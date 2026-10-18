@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, TableProperties, AlertCircle } from 'lucide-react';
 import { PillarData } from '@/types/dashboard';
+import { PillarKendalaSection } from './PillarKendalaSection';
+import { PillButton } from '@/components/atoms/PillButton';
+import { PillarIndicatorSection } from './PillarIndicatorSection';
+
+type DetailTab = 'ringkasan' | 'indikator' | 'kendala';
 
 interface PendidikanDetailViewProps {
   onBackToHome: () => void;
@@ -30,8 +35,7 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
   onBackToHome,
   pillar,
 }) => {
-  const [showOrchestration, setShowOrchestration] = useState(true);
-  const [expandedIssueId, setExpandedIssueId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<DetailTab>('ringkasan');
 
   // 1. Exact 6 Metric Cards from the provided image
   const metricCards: MetricCardItem[] = [
@@ -150,31 +154,76 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
     },
   ];
 
-  const toggleIssue = (id: number) => {
-    setExpandedIssueId(expandedIssueId === id ? null : id);
-  };
-
   return (
     <div className="w-full space-y-6">
-      {/* Top Main Panel: Redesigned according to user's layout & image */}
+      {/* Top Main Panel */}
       <div className="bg-white rounded-xl p-5 md:p-7 border border-slate-200/90 shadow-2xs">
-        {/* Header: Title "Pendidikan" + Back Button */}
-        <div className="flex items-center justify-between pb-5 mb-5 border-b border-slate-100">
-          <h2 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
-            Pendidikan
-          </h2>
+        {/* Header: Title "Pendidikan" + Submenu Tabs + Back Button */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 mb-5 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
+              Pendidikan
+            </h2>
+          </div>
+
+          {/* Submenu Tabs: Ringkasan, Indikator, Kendala */}
+          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200/80 overflow-x-auto self-start sm:self-center">
+            <PillButton
+              variant="tab"
+              size="sm"
+              active={activeTab === 'ringkasan'}
+              onClick={() => setActiveTab('ringkasan')}
+              icon={<LayoutDashboard className="h-3.5 w-3.5 text-blue-600" />}
+            >
+              Ringkasan
+            </PillButton>
+            <PillButton
+              variant="tab"
+              size="sm"
+              active={activeTab === 'indikator'}
+              onClick={() => setActiveTab('indikator')}
+              icon={<TableProperties className="h-3.5 w-3.5 text-emerald-600" />}
+            >
+              Indikator
+            </PillButton>
+            <PillButton
+              variant="tab"
+              size="sm"
+              active={activeTab === 'kendala'}
+              onClick={() => setActiveTab('kendala')}
+              icon={<AlertCircle className="h-3.5 w-3.5 text-amber-600" />}
+            >
+              Kendala ({pillar.kendalaLengkap.length})
+            </PillButton>
+          </div>
 
           <button
             type="button"
             onClick={onBackToHome}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer self-start sm:self-auto shrink-0"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Kembali ke Ringkasan</span>
           </button>
         </div>
 
-        <div className="space-y-6">
+        {/* Tab Content 1: Ringkasan */}
+        {activeTab === 'ringkasan' && (
+          <div className="space-y-4 animate-in fade-in duration-150">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                  Ringkasan Capaian Utama
+                </h3>
+                <p className="text-xs text-slate-600 font-medium mt-0.5">
+                  Sorotan 6 indikator prioritas dan realisasi tahun berjalan 2026
+                </p>
+              </div>
+              <span className="text-xs font-semibold text-slate-500">
+                {metricCards.length} Indikator Kunci
+              </span>
+            </div>
+
             {/* 1. Grid of 6 Metric Cards (3 columns x 2 rows, shared clean borders) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-slate-200 rounded-xl overflow-hidden border border-slate-200 shadow-2xs">
               {metricCards.map((card, idx) => (
@@ -213,201 +262,29 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
                 </div>
               ))}
             </div>
-
-            {/* 2. Target dan capaian tahunan */}
-            <div className="pt-2">
-              <h3 className="text-base md:text-lg font-bold text-slate-900 tracking-tight mb-3">
-                Target dan capaian tahunan
-              </h3>
-
-              <div className="overflow-x-auto custom-scrollbar border border-slate-200 rounded-xl">
-                <table className="w-full text-left border-collapse text-xs md:text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-slate-100/90 text-slate-900 font-bold">
-                      <th className="py-3 px-4 md:px-5 min-w-[240px]">
-                        Indikator dan satuan
-                      </th>
-                      <th className="py-3 px-3 md:px-4 text-center min-w-[110px] text-slate-800">
-                        2025
-                      </th>
-                      <th className="py-3 px-3 md:px-4 text-center min-w-[150px] font-bold text-blue-950 bg-blue-100/70 border-x border-blue-200">
-                        2026
-                      </th>
-                      <th className="py-3 px-3 md:px-4 text-center min-w-[110px] text-slate-800">
-                        2027
-                      </th>
-                      <th className="py-3 px-3 md:px-4 text-center min-w-[110px] text-slate-800">
-                        2028
-                      </th>
-                      <th className="py-3 px-3 md:px-4 text-center min-w-[110px] text-slate-800">
-                        2029
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 font-medium">
-                    {tableRows.map((row, idx) => (
-                      <tr
-                        key={idx}
-                        className="hover:bg-slate-50/70 transition-colors"
-                      >
-                        {/* Column 1: Indikator dan satuan */}
-                        <td className="py-3.5 px-4 md:px-5 align-top">
-                          <div className="font-bold text-slate-900 text-xs md:text-sm">
-                            {row.name}
-                          </div>
-                          {row.subUnit && (
-                            <div className="text-[11px] md:text-xs text-slate-600 font-medium mt-0.5">
-                              {row.subUnit}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Column 2: 2025 */}
-                        <td className="py-3.5 px-3 md:px-4 text-center align-top tabular-nums">
-                          <div className="text-slate-700">T: {row.y2025.t}</div>
-                          <div className="text-slate-900 font-semibold">
-                            C: {row.y2025.c}
-                          </div>
-                        </td>
-
-                        {/* Column 3: 2026 (Highlighted Column) */}
-                        <td className="py-3.5 px-3 md:px-4 text-center align-top tabular-nums font-bold text-slate-950 bg-blue-50/50 border-x border-blue-100">
-                          <div className="text-slate-800">T: {row.y2026.t}</div>
-                          <div className="text-blue-950 font-bold">
-                            C: {row.y2026.c}
-                          </div>
-                          {row.y2026.note && (
-                            <div className="text-[11px] text-blue-900 font-medium mt-0.5">
-                              {row.y2026.note}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Column 4: 2027 */}
-                        <td className="py-3.5 px-3 md:px-4 text-center align-top tabular-nums">
-                          <div className="text-slate-700">T: {row.y2027.t}</div>
-                          <div className="text-slate-800 font-semibold">
-                            C: {row.y2027.c}
-                          </div>
-                        </td>
-
-                        {/* Column 5: 2028 */}
-                        <td className="py-3.5 px-3 md:px-4 text-center align-top tabular-nums">
-                          <div className="text-slate-700">T: {row.y2028.t}</div>
-                          <div className="text-slate-800 font-semibold">
-                            C: {row.y2028.c}
-                          </div>
-                        </td>
-
-                        {/* Column 6: 2029 */}
-                        <td className="py-3.5 px-3 md:px-4 text-center align-top tabular-nums">
-                          <div className="text-slate-700">T: {row.y2029.t}</div>
-                          <div className="text-slate-800 font-semibold">
-                            C: {row.y2029.c}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Footnote verbatim from image */}
-              <p className="mt-3 text-xs text-slate-600 font-medium leading-relaxed">
-                T = target • C = capaian • — = belum tersedia, bukan nol • 2026
-                merupakan posisi berjalan • Satuan mengikuti setiap indikator
-              </p>
-            </div>
           </div>
-      </div>
+        )}
 
-      {/* Accordion / Secondary Sections: Kendala Pelaksanaan & Tindak Lanjut Orkestrasi */}
-      <div className="bg-white rounded-xl p-5 md:p-6 border border-slate-200/90 shadow-2xs">
-        <button
-          type="button"
-          onClick={() => setShowOrchestration(!showOrchestration)}
-          className="w-full flex items-center justify-between text-left group cursor-pointer focus-visible:outline-2 focus-visible:outline-slate-400 rounded-lg"
-          aria-expanded={showOrchestration}
-        >
-          <div className="flex items-center gap-2.5">
-            <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
-            <div>
-              <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-800 transition-colors">
-                Kendala Pelaksanaan dan Tindak Lanjut Orkestrasi
-              </h3>
-              <p className="text-xs text-slate-600 font-medium mt-0.5">
-                8 agenda hambatan regulasi dan langkah percepatan lintas K/L
-              </p>
-            </div>
-          </div>
-          {showOrchestration ? (
-            <ChevronUp className="h-5 w-5 text-slate-600" />
-          ) : (
-            <ChevronDown className="h-5 w-5 text-slate-600" />
-          )}
-        </button>
+        {/* Tab Content 2: Indikator (Tabel & Visualisasi 2-segment) */}
+        {activeTab === 'indikator' && (
+          <PillarIndicatorSection
+            pillarName="Pendidikan"
+            pillarId="pendidikan"
+            tableRows={tableRows}
+          />
+        )}
 
-        {showOrchestration && (
-          <div className="mt-4 pt-4 border-t border-slate-100 space-y-2.5">
-            {pillar.kendalaLengkap.map((issue) => {
-              const isExpanded = expandedIssueId === issue.id;
-
-              return (
-                <div
-                  key={issue.id}
-                  className="rounded-lg border border-slate-200 overflow-hidden"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleIssue(issue.id)}
-                    aria-expanded={isExpanded}
-                    className="w-full p-3.5 md:p-4 flex items-center justify-between gap-3 text-left bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-bold text-slate-700 w-5">
-                        {issue.id}.
-                      </span>
-                      <span className="text-sm font-bold text-slate-900">
-                        {issue.title}
-                      </span>
-                    </div>
-                    {isExpanded ? (
-                      <ChevronUp className="h-4 w-4 text-slate-700 shrink-0" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-slate-700 shrink-0" />
-                    )}
-                  </button>
-
-                  {isExpanded && (
-                    <div className="p-4 bg-white border-t border-slate-200 space-y-3">
-                      {issue.kendala && (
-                        <div>
-                          <span className="text-xs font-bold text-slate-800 block mb-1">
-                            Kendala Pelaksanaan:
-                          </span>
-                          <p className="text-xs md:text-sm text-slate-800 leading-relaxed font-medium">
-                            {issue.kendala}
-                          </p>
-                        </div>
-                      )}
-
-                      <div>
-                        <span className="text-xs font-bold text-slate-800 block mb-1">
-                          Tindak Lanjut Orkestrasi:
-                        </span>
-                        <p className="text-xs md:text-sm text-slate-800 leading-relaxed font-medium">
-                          {issue.tindakLanjut}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        {/* Tab Content 3: Kendala */}
+        {activeTab === 'kendala' && (
+          <div className="animate-in fade-in duration-150">
+            <PillarKendalaSection
+              kendalaList={pillar.kendalaLengkap}
+              pillarTitle="Pendidikan"
+              embedded={true}
+            />
           </div>
         )}
       </div>
-
     </div>
   );
 };

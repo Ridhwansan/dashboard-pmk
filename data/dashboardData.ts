@@ -405,26 +405,31 @@ export const PILLARS_DATA: Record<string, PillarData> = {
       {
         id: 1,
         title: 'Stunting pada kantong kemiskinan',
+        kendala: 'Intervensi nutrisi dan pendataan balita stunting di kantong kemiskinan belum terintegrasi optimal dengan distribusi program MBG.',
         tindakLanjut: 'Mengorkestrasi penetapan target sasaran dan intervensi stunting melalui MBG pada wilayah kantong kemiskinan (BGN dan Kemensos)',
       },
       {
         id: 2,
         title: 'Penuntasan Tuberkulosis pada kantong kemiskinan',
+        kendala: 'Tingginya beban penularan TB pada kawasan padat kantong kemiskinan serta hambatan pemenuhan nutrisi dan isolasi pasien.',
         tindakLanjut: 'Mengorkestrasi penetapan target sasaran dan intervensi TB melalui MBG pada wilayah kantong kemiskinan (BGN dan Kemensos)',
       },
       {
         id: 3,
         title: 'Lansia dan Penyandang Disabilitas pada kantong kemiskinan',
+        kendala: 'Bantuan permakanan terhenti sejak awal 2026; integrasi skema MBG bagi kelompok lansia dan disabilitas rentan belum terlaksana.',
         tindakLanjut: 'Mengorkestrasi penetapan target sasaran dan intervensi lansia dan disabilitas melalui MBG pada wilayah kantong kemiskinan (BGN dan Kemensos)',
       },
       {
         id: 4,
         title: 'Bantuan Pendidikan Gratis',
+        kendala: 'Perlu kepastian postur anggaran, skema pembiayaan, dan afirmasi wilayah kantong kemiskinan untuk bantuan pendidikan gratis.',
         tindakLanjut: 'Mengorkestrasi penetapan sasaran bantuan Pendidikan gratis pada wilayah kantong kemiskinan',
       },
       {
         id: 5,
         title: 'Data Sasaran Stunting, TB, Lansia Disabilitas pada kantong kemiskinan',
+        kendala: 'Perlunya pemadanan data sasaran lintas K/L (DTSEN, Regsosek, P3KE) agar tidak terjadi tumpang tindih maupun exclusion error.',
         tindakLanjut: 'Mengorkestrasi validitas data ke Kementerian/Lembaga terkait untuk ketepatan intervensi sasaran stunting, TB, lansia, disabilitas pada kantong kemiskinan',
       },
     ],
