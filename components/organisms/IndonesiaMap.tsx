@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   WilayahData,
   NASIONAL_DATA,
@@ -8,38 +8,87 @@ import {
   KABKOTA_DATA,
   KECAMATAN_DATA,
   DESA_DATA,
-  getWilayahCapaianRpjmn,
-  getWilayahTargetRpjmn,
-  getWilayahIsuStrategis,
-  getWilayahAgendaTransformasi,
 } from '@/data/wilayahData';
-import { LeafletMapWrapper } from '@/components/molecules/LeafletMapWrapper';
 import {
-  GraduationCap,
-  HeartPulse,
-  ShieldAlert,
-  TrendingDown,
+  MapPillarId,
+  MAP_PILLARS,
+  getIndicatorsByPillar,
+  getIndicatorById,
+  getDefaultIndicatorForPillar,
+} from '@/data/mapIndicators';
+import { AVAILABLE_YEARS, PeriodYear } from '@/data/pillarAgregatData';
+import { LeafletMapWrapper } from '@/components/molecules/LeafletMapWrapper';
+import { PillarAgregatListCard } from '@/components/molecules/PillarAgregatListCard';
+import {
   RotateCcw,
-  Layers,
-  ChevronRight,
-  Info,
-  AlertTriangle,
-  Compass,
+  ChevronDown,
+  Check,
+  Calendar,
 } from 'lucide-react';
 
 interface IndonesiaMapProps {
   className?: string;
   onSelectPillar?: (id: string) => void;
+  initialPillar?: MapPillarId | null;
 }
 
-export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({ className = '' }) => {
-  // Cascading Filter States
+export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
+  className = '',
+  onSelectPillar,
+  initialPillar = null,
+}) => {
+  // 1. Pillar and Sub-Indicator Filter States (defaults to null so user chooses first)
+  const [activePillar, setActivePillar] = useState<MapPillarId | null>(initialPillar);
+  const [activeIndicatorId, setActiveIndicatorId] = useState<string | null>(() => {
+    return initialPillar ? getDefaultIndicatorForPillar(initialPillar).id : null;
+  });
+
+  // 2. Annual Period Filter State (2025 - 2029, default: 2026)
+  const [selectedYear, setSelectedYear] = useState<PeriodYear>(2026);
+
+  // Dropdown open state for hover / click
+  const [openDropdownPillar, setOpenDropdownPillar] = useState<MapPillarId | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseEnter = (pillarId: MapPillarId) => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    setOpenDropdownPillar(pillarId);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    hoverTimeoutRef.current = setTimeout(() => {
+      setOpenDropdownPillar(null);
+    }, 200);
+  };
+
+  // 2. Cascading Territory Filter States
   const [selectedProvinsiId, setSelectedProvinsiId] = useState<string>('nasional');
   const [selectedKabKotaId, setSelectedKabKotaId] = useState<string>('');
   const [selectedKecamatanId, setSelectedKecamatanId] = useState<string>('');
   const [selectedDesaId, setSelectedDesaId] = useState<string>('');
 
-  // 1. Resolve Active Territory
+  // Handle Pillar Switch: update active pillar and select its default indicator
+  const handlePillarChange = (newPillar: MapPillarId) => {
+    setActivePillar(newPillar);
+    const defaultInd = getDefaultIndicatorForPillar(newPillar);
+    setActiveIndicatorId(defaultInd.id);
+  };
+
+  // Handle Sub-Indicator Select from Dropdown
+  const handleSelectIndicator = (pillarId: MapPillarId, indicatorId: string) => {
+    setActivePillar(pillarId);
+    setActiveIndicatorId(indicatorId);
+    setOpenDropdownPillar(null);
+  };
+
+  // Active indicator definition (null when user hasn't selected a pillar yet)
+  const currentIndicator = useMemo(() => {
+    if (!activeIndicatorId && !activePillar) return null;
+    return getIndicatorById(activeIndicatorId, activePillar);
+  }, [activeIndicatorId, activePillar]);
+
+  // 3. Resolve Active Territory Object
   const currentWilayah: WilayahData = useMemo(() => {
     if (selectedDesaId) {
       const found = DESA_DATA.find((d) => d.id === selectedDesaId);
@@ -60,7 +109,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({ className = '' }) =>
     return NASIONAL_DATA;
   }, [selectedProvinsiId, selectedKabKotaId, selectedKecamatanId, selectedDesaId]);
 
-  // 2. Filter Options strictly sorted by official BPS code
+  // 4. Territory cascading choices
   const availableKabKota = useMemo(() => {
     if (!selectedProvinsiId || selectedProvinsiId === 'nasional') return [];
     return KABKOTA_DATA.filter((k) => k.parentProvinsiId === selectedProvinsiId);
@@ -76,7 +125,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({ className = '' }) =>
     return DESA_DATA.filter((d) => d.parentKecamatanId === selectedKecamatanId);
   }, [selectedKecamatanId]);
 
-  // 3. Boundaries (Polygons) to display on the OpenStreetMap blind map
+  // 5. Boundaries for GeoJSON mapping
   const activeBoundaries = useMemo(() => {
     if (selectedKecamatanId && availableDesa.length > 0) {
       return availableDesa;
@@ -95,7 +144,6 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({ className = '' }) =>
       const prov = PROVINSI_DATA.find((p) => p.id === selectedProvinsiId);
       return prov ? [prov] : [];
     }
-    // Return all provinces across the archipelago at root view
     return PROVINSI_DATA;
   }, [
     selectedProvinsiId,
@@ -106,7 +154,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({ className = '' }) =>
     availableDesa,
   ]);
 
-  // Handlers for Sequential Filter Selection
+  // Handlers for sequential region filtering
   const handleProvinsiChange = (provId: string) => {
     setSelectedProvinsiId(provId);
     setSelectedKabKotaId('');
@@ -136,7 +184,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({ className = '' }) =>
     setSelectedDesaId('');
   };
 
-  // Direct selection from Map Boundary Click (Area Batas Wilayah Poligon)
+  // Direct selection from Map Boundary Click
   const handleBoundaryClick = (wilayah: WilayahData) => {
     if (wilayah.level === 'provinsi') {
       handleProvinsiChange(wilayah.id);
@@ -159,589 +207,277 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({ className = '' }) =>
     selectedProvinsiId === 'dki-jakarta' || selectedProvinsiId === 'jawa-barat';
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-5 ${className}`}>
       {/* ======================================================== */}
-      {/* 1. TOP CONTROL BAR: Horizontal 4-Level Sequential Filter */}
+      {/* 1. COMPACT & SIMPLIFIED FILTER TOOLBAR                   */}
       {/* ======================================================== */}
-      <div className="bg-white rounded-2xl p-5 md:p-6 border border-slate-200/90 shadow-2xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 mb-4 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700">
-              <Layers className="h-4 w-4" />
-            </div>
-            <div>
-              <span className="text-sm md:text-base font-bold text-slate-900 tracking-tight block">
-                Filter Wilayah Kerja Prioritas
-              </span>
-              <span className="text-xs text-slate-500 font-medium">
-                Pilih bertingkat berdasarkan kode wilayah BPS untuk memfokuskan peta dan capaian
-              </span>
+      <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-2xs space-y-3">
+        {/* Row 1: Filter Wilayah (Lokus Administratif) */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-slate-500 shrink-0">
+              Wilayah:
+            </span>
+
+            {/* Compact Selects with reduced widths */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Dropdown 1: Provinsi */}
+              <select
+                id="filter-provinsi"
+                aria-label="Pilih Provinsi"
+                value={selectedProvinsiId}
+                onChange={(e) => handleProvinsiChange(e.target.value)}
+                className="w-40 sm:w-44 text-xs font-semibold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200 hover:border-slate-300 rounded-lg py-1.5 px-2 focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors cursor-pointer truncate"
+              >
+                <option value="nasional">Seluruh Indonesia (38 Prov)</option>
+                {PROVINSI_DATA.map((prov) => (
+                  <option key={prov.id} value={prov.id}>
+                    {prov.name} {prov.isPrioritas ? '• Prioritas' : ''}
+                  </option>
+                ))}
+              </select>
+
+              {/* Dropdown 2: Kabupaten / Kota */}
+              <select
+                id="filter-kabkota"
+                aria-label="Pilih Kabupaten atau Kota"
+                value={selectedKabKotaId}
+                disabled={!isDetailSupported}
+                onChange={(e) => handleKabKotaChange(e.target.value)}
+                className={`w-28 sm:w-32 text-xs font-semibold rounded-lg py-1.5 px-2 border transition-colors truncate ${
+                  !isDetailSupported
+                    ? 'bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed'
+                    : 'bg-slate-50 hover:bg-white text-slate-900 border-slate-200 hover:border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer'
+                }`}
+              >
+                <option value="">
+                  {!isDetailSupported
+                    ? selectedProvinsiId === 'nasional'
+                      ? 'Kab/Kota'
+                      : 'Detail s.d. Provinsi'
+                    : 'Pilih Kab/Kota'}
+                </option>
+                {availableKabKota.map((kab) => (
+                  <option key={kab.id} value={kab.id}>
+                    {kab.name} {kab.isPrioritas ? '• Prioritas' : ''}
+                  </option>
+                ))}
+              </select>
+
+              {/* Dropdown 3: Kecamatan */}
+              <select
+                id="filter-kecamatan"
+                aria-label="Pilih Kecamatan"
+                value={selectedKecamatanId}
+                disabled={!selectedKabKotaId}
+                onChange={(e) => handleKecamatanChange(e.target.value)}
+                className={`w-24 sm:w-28 text-xs font-semibold rounded-lg py-1.5 px-2 border transition-colors truncate ${
+                  !selectedKabKotaId
+                    ? 'bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed'
+                    : 'bg-slate-50 hover:bg-white text-slate-900 border-slate-200 hover:border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer'
+                }`}
+              >
+                <option value="">
+                  {!selectedKabKotaId ? 'Kecamatan' : 'Pilih Kecamatan'}
+                </option>
+                {availableKecamatan.map((kec) => (
+                  <option key={kec.id} value={kec.id}>
+                    {kec.name} {kec.isPrioritas ? '• Prioritas' : ''}
+                  </option>
+                ))}
+              </select>
+
+              {/* Dropdown 4: Desa */}
+              <select
+                id="filter-desa"
+                aria-label="Pilih Desa atau Kelurahan"
+                value={selectedDesaId}
+                disabled={!selectedKecamatanId}
+                onChange={(e) => handleDesaChange(e.target.value)}
+                className={`w-24 sm:w-28 text-xs font-semibold rounded-lg py-1.5 px-2 border transition-colors truncate ${
+                  !selectedKecamatanId
+                    ? 'bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed'
+                    : 'bg-slate-50 hover:bg-white text-slate-900 border-slate-200 hover:border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer'
+                }`}
+              >
+                <option value="">
+                  {!selectedKecamatanId ? 'Desa/Kel' : 'Pilih Desa'}
+                </option>
+                {availableDesa.map((desa) => (
+                  <option key={desa.id} value={desa.id}>
+                    {desa.name} {desa.isPrioritas ? '• Prioritas' : ''}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            {/* Active Hierarchy Breadcrumb */}
-            <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 flex items-center gap-1.5 flex-wrap">
-              <span className="text-slate-400 text-[10px] uppercase font-bold">Lokus:</span>
-              <span>
-                {selectedProvinsiId === 'nasional'
-                  ? 'Seluruh Indonesia'
-                  : PROVINSI_DATA.find((p) => p.id === selectedProvinsiId)?.name}
-              </span>
-              {selectedKabKotaId && (
-                <>
-                  <ChevronRight className="h-3 w-3 text-slate-400 inline" />
-                  <span>{KABKOTA_DATA.find((k) => k.id === selectedKabKotaId)?.name}</span>
-                </>
-              )}
-              {selectedKecamatanId && (
-                <>
-                  <ChevronRight className="h-3 w-3 text-slate-400 inline" />
-                  <span>{KECAMATAN_DATA.find((k) => k.id === selectedKecamatanId)?.name}</span>
-                </>
-              )}
-              {selectedDesaId && (
-                <>
-                  <ChevronRight className="h-3 w-3 text-slate-400 inline" />
-                  <span>{DESA_DATA.find((d) => d.id === selectedDesaId)?.name}</span>
-                </>
-              )}
+          {/* Right side of Row 1: Filter Periode Tahun (Dropdown) & Reset Wilayah */}
+          <div className="flex items-center gap-2.5 shrink-0 self-end md:self-auto flex-wrap min-h-[32px]">
+            {/* Filter Periode Tahun Dropdown */}
+            <div className="flex items-center gap-1.5">
+              <label htmlFor="filter-tahun" className="text-xs font-semibold text-slate-500 shrink-0">
+                Tahun:
+              </label>
+              <select
+                id="filter-tahun"
+                aria-label="Pilih Periode Tahun"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value) as PeriodYear)}
+                className="text-xs font-semibold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200 hover:border-slate-300 rounded-lg py-1.5 px-2.5 focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors cursor-pointer"
+              >
+                {AVAILABLE_YEARS.map((yr) => (
+                  <option key={yr} value={yr}>
+                    {yr}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <button
-              type="button"
-              onClick={handleResetNasional}
-              title="Reset ke Seluruh Indonesia"
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-200"
-            >
-              <RotateCcw className="h-3.5 w-3.5 text-slate-600" />
-              Reset
-            </button>
+            {/* Reset Wilayah Button (visible when a specific territory is filtered) */}
+            {selectedProvinsiId !== 'nasional' && (
+              <button
+                type="button"
+                onClick={handleResetNasional}
+                title="Kembali ke tampilan Seluruh Indonesia"
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-200 shrink-0"
+              >
+                <RotateCcw className="h-3 w-3 text-slate-500" />
+                <span>Reset Wilayah</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* 4 Sequential Dropdowns in Wide Grid (No numeric codes, clean region names) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {/* Filter 1: Provinsi */}
-          <div>
-            <label
-              htmlFor="filter-provinsi"
-              className="block text-xs font-bold text-slate-800 mb-1.5"
-            >
-              Provinsi
-            </label>
-            <select
-              id="filter-provinsi"
-              value={selectedProvinsiId}
-              onChange={(e) => handleProvinsiChange(e.target.value)}
-              className="w-full text-xs font-semibold bg-white text-slate-900 border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-colors shadow-2xs"
-            >
-              <option value="nasional">Seluruh Indonesia</option>
-              {PROVINSI_DATA.map((prov) => (
-                <option key={prov.id} value={prov.id}>
-                  {prov.name} {prov.isPrioritas ? '• Prioritas' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Row 2: Filter Pilar & Sub-Indikator (Clean Buttons, No Noise) */}
+        <div className="pt-2.5 border-t border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 overflow-x-visible flex-wrap sm:flex-nowrap">
+            <span className="text-xs font-semibold text-slate-500 shrink-0 mr-0.5">
+              Pilar:
+            </span>
 
-          {/* Filter 2: Kabupaten / Kota */}
-          <div>
-            <label
-              htmlFor="filter-kabkota"
-              className="block text-xs font-bold text-slate-800 mb-1.5"
-            >
-              Kabupaten / Kota
-            </label>
-            <select
-              id="filter-kabkota"
-              value={selectedKabKotaId}
-              disabled={!isDetailSupported}
-              onChange={(e) => handleKabKotaChange(e.target.value)}
-              className={`w-full text-xs font-semibold rounded-xl p-2.5 border transition-colors shadow-2xs ${
-                !isDetailSupported
-                  ? 'bg-slate-100/80 text-slate-400 border-slate-200 cursor-not-allowed'
-                  : 'bg-white text-slate-900 border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600'
-              }`}
-            >
-              <option value="">
-                {!isDetailSupported
-                  ? selectedProvinsiId === 'nasional'
-                    ? '— Pilih Provinsi terlebih dahulu —'
-                    : '— Detail hanya sampai provinsi —'
-                  : '— Pilih Kabupaten / Kota —'}
-              </option>
-              {availableKabKota.map((kab) => (
-                <option key={kab.id} value={kab.id}>
-                  {kab.name} {kab.isPrioritas ? '• Prioritas' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
+            {MAP_PILLARS.map((pilar) => {
+              const isSelected = activePillar === pilar.id;
+              const pilarIndicators = getIndicatorsByPillar(pilar.id);
+              const isOpen = openDropdownPillar === pilar.id;
 
-          {/* Filter 3: Kecamatan */}
-          <div>
-            <label
-              htmlFor="filter-kecamatan"
-              className="block text-xs font-bold text-slate-800 mb-1.5"
-            >
-              Kecamatan
-            </label>
-            <select
-              id="filter-kecamatan"
-              value={selectedKecamatanId}
-              disabled={!selectedKabKotaId}
-              onChange={(e) => handleKecamatanChange(e.target.value)}
-              className={`w-full text-xs font-semibold rounded-xl p-2.5 border transition-colors shadow-2xs ${
-                !selectedKabKotaId
-                  ? 'bg-slate-100/80 text-slate-400 border-slate-200 cursor-not-allowed'
-                  : 'bg-white text-slate-900 border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600'
-              }`}
-            >
-              <option value="">
-                {!selectedKabKotaId
-                  ? '— Pilih Kab/Kota terlebih dahulu —'
-                  : '— Pilih Kecamatan —'}
-              </option>
-              {availableKecamatan.map((kec) => (
-                <option key={kec.id} value={kec.id}>
-                  {kec.name} {kec.isPrioritas ? '• Prioritas' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filter 4: Desa / Kelurahan */}
-          <div>
-            <label
-              htmlFor="filter-desa"
-              className="block text-xs font-bold text-slate-800 mb-1.5"
-            >
-              Desa / Kelurahan
-            </label>
-            <select
-              id="filter-desa"
-              value={selectedDesaId}
-              disabled={!selectedKecamatanId}
-              onChange={(e) => handleDesaChange(e.target.value)}
-              className={`w-full text-xs font-semibold rounded-xl p-2.5 border transition-colors shadow-2xs ${
-                !selectedKecamatanId
-                  ? 'bg-slate-100/80 text-slate-400 border-slate-200 cursor-not-allowed'
-                  : 'bg-white text-slate-900 border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600'
-              }`}
-            >
-              <option value="">
-                {!selectedKecamatanId
-                  ? '— Pilih Kecamatan terlebih dahulu —'
-                  : '— Pilih Desa / Kelurahan —'}
-              </option>
-              {availableDesa.map((desa) => (
-                <option key={desa.id} value={desa.id}>
-                  {desa.name} {desa.isPrioritas ? '• Prioritas' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* High-Contrast Clear User Guidance Banner */}
-        <div className="mt-4 p-3 rounded-xl bg-blue-50/80 border border-blue-200/90 text-xs text-blue-950 font-medium flex items-center gap-2.5">
-          <Info className="h-4 w-4 text-blue-700 shrink-0" />
-          <span>
-            <strong>Panduan Interaktif:</strong> Klik langsung pada <strong>area batas wilayah</strong> di peta untuk menelaah Capaian RPJMN, Isu Strategis, Agenda Transformasi, IMM, dan 4 Pilar PKPN di wilayah terpilih.
-          </span>
-        </div>
-      </div>
-
-      {/* ======================================================== */}
-      {/* 2. WIDE MAP: OpenStreetMap Blind Map with Vignette Mask  */}
-      {/* ======================================================== */}
-      <div className="w-full">
-        <LeafletMapWrapper
-          selectedWilayah={currentWilayah}
-          availableBoundaries={activeBoundaries}
-          onSelectWilayah={handleBoundaryClick}
-          onResetNasional={handleResetNasional}
-        />
-      </div>
-
-      {/* ======================================================== */}
-      {/* 3. STRATEGIC REGION CARD (Capaian RPJMN, Isu Strategis,  */}
-      {/*    Agenda Transformasi, IMM, dan 4 Pilar PKPN)           */}
-      {/* ======================================================== */}
-      <div className="bg-white rounded-2xl p-5 md:p-6 border border-slate-200/90 shadow-2xs space-y-6">
-        {/* Header Profile + 4 Macro Indicator Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pb-5 border-b border-slate-100 items-center">
-          {/* Territory Identification */}
-          <div className="lg:col-span-5 flex flex-col justify-center">
-            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-bold tracking-wide">
-                {currentWilayah.level === 'nasional'
-                  ? 'Cakupan Nasional'
-                  : currentWilayah.level === 'provinsi'
-                  ? 'Tingkat Provinsi'
-                  : currentWilayah.level === 'kabupaten'
-                  ? 'Tingkat Kabupaten/Kota'
-                  : currentWilayah.level === 'kecamatan'
-                  ? 'Tingkat Kecamatan'
-                  : 'Tingkat Desa/Kelurahan'}
-              </span>
-              {currentWilayah.isPrioritas ? (
-                <span className="px-2.5 py-0.5 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-bold inline-flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
-                  Wilayah Prioritas Percepatan PKPN
-                </span>
-              ) : (
-                <span className="px-2.5 py-0.5 rounded-md bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium">
-                  {currentWilayah.kategoriWilayah}
-                </span>
-              )}
-            </div>
-
-            <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight mb-1.5">
-              {currentWilayah.name}
-            </h2>
-
-            <p className="text-xs text-slate-600 leading-relaxed font-normal">
-              {currentWilayah.ringkasanStrategis}
-            </p>
-          </div>
-
-          {/* 4 Macro KPI Cards: Capaian RPJMN, IMM, Kemiskinan, Status PKPN */}
-          <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-4 gap-3 items-stretch">
-            {/* Box 1: Capaian RPJMN */}
-            <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-200 flex flex-col justify-between">
-              <span className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                Capaian RPJMN
-              </span>
-              <div className="my-0.5">
-                <span className="text-2xl font-black text-slate-900 tabular-nums">
-                  {getWilayahCapaianRpjmn(currentWilayah)}
-                </span>
-              </div>
-              <div className="w-full bg-slate-200 h-1.5 rounded-full mt-1 overflow-hidden">
+              return (
                 <div
-                  className="bg-blue-600 h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${Math.min(
-                      100,
-                      (parseFloat(
-                        getWilayahCapaianRpjmn(currentWilayah)
-                          .replace('%', '')
-                          .replace(',', '.')
-                      ) /
-                        80) *
-                        100
-                    )}%`,
-                  }}
-                />
-              </div>
-              <span className="text-[10px] text-slate-500 font-medium mt-1">
-                Target: {getWilayahTargetRpjmn(currentWilayah)}
-              </span>
-            </div>
+                  key={pilar.id}
+                  className="relative"
+                  onMouseEnter={() => handleMouseEnter(pilar.id)}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handlePillarChange(pilar.id);
+                      setOpenDropdownPillar((prev) => (prev === pilar.id ? null : pilar.id));
+                    }}
+                    aria-haspopup="true"
+                    aria-expanded={isOpen}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all duration-150 cursor-pointer ${
+                      isSelected
+                        ? 'bg-blue-600 text-white font-semibold shadow-xs'
+                        : 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200/90 font-medium'
+                    }`}
+                  >
+                    <span>{pilar.shortName}</span>
+                    <ChevronDown
+                      className={`h-3 w-3 transition-transform duration-150 ${
+                        isOpen ? 'rotate-180' : ''
+                      } ${isSelected ? 'text-white/80' : 'text-slate-400'}`}
+                    />
+                  </button>
 
-            {/* Box 2: Indeks IMM */}
-            <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-200 flex flex-col justify-between">
-              <span className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                Indeks Modal Manusia
-              </span>
-              <div className="my-0.5">
-                <span className="text-2xl font-black text-slate-900 tabular-nums">
-                  {currentWilayah.imm}
-                </span>
-              </div>
-              <span className="text-[10px] text-slate-500 font-medium">
-                Skala 0,00 – 1,00
-              </span>
-            </div>
-
-            {/* Box 3: Tingkat Kemiskinan */}
-            <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-200 flex flex-col justify-between">
-              <span className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                Tingkat Kemiskinan
-              </span>
-              <div className="my-0.5">
-                <span className="text-2xl font-black text-slate-900 tabular-nums">
-                  {currentWilayah.tingkatKemiskinan}
-                </span>
-              </div>
-              <span className="text-[10px] text-slate-500 font-medium">
-                Ekstrem: {currentWilayah.kemiskinanEkstrem}
-              </span>
-            </div>
-
-            {/* Box 4: Status PKPN */}
-            <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-200 flex flex-col justify-between">
-              <span className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                Orkestrasi PKPN
-              </span>
-              <div className="my-0.5">
-                <span className="text-2xl font-black text-blue-700 tabular-nums">
-                  4 Pilar
-                </span>
-              </div>
-              <span className="text-[10px] text-slate-500 font-medium">
-                Pengawalan Aktif
-              </span>
-            </div>
+                  {/* Clean Floating Dropdown for Sub-Indicators */}
+                  {isOpen && (
+                    <div
+                      className="absolute left-0 top-full pt-1.5 z-40 w-72 sm:w-80 animate-in fade-in zoom-in-95 duration-100"
+                      onMouseEnter={() => handleMouseEnter(pilar.id)}
+                      onMouseLeave={handleMouseLeave}
+                    >
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-xl p-1.5 text-xs">
+                        <div className="space-y-0.5 max-h-64 overflow-y-auto">
+                          {pilarIndicators.map((ind) => {
+                            const isIndActive = activeIndicatorId === ind.id;
+                            return (
+                              <button
+                                key={ind.id}
+                                type="button"
+                                onClick={() => handleSelectIndicator(pilar.id, ind.id)}
+                                className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-left transition-colors cursor-pointer ${
+                                  isIndActive
+                                    ? 'bg-blue-50 text-blue-900 font-semibold'
+                                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                                }`}
+                              >
+                                <div className="min-w-0 pr-1">
+                                  <div className="text-xs font-medium text-slate-800 truncate">
+                                    {ind.name}
+                                  </div>
+                                </div>
+                                {isIndActive && (
+                                  <Check className="h-4 w-4 text-blue-600 shrink-0" />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
+
+          {/* Active Indicator Display or Prompt */}
+          {currentIndicator ? (
+            <div className="flex items-center gap-1.5 text-xs text-slate-600 self-start xl:self-auto py-0.5">
+              <span className="text-slate-400">Indikator:</span>
+              <span className="font-semibold text-slate-900">{currentIndicator.name}</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-500">Target 2026: {currentIndicator.target2026}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs text-slate-400 self-start xl:self-auto py-0.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+              <span className="italic">Pilih pilar di atas untuk mengaktifkan pemetaan tematik</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ======================================================== */}
+      {/* 2. EXECUTIVE WORKSPACE: 30% AGREGAT LIST & 70% PETA      */}
+      {/* ======================================================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-10 gap-4.5 items-stretch w-full">
+        {/* Left Column: 30% Target & Capaian Agregat Nasional Pilar */}
+        <div className="lg:col-span-3 h-[540px] lg:h-[580px] xl:h-[620px] flex flex-col">
+          <PillarAgregatListCard
+            activePillar={activePillar}
+            selectedYear={selectedYear}
+            activeIndicatorId={activeIndicatorId}
+            onSelectIndicator={(indicatorId) => {
+              setActiveIndicatorId(indicatorId);
+            }}
+            onSelectPillar={(pillarId) => {
+              handlePillarChange(pillarId);
+            }}
+          />
         </div>
 
-        {/* Dual Strategic Banners: Isu Strategis & Agenda Transformasi PMK */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Card A: Isu Strategis */}
-          <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200/80 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2 text-amber-900 font-bold text-xs">
-                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                <span>Isu Strategis Wilayah:</span>
-              </div>
-              <p className="text-xs text-slate-800 leading-relaxed font-medium">
-                {getWilayahIsuStrategis(currentWilayah)}
-              </p>
-            </div>
-            <div className="text-[10.5px] text-amber-700/90 font-semibold mt-3 pt-2 border-t border-amber-200/60">
-              Fokus mitigasi hambatan &amp; akselerasi sasaran pembangunan
-            </div>
-          </div>
-
-          {/* Card B: Agenda Transformasi */}
-          <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200/80 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2 text-blue-900 font-bold text-xs">
-                <Compass className="h-4 w-4 text-blue-600 shrink-0" />
-                <span>Agenda Transformasi PMK 2025–2029:</span>
-              </div>
-              <p className="text-xs text-slate-800 leading-relaxed font-medium">
-                {getWilayahAgendaTransformasi(currentWilayah)}
-              </p>
-            </div>
-            <div className="text-[10.5px] text-blue-700/90 font-semibold mt-3 pt-2 border-t border-blue-200/60">
-              Konvergensi lintas K/L &amp; pemerintah daerah berkelanjutan
-            </div>
-          </div>
-        </div>
-
-        {/* 4 Pillars Capaian Strategis Side-by-Side (High readability, structured stats, no long jammed sentences) */}
-        <div className="my-6">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              Capaian Strategis 4 Pilar Utama di Wilayah Terpilih:
-            </span>
-            <span className="text-[11px] text-slate-500 font-medium">
-              Data Terpadu Kemenko PMK
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Pilar 1: Pendidikan */}
-            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200 flex flex-col justify-between hover:border-blue-300 transition-colors min-h-[220px]">
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-xs font-bold text-slate-900">
-                    Revitalisasi Sarana Satdik
-                  </span>
-                  <div className="w-6 h-6 rounded-md bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700">
-                    <GraduationCap className="h-3.5 w-3.5" />
-                  </div>
-                </div>
-
-                {/* Hero Number Highlight */}
-                <div className="mb-3">
-                  <div className="text-2xl md:text-3xl font-black text-slate-900 tabular-nums tracking-tight">
-                    {currentWilayah.pillarDetails?.pendidikan?.heroValue}
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-medium mt-0.5">
-                    {currentWilayah.pillarDetails?.pendidikan?.heroLabel}
-                  </div>
-                </div>
-
-                {/* Structured Key-Value Rows */}
-                <div className="space-y-1.5 py-2.5 border-t border-slate-200/80 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">
-                      {currentWilayah.pillarDetails?.pendidikan?.metric1?.label}
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-900">
-                      {currentWilayah.pillarDetails?.pendidikan?.metric1?.value}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">
-                      {currentWilayah.pillarDetails?.pendidikan?.metric2?.label}
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-900">
-                      {currentWilayah.pillarDetails?.pendidikan?.metric2?.value}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-[11px] text-slate-600 leading-snug pt-2.5 border-t border-slate-100 font-normal">
-                {currentWilayah.pillarDetails?.pendidikan?.keterangan}
-              </p>
-            </div>
-
-            {/* Pilar 2: Kesehatan */}
-            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200 flex flex-col justify-between hover:border-emerald-300 transition-colors min-h-[220px]">
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-xs font-bold text-slate-900">
-                    Layanan Kesehatan Dasar &amp; CKG
-                  </span>
-                  <div className="w-6 h-6 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
-                    <HeartPulse className="h-3.5 w-3.5" />
-                  </div>
-                </div>
-
-                {/* Hero Number Highlight */}
-                <div className="mb-3">
-                  <div className="text-2xl md:text-3xl font-black text-slate-900 tabular-nums tracking-tight">
-                    {currentWilayah.pillarDetails?.kesehatan?.heroValue}
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-medium mt-0.5">
-                    {currentWilayah.pillarDetails?.kesehatan?.heroLabel}
-                  </div>
-                </div>
-
-                {/* Structured Key-Value Rows */}
-                <div className="space-y-1.5 py-2.5 border-t border-slate-200/80 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">
-                      {currentWilayah.pillarDetails?.kesehatan?.metric1?.label}
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-900">
-                      {currentWilayah.pillarDetails?.kesehatan?.metric1?.value}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">
-                      {currentWilayah.pillarDetails?.kesehatan?.metric2?.label}
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-900">
-                      {currentWilayah.pillarDetails?.kesehatan?.metric2?.value}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-[11px] text-slate-600 leading-snug pt-2.5 border-t border-slate-100 font-normal">
-                {currentWilayah.pillarDetails?.kesehatan?.keterangan}
-              </p>
-            </div>
-
-            {/* Pilar 3: Ketahanan Bencana */}
-            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200 flex flex-col justify-between hover:border-amber-300 transition-colors min-h-[220px]">
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-xs font-bold text-slate-900">
-                    Infrastruktur Pascabencana
-                  </span>
-                  <div className="w-6 h-6 rounded-md bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
-                    <ShieldAlert className="h-3.5 w-3.5" />
-                  </div>
-                </div>
-
-                {/* Hero Number Highlight */}
-                <div className="mb-3">
-                  <div className="text-2xl md:text-3xl font-black text-slate-900 tabular-nums tracking-tight">
-                    {currentWilayah.pillarDetails?.bencana?.heroValue}
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-medium mt-0.5">
-                    {currentWilayah.pillarDetails?.bencana?.heroLabel}
-                  </div>
-                </div>
-
-                {/* Structured Key-Value Rows */}
-                <div className="space-y-1.5 py-2.5 border-t border-slate-200/80 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">
-                      {currentWilayah.pillarDetails?.bencana?.metric1?.label}
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-900">
-                      {currentWilayah.pillarDetails?.bencana?.metric1?.value}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">
-                      {currentWilayah.pillarDetails?.bencana?.metric2?.label}
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-900">
-                      {currentWilayah.pillarDetails?.bencana?.metric2?.value}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-[11px] text-slate-600 leading-snug pt-2.5 border-t border-slate-100 font-normal">
-                {currentWilayah.pillarDetails?.bencana?.keterangan}
-              </p>
-            </div>
-
-            {/* Pilar 4: Penurunan Kemiskinan */}
-            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200 flex flex-col justify-between hover:border-rose-300 transition-colors min-h-[220px]">
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-xs font-bold text-slate-900">
-                    Perlindungan Sosial &amp; Kemiskinan
-                  </span>
-                  <div className="w-6 h-6 rounded-md bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-700">
-                    <TrendingDown className="h-3.5 w-3.5" />
-                  </div>
-                </div>
-
-                {/* Hero Number Highlight */}
-                <div className="mb-3">
-                  <div className="text-2xl md:text-3xl font-black text-slate-900 tabular-nums tracking-tight">
-                    {currentWilayah.pillarDetails?.kemiskinan?.heroValue}
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-medium mt-0.5">
-                    {currentWilayah.pillarDetails?.kemiskinan?.heroLabel}
-                  </div>
-                </div>
-
-                {/* Structured Key-Value Rows */}
-                <div className="space-y-1.5 py-2.5 border-t border-slate-200/80 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">
-                      {currentWilayah.pillarDetails?.kemiskinan?.metric1?.label}
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-900">
-                      {currentWilayah.pillarDetails?.kemiskinan?.metric1?.value}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">
-                      {currentWilayah.pillarDetails?.kemiskinan?.metric2?.label}
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-900">
-                      {currentWilayah.pillarDetails?.kemiskinan?.metric2?.value}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-[11px] text-slate-600 leading-snug pt-2.5 border-t border-slate-100 font-normal">
-                {currentWilayah.pillarDetails?.kemiskinan?.keterangan}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Coordination Banner: Kemenko PMK */}
-        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-start sm:items-center gap-2.5">
-            <span className="font-extrabold text-slate-900 shrink-0">
-              Fokus Pengawalan Kemenko PMK:
-            </span>
-            <span className="text-slate-700 font-normal leading-relaxed">
-              {currentWilayah.catatanStrategis}
-            </span>
-          </div>
-          <span className="text-[11px] text-slate-500 shrink-0 font-medium">
-            Sumber: Konsolidasi 4 Pilar &amp; BPS 2026
-          </span>
+        {/* Right Column: 70% Peta Geospasial Interaktif */}
+        <div className="lg:col-span-7 h-[540px] lg:h-[580px] xl:h-[620px] flex flex-col">
+          <LeafletMapWrapper
+            selectedWilayah={currentWilayah}
+            availableBoundaries={activeBoundaries}
+            onSelectWilayah={handleBoundaryClick}
+            onResetNasional={handleResetNasional}
+            selectedPillar={activePillar}
+            selectedIndicator={activeIndicatorId}
+          />
         </div>
       </div>
     </div>

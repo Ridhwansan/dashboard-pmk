@@ -49,26 +49,28 @@ export const DashboardShell: React.FC = () => {
         onNavigateHome={handleSelectLayer1}
       />
 
-      {/* 3. Main Dashboard Content Area */}
-      <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 lg:px-8 py-6">
-        {currentLayer === 'layer1' && (
-          <Layer1BentoGrid
-            viewMode={viewMode}
-            onSelectPillar={handleSelectPillar}
-          />
-        )}
+      {/* 3. Main Dashboard Content Area - Perfectly aligned with Navbar */}
+      <div className="w-full px-4 lg:px-8 flex-1 flex flex-col">
+        <main className="flex-1 w-full max-w-[1600px] mx-auto py-6">
+          {currentLayer === 'layer1' && (
+            <Layer1BentoGrid
+              viewMode={viewMode}
+              onSelectPillar={handleSelectPillar}
+            />
+          )}
 
-        {currentLayer === 'layer2' && (
-          <Layer2PillarDetail
-            pillarId={selectedPillar}
-            onBackToHome={handleSelectLayer1}
-          />
-        )}
+          {currentLayer === 'layer2' && (
+            <Layer2PillarDetail
+              pillarId={selectedPillar}
+              onBackToHome={handleSelectLayer1}
+            />
+          )}
 
-        {currentLayer === 'layer3' && (
-          <Layer3MasterData onBackToHome={handleSelectLayer1} />
-        )}
-      </main>
+          {currentLayer === 'layer3' && (
+            <Layer3MasterData onBackToHome={handleSelectLayer1} />
+          )}
+        </main>
+      </div>
 
       {/* Clean White Executive Footer - Non-redundant */}
       <footer className="w-full bg-white border-t border-slate-200/90 py-4 px-4 lg:px-8 mt-auto">

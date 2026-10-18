@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronUp, AlertCircle, MapPin } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { PillarData } from '@/types/dashboard';
-import { INDONESIA_REGIONS } from '@/data/dashboardData';
 
 interface PendidikanDetailViewProps {
   onBackToHome: () => void;
@@ -32,50 +31,49 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
   pillar,
 }) => {
   const [showOrchestration, setShowOrchestration] = useState(true);
-  const [showRegional, setShowRegional] = useState(false);
   const [expandedIssueId, setExpandedIssueId] = useState<number | null>(null);
 
   // 1. Exact 6 Metric Cards from the provided image
   const metricCards: MetricCardItem[] = [
     {
-      title: 'Revitalisasi Satuan Pendidikan',
+      title: 'Revitalisasi (satdik)',
       value: '36.669',
-      unit: 'satuan pendidikan',
+      unit: 'satdik',
       status: 'Capaian 2026',
-      target: 'Target 2026: 80.282 satuan pendidikan',
+      target: 'Target 2026: 80.282 satdik (45,7%)',
     },
     {
       title: 'SNT operasional',
       value: '17',
-      unit: 'satuan pendidikan',
+      unit: 'unit - kumulatif',
       status: 'Capaian 2026',
-      target: 'Target 2026: 35 satuan pendidikan',
+      target: 'Target 2026: 35 unit (45,9%)',
     },
     {
-      title: 'Sekolah Unggul Garuda Baru',
+      title: 'SUG baru',
       value: '3',
-      unit: 'satuan pendidikan',
-      status: 'Capaian 2026',
-      target: 'Target 2026: 4 satuan pendidikan',
-    },
-    {
-      title: 'Sekolah Unggul Garuda Transformasi',
-      value: '30',
-      unit: 'satuan pendidikan',
-      status: 'Capaian 2026',
-      target: 'Target 2026: 30 satuan pendidikan',
-    },
-    {
-      title: 'Digitalisasi Pendidikan',
-      value: '727.436',
       unit: 'unit',
       status: 'Capaian 2026',
-      target: 'Target 2026: 727.436 unit (100%)',
+      target: 'Target 2026: 4 unit (75%)',
+    },
+    {
+      title: 'SUG Transformasi',
+      value: '30',
+      unit: 'unit',
+      status: 'Capaian 2026',
+      target: 'Target 2026: 30 unit (100%)',
+    },
+    {
+      title: 'IFP diproduksi dan disalurkan',
+      value: '727.436',
+      unit: 'perangkat & satdik',
+      status: 'Capaian 2026',
+      target: 'Target 2026: 727.436 (100%)',
       subtext: '(Berproses disalurkan)',
     },
     {
-      title: 'Indeks Modal Manusia (IMM)',
-      value: '0,562',
+      title: 'Indeks Modal Manusia',
+      value: '0,56',
       unit: 'poin',
       status: 'Capaian 2025',
       target: 'Target 2026: 0.57',
@@ -83,17 +81,8 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
     },
   ];
 
-  // 2. Exact 6 Table Rows from the provided image
+  // 2. Exact 7 Table Rows from the provided image
   const tableRows: AnnualIndicatorRow[] = [
-    {
-      name: 'Revitalisasi satuan pendidikan',
-      subUnit: 'satdik · target per tahun',
-      y2025: { t: '12.825', c: '17.508' },
-      y2026: { t: '80.282', c: '36.669' },
-      y2027: { t: '99.423', c: '—' },
-      y2028: { t: '116.614', c: '—' },
-      y2029: { t: '98.375', c: '—' },
-    },
     {
       name: 'Indeks Modal Manusia',
       y2025: { t: '0,56', c: '—' },
@@ -103,25 +92,34 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
       y2029: { t: '0.59', c: '—' },
     },
     {
-      name: 'SNT operasional',
+      name: 'Revitalisasi (satdik)',
+      subUnit: 'satdik · target per tahun',
+      y2025: { t: '12.825', c: '17.508' },
+      y2026: { t: '80.282', c: '36.669 (45,7%)' },
+      y2027: { t: '99.423', c: '—' },
+      y2028: { t: '116.614', c: '—' },
+      y2029: { t: '98.375', c: '—' },
+    },
+    {
+      name: 'SNT operasional (unit - kumulatif)',
       subUnit: 'unit · kumulatif',
       y2025: { t: '—', c: '—' },
-      y2026: { t: '35', c: '17' },
+      y2026: { t: '35', c: '17 (45,9%)' },
       y2027: { t: '135', c: '—' },
       y2028: { t: '335', c: '—' },
       y2029: { t: '500', c: '—' },
     },
     {
-      name: 'SUG baru',
+      name: 'SUG baru (unit)',
       subUnit: 'unit · target per tahun',
       y2025: { t: '4', c: '—' },
-      y2026: { t: '4', c: '3' },
+      y2026: { t: '4', c: '3 (75%)' },
       y2027: { t: '5', c: '—' },
       y2028: { t: '4', c: '—' },
       y2029: { t: '3', c: '—' },
     },
     {
-      name: 'SUG Transformasi',
+      name: 'SUG Transformasi (unit)',
       subUnit: 'unit',
       y2025: { t: '12', c: '12' },
       y2026: { t: '30', c: '30' },
@@ -130,7 +128,7 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
       y2029: { t: '—', c: '—' },
     },
     {
-      name: 'IFP diproduksi dan disalurkan',
+      name: 'IFP diproduksi dan disalurkan (perangkat & satdik)',
       subUnit: '(perangkat & satdik)',
       y2025: { t: '288.865', c: '288.865 (100%)' },
       y2026: {
@@ -139,6 +137,14 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
         note: '(Berproses disalurkan)',
       },
       y2027: { t: '—', c: '—' },
+      y2028: { t: '—', c: '—' },
+      y2029: { t: '—', c: '—' },
+    },
+    {
+      name: 'Studio Guru',
+      y2025: { t: '—', c: '—' },
+      y2026: { t: 'Peluncuran Nov 2027', c: '—' },
+      y2027: { t: 'Operasional', c: '—' },
       y2028: { t: '—', c: '—' },
       y2029: { t: '—', c: '—' },
     },
@@ -402,61 +408,6 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
         )}
       </div>
 
-      {/* Accordion / Secondary Sections: Peta & Progres Wilayah */}
-      <div className="bg-white rounded-xl p-5 md:p-6 border border-slate-200/90 shadow-2xs">
-        <button
-          type="button"
-          onClick={() => setShowRegional(!showRegional)}
-          className="w-full flex items-center justify-between text-left group cursor-pointer focus-visible:outline-2 focus-visible:outline-slate-400 rounded-lg"
-          aria-expanded={showRegional}
-        >
-          <div className="flex items-center gap-2.5">
-            <MapPin className="h-5 w-5 text-blue-600 shrink-0" />
-            <div>
-              <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-800 transition-colors">
-                Sebaran 6 Koridor Wilayah Indonesia
-              </h3>
-              <p className="text-xs text-slate-600 font-medium mt-0.5">
-                Progres rata-rata PKPN dan Agenda Transformasi per wilayah
-              </p>
-            </div>
-          </div>
-          {showRegional ? (
-            <ChevronUp className="h-5 w-5 text-slate-600" />
-          ) : (
-            <ChevronDown className="h-5 w-5 text-slate-600" />
-          )}
-        </button>
-
-        {showRegional && (
-          <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-            {INDONESIA_REGIONS.map((region) => (
-              <div
-                key={region.id}
-                className="p-3 rounded-lg bg-slate-50 border border-slate-200"
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold text-slate-900">
-                    {region.name}
-                  </span>
-                  <span className="text-xs font-bold text-slate-900 numeric tabular-nums">
-                    {region.progressOverall}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mb-2">
-                  <div
-                    className="bg-blue-600 h-full rounded-full"
-                    style={{ width: `${region.progressOverall}%` }}
-                  />
-                </div>
-                <p className="text-xs text-slate-700 font-medium line-clamp-2">
-                  {region.statusPKPN}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 };

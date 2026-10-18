@@ -44,7 +44,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
           <span className="text-slate-700">Super Eksekutif</span>
           <ChevronRight className="h-3.5 w-3.5 text-slate-500 shrink-0" />
           <span className="text-slate-900 font-bold">
-            {viewMode === 'cards' ? 'Ringkasan Nasional' : 'Peta Wilayah Indonesia'}
+            Peta Spasial &amp; Capaian Nasional
           </span>
         </>
       )}

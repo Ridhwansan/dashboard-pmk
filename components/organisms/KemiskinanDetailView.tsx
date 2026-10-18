@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronUp, AlertCircle, MapPin } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { PillarData } from '@/types/dashboard';
-import { INDONESIA_REGIONS } from '@/data/dashboardData';
 
 interface KemiskinanDetailViewProps {
   onBackToHome: () => void;
@@ -32,7 +31,6 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
   pillar,
 }) => {
   const [showOrchestration, setShowOrchestration] = useState(true);
-  const [showRegional, setShowRegional] = useState(false);
   const [expandedIssueId, setExpandedIssueId] = useState<number | null>(null);
 
   // Exact 9 Metric Cards from Image 3 (Gambar 3 - Detail Penurunan Kemiskinan)
@@ -410,61 +408,6 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
         )}
       </div>
 
-      {/* Accordion / Secondary Sections: Peta & Progres Wilayah */}
-      <div className="bg-white rounded-xl p-5 md:p-6 border border-slate-200/90 shadow-2xs">
-        <button
-          type="button"
-          onClick={() => setShowRegional(!showRegional)}
-          className="w-full flex items-center justify-between text-left group cursor-pointer focus-visible:outline-2 focus-visible:outline-slate-400 rounded-lg"
-          aria-expanded={showRegional}
-        >
-          <div className="flex items-center gap-2.5">
-            <MapPin className="h-5 w-5 text-blue-600 shrink-0" />
-            <div>
-              <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-800 transition-colors">
-                Sebaran 6 Koridor Wilayah Indonesia
-              </h3>
-              <p className="text-xs text-slate-600 font-medium mt-0.5">
-                Progres rata-rata PKPN dan Agenda Transformasi per wilayah
-              </p>
-            </div>
-          </div>
-          {showRegional ? (
-            <ChevronUp className="h-5 w-5 text-slate-600" />
-          ) : (
-            <ChevronDown className="h-5 w-5 text-slate-600" />
-          )}
-        </button>
-
-        {showRegional && (
-          <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-            {INDONESIA_REGIONS.map((region) => (
-              <div
-                key={region.id}
-                className="p-3 rounded-lg bg-slate-50 border border-slate-200"
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold text-slate-900">
-                    {region.name}
-                  </span>
-                  <span className="text-xs font-bold text-slate-900 numeric tabular-nums">
-                    {region.progressOverall}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mb-2">
-                  <div
-                    className="bg-blue-600 h-full rounded-full"
-                    style={{ width: `${region.progressOverall}%` }}
-                  />
-                </div>
-                <p className="text-xs text-slate-700 font-medium line-clamp-2">
-                  {region.statusPKPN}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 };
