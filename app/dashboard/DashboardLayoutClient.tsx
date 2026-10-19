@@ -29,22 +29,6 @@ export function DashboardLayoutClient({
           </Suspense>
         </main>
       </div>
-
-      {/* Clean White Executive Footer */}
-      <footer className="w-full bg-white border-t border-slate-200/90 py-4 px-4 lg:px-8 mt-auto">
-        <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs text-slate-500 font-normal">
-          <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-            <span className="font-semibold text-slate-700">
-              Kemenko PMK &amp; Badan Pusat Statistik (BPS)
-            </span>
-            <span className="text-slate-300">·</span>
-            <span>Sistem Pengawalan Program Prioritas Nasional</span>
-          </div>
-          <div className="text-slate-400 text-[11px]">
-            Hak Cipta © 2026 Kementerian Koordinator Bidang Pembangunan Manusia dan Kebudayaan. Seluruh hak cipta dilindungi.
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
