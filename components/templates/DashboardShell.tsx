@@ -83,7 +83,7 @@ export const DashboardShell: React.FC = () => {
             <span>Sistem Pengawalan Program Prioritas Nasional</span>
           </div>
           <div className="text-slate-400 text-[11px]">
-            Hak Cipta © 2026 Republik Indonesia. Seluruh hak cipta dilindungi.
+            Hak Cipta © 2026 Kementerian Koordinator Bidang Pembangunan Manusia dan Kebudayaan. Seluruh hak cipta dilindungi.
           </div>
         </div>
       </footer>

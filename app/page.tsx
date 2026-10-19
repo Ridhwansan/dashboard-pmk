@@ -1,5 +1,5 @@
-import { DashboardShell } from "@/components/templates/DashboardShell";
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-  return <DashboardShell />;
+  redirect('/dashboard/eksekutif');
 }

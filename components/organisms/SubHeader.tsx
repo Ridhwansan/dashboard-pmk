@@ -1,40 +1,72 @@
+'use client';
+
 import React from 'react';
-import { Breadcrumb } from '@/components/molecules/Breadcrumb';
+import { usePathname, useRouter } from 'next/navigation';
 import { LayerType, Layer1ViewMode, PillarId } from '@/types/dashboard';
 import { DASHBOARD_META } from '@/data/dashboardData';
 import { Calendar } from 'lucide-react';
 
 interface SubHeaderProps {
-  currentLayer: LayerType;
-  selectedPillar: PillarId;
+  currentLayer?: LayerType;
+  selectedPillar?: PillarId;
   viewMode?: Layer1ViewMode;
   onViewModeChange?: (mode: Layer1ViewMode) => void;
-  onNavigateHome: () => void;
+  onNavigateHome?: () => void;
 }
 
 export const SubHeader: React.FC<SubHeaderProps> = ({
-  currentLayer,
-  selectedPillar,
-  viewMode = 'map',
-  onNavigateHome,
+  currentLayer: propCurrentLayer,
+  selectedPillar: propSelectedPillar,
 }) => {
+  const pathname = usePathname() || '';
+
+  // Determine current layer and selected pillar from pathname if available
+  let currentLayer: LayerType = propCurrentLayer || 'layer1';
+  let selectedPillar: PillarId = propSelectedPillar || 'pendidikan';
+
+  if (pathname.startsWith('/dashboard/pilar')) {
+    currentLayer = 'layer2';
+    const segment = pathname.split('/')[3] as PillarId;
+    if (segment) selectedPillar = segment;
+  } else if (pathname.startsWith('/dashboard/master-data')) {
+    currentLayer = 'layer3';
+  } else if (pathname.startsWith('/dashboard/eksekutif')) {
+    currentLayer = 'layer1';
+  }
+
+  const getPillarTitle = (id: PillarId) => {
+    switch (id) {
+      case 'pendidikan':
+        return 'Pilar Pendidikan';
+      case 'kesehatan':
+        return 'Pilar Kesehatan';
+      case 'bencana':
+        return 'Pilar Ketahanan Bencana';
+      case 'kemiskinan':
+        return 'Pilar Penurunan Kemiskinan';
+      default:
+        return 'Detail Pilar';
+    }
+  };
+
+  const getPageTitle = () => {
+    if (currentLayer === 'layer1') {
+      return 'Monitoring Program Kerja Prioritas Nasional';
+    }
+    if (currentLayer === 'layer2') {
+      return getPillarTitle(selectedPillar);
+    }
+    return 'Master Data DTSEN';
+  };
+
   return (
-    <div className="w-full bg-white text-slate-900 px-4 lg:px-8 py-3 border-b border-slate-200/90">
+    <div className="w-full bg-white text-slate-900 px-4 lg:px-8 pt-5 sm:pt-6 pb-2.5 border-b border-slate-200/80">
       <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
-        {/* Left Side: Clean Executive Indicator (Layer 1) or Breadcrumb (Layer 2 / Layer 3) */}
+        {/* Left Side: Clean Title (No Breadcrumbs) */}
         <div className="flex items-center gap-3">
-          {currentLayer === 'layer1' ? (
-            <h1 className="text-xs md:text-sm font-semibold text-slate-800 tracking-tight">
-              Peta Spasial &amp; Pengawalan Program Prioritas Nasional (PKPN)
-            </h1>
-          ) : (
-            <Breadcrumb
-              currentLayer={currentLayer}
-              selectedPillar={selectedPillar}
-              viewMode={viewMode}
-              onNavigateHome={onNavigateHome}
-            />
-          )}
+          <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-snug">
+            {getPageTitle()}
+          </h1>
         </div>
 
         {/* Right Side: Clean Cutoff Date */}

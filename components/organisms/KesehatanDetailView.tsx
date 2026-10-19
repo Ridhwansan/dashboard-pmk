@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ArrowLeft, LayoutDashboard, TableProperties, AlertCircle } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, TableProperties, AlertCircle, ChevronRight } from 'lucide-react';
 import { PillarData } from '@/types/dashboard';
 import { PillarKendalaSection } from './PillarKendalaSection';
 import { PillButton } from '@/components/atoms/PillButton';
 import { PillarIndicatorSection } from './PillarIndicatorSection';
+import { CardKendalaModal } from '@/components/molecules/CardKendalaModal';
 
 type DetailTab = 'ringkasan' | 'indikator' | 'kendala';
 
@@ -19,6 +20,8 @@ interface MetricCardItem {
   status?: string;
   target?: string;
   subtext?: string;
+  kendala?: string;
+  tindakLanjut?: string;
 }
 
 interface AnnualIndicatorRow {
@@ -36,8 +39,9 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
   pillar,
 }) => {
   const [activeTab, setActiveTab] = useState<DetailTab>('ringkasan');
+  const [selectedKendalaCard, setSelectedKendalaCard] = useState<MetricCardItem | null>(null);
 
-  // Exact 9 Metric Cards from Image 1 (Gambar 2 - Detail Kesehatan)
+  // Exact 9 Metric Cards from Image 1 (Gambar 1 - Ringkasan Kesehatan & Gambar 3 - Kendala)
   const metricCards: MetricCardItem[] = [
     {
       title: 'Cek Kesehatan Gratis',
@@ -45,61 +49,84 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
       unit: 'juta jiwa',
       status: 'Capaian 2026',
       target: 'Target 2026: 130',
+      kendala: 'Tata Kelola pemeriksaan lanjutan; ketersediaan bahan medis habis pakai',
+      tindakLanjut: 'Percepatan faskes TNI/Polri untuk percepatan daerah Indonesia timur',
     },
     {
       title: 'Penemuan kasus TB',
-      value: '617.244',
+      value: '656.517',
       unit: 'kasus',
       status: 'Capaian 2026',
       target: 'Target 2026: 972.000',
+      kendala: 'Anggaran, stigma, dan dukungan nutrisi',
+      tindakLanjut: 'Peningkatan alokasi anggaran',
     },
     {
       title: 'Renovasi RSUD Tipe D ke C',
       value: '39',
       unit: 'RSUD',
-      status: 'Capaian 2025 :21 RSUD  Capaian 2026: 18 RSUD proses konstruksi',
-      target: 'Target 2026 : 20 RSUD',
+      status: 'Capaian 2025 : 21 RSUD · Capaian 2026: 18 RSUD proses konstruksi',
+      target: 'Target 2026: 20 RSUD',
       subtext: 'Target 2027: 66 RSUD',
+      kendala: 'Ketersediaan dokter spesialis dan alat kesehatan',
+      tindakLanjut: 'Mendorong Kemenkes dan Kemdiktisaintek untuk percepatan penyediaan dokter spesialis dan penyediaan alat kesehatan.',
     },
     {
       title: 'Stunting',
       value: '19,8%',
       status: 'Capaian 2024 (Survei SKI)',
       target: 'Target 14% pada 2029',
+      kendala: 'Revisi Perpres 72/2021 belum ditetapkan',
+      tindakLanjut: 'Percepatan revisi Perpres',
     },
     {
       title: 'MBG balita non-PAUD',
-      value: '7,4',
+      value: '4,89',
       unit: 'juta jiwa',
-      status: 'Capaian 2026 • 44,28% dari sasaran',
+      status: 'Capaian 2026 • 29,2% dari sasaran',
       target: 'Target 2026: 16,7 juta jiwa',
+      kendala: 'Ketepatan sasaran, integrasi data, kualitas layanan',
+      tindakLanjut: 'Refocusing MBG 3B pada wilayah 3T dan penguatan Pemda dalam pengawalan MBG',
     },
     {
       title: 'MBG ibu hamil',
-      value: '38,63',
-      unit: 'juta jiwa',
-      status: 'Capaian 2026 • 38,63% dari sasaran',
-      target: 'Target 2026: 2,39 juta jiwa',
+      value: '656',
+      unit: 'ribu jiwa',
+      status: 'Capaian 2026 • 26,3% dari sasaran',
+      target: 'Target 2026: 2,49 juta jiwa',
+      kendala: 'Ketepatan sasaran, integrasi data, kualitas layanan',
+      tindakLanjut: 'Refocusing MBG 3B pada wilayah 3T dan penguatan Pemda dalam pengawalan MBG',
     },
     {
       title: 'MBG ibu menyusui',
-      value: '86,87',
-      status: 'Capaian 2026 • 86,87% dari sasaran',
+      value: '1,77',
+      unit: 'juta jiwa',
+      status: 'Capaian 2026 • 64,5% dari sasaran',
       target: 'Target 2026: 2,75 juta jiwa',
+      kendala: 'Ketepatan sasaran, integrasi data, kualitas layanan',
+      tindakLanjut: 'Refocusing MBG 3B pada wilayah 3T dan penguatan Pemda dalam pengawalan MBG',
     },
     {
       title: 'Revitalisasi Puskesmas',
       value: '10.000',
-      target: 'Target 2027',
+      unit: 'puskesmas',
+      status: 'Target 2027',
+      target: 'Target 2027: 10.000 puskesmas',
+      kendala: 'Dukungan anggaran',
+      tindakLanjut: 'Mendorong Kemenkes untuk melakukan inventarisasi status kelayakan',
     },
     {
       title: 'Revitalisasi RS',
       value: '450',
-      target: 'Target 2027-2028',
+      unit: 'RS',
+      status: 'Target 2027-2028',
+      target: 'Target 2027-2028: 450 RS',
+      kendala: 'Dukungan anggaran',
+      tindakLanjut: 'Mendorong Kemenkes untuk melakukan inventarisasi status kelayakan',
     },
   ];
 
-  // Exact 6 Table Rows from Image 1 (Gambar 2 - Detail Kesehatan)
+  // Exact 6 Table Rows from Image 2 (Gambar 2 - Indikator Kesehatan)
   const tableRows: AnnualIndicatorRow[] = [
     {
       name: 'Cek Kesehatan Gratis',
@@ -114,7 +141,7 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
       name: 'Penemuan kasus TB',
       subUnit: 'kasus',
       y2025: { t: '981.000', c: '867.480' },
-      y2026: { t: '972.000', c: '617.244' },
+      y2026: { t: '972.000', c: '656.517' },
       y2027: { t: '963.014', c: '—' },
       y2028: { t: '954.035', c: '—' },
       y2029: { t: '945.058', c: '—' },
@@ -123,7 +150,7 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
       name: 'MBG ibu hamil',
       subUnit: '% dari sasaran',
       y2025: { t: '—', c: '—' },
-      y2026: { t: '50', c: '38,63' },
+      y2026: { t: '50', c: '26,3' },
       y2027: { t: '70', c: '—' },
       y2028: { t: '70', c: '—' },
       y2029: { t: '100', c: '—' },
@@ -132,7 +159,7 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
       name: 'MBG ibu menyusui',
       subUnit: '% dari sasaran',
       y2025: { t: '—', c: '—' },
-      y2026: { t: '50', c: '86,87' },
+      y2026: { t: '50', c: '64,5' },
       y2027: { t: '70', c: '—' },
       y2028: { t: '70', c: '—' },
       y2029: { t: '100', c: '—' },
@@ -141,7 +168,7 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
       name: 'MBG balita non-PAUD',
       subUnit: '% dari sasaran',
       y2025: { t: '—', c: '—' },
-      y2026: { t: '16', c: '44,28' },
+      y2026: { t: '16', c: '29,2' },
       y2027: { t: '70', c: '—' },
       y2028: { t: '80', c: '—' },
       y2029: { t: '100', c: '—' },
@@ -235,9 +262,11 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
                   className="bg-white p-5 md:p-6 flex flex-col justify-between hover:bg-slate-50/50 transition-colors"
                 >
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-800 tracking-tight leading-snug">
-                      {card.title}
-                    </h3>
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-slate-800 tracking-tight leading-snug">
+                        {card.title}
+                      </h3>
+                    </div>
 
                     <div className="flex items-baseline gap-2 mt-2 mb-3 flex-wrap">
                       <span className="text-2xl lg:text-3xl font-bold text-slate-900 tabular-nums tracking-tight">
@@ -251,26 +280,52 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="space-y-0.5 pt-2.5 border-t border-slate-100 text-xs">
-                    {card.status && (
-                      <div className="font-semibold text-slate-700">
-                        {card.status}
-                      </div>
-                    )}
-                    {card.target && (
-                      <div className="text-slate-600 font-medium">
-                        {card.target}
-                      </div>
-                    )}
-                    {card.subtext && (
-                      <div className="text-slate-600 font-medium">
-                        {card.subtext}
+                  <div className="pt-2.5 mt-2 border-t border-slate-100 text-xs flex-1 flex flex-col justify-between">
+                    <div className="space-y-0.5">
+                      {card.status && (
+                        <div className="font-semibold text-slate-700">
+                          {card.status}
+                        </div>
+                      )}
+                      {card.target && (
+                        <div className="text-slate-600 font-medium">
+                          {card.target}
+                        </div>
+                      )}
+                      {card.subtext && (
+                        <div className="text-slate-600 font-medium">
+                          {card.subtext}
+                        </div>
+                      )}
+                    </div>
+
+                    {card.kendala && (
+                      <div className="pt-3 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedKendalaCard(card)}
+                          className="w-full h-[40px] min-h-[40px] inline-flex items-center justify-between px-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200/90 hover:border-slate-300 text-xs font-semibold transition-all cursor-pointer shadow-2xs group"
+                        >
+                          <span className="flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-slate-500 shrink-0" />
+                            <span>Kendala &amp; Tindak Lanjut</span>
+                          </span>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform group-hover:translate-x-0.5 shrink-0" />
+                        </button>
                       </div>
                     )}
                   </div>
                 </div>
               ))}
             </div>
+
+            {/* Modal Detail Kendala & Tindak Lanjut Per Kartu */}
+            <CardKendalaModal
+              isOpen={!!selectedKendalaCard}
+              onClose={() => setSelectedKendalaCard(null)}
+              item={selectedKendalaCard}
+              pillarTitle="Kesehatan"
+            />
           </div>
         )}
 

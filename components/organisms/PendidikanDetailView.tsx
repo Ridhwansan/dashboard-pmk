@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ArrowLeft, LayoutDashboard, TableProperties, AlertCircle } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, TableProperties, AlertCircle, ChevronRight } from 'lucide-react';
 import { PillarData } from '@/types/dashboard';
 import { PillarKendalaSection } from './PillarKendalaSection';
 import { PillButton } from '@/components/atoms/PillButton';
 import { PillarIndicatorSection } from './PillarIndicatorSection';
+import { CardKendalaModal } from '@/components/molecules/CardKendalaModal';
 
 type DetailTab = 'ringkasan' | 'indikator' | 'kendala';
 
@@ -19,6 +20,8 @@ interface MetricCardItem {
   status: string;
   target: string;
   subtext?: string;
+  kendala?: string;
+  tindakLanjut?: string;
 }
 
 interface AnnualIndicatorRow {
@@ -36,48 +39,57 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
   pillar,
 }) => {
   const [activeTab, setActiveTab] = useState<DetailTab>('ringkasan');
+  const [selectedKendalaCard, setSelectedKendalaCard] = useState<MetricCardItem | null>(null);
 
-  // 1. Exact 6 Metric Cards from the provided image
+  // 1. Exact 6 Metric Cards from Gambar 1 & Gambar 2
   const metricCards: MetricCardItem[] = [
     {
-      title: 'Revitalisasi (satdik)',
+      title: 'Revitalisasi Satuan Pendidikan',
       value: '36.669',
-      unit: 'satdik',
+      unit: 'satuan pendidikan',
       status: 'Capaian 2026',
-      target: 'Target 2026: 80.282 satdik (45,7%)',
+      target: 'Target 2026: 80.282 satuan pendidikan',
+      kendala: 'ABT 7.131 madrasah belum disetujui; 41 madrasah terdampak bencana butuh penanganan',
+      tindakLanjut: 'Percepatan persetujuan ABT, realokasi sekolah terdampak bencana, penerbitan instruksi Mendagri untuk dukungan daerah',
     },
     {
       title: 'SNT operasional',
       value: '17',
-      unit: 'unit - kumulatif',
+      unit: 'satuan pendidikan',
       status: 'Capaian 2026',
-      target: 'Target 2026: 35 unit (45,9%)',
+      target: 'Target 2026: 35 satuan pendidikan',
+      kendala: 'RPerpres belum ditetapkan; terkendala kesiapan lahan dan kebutuhan guru',
+      tindakLanjut: 'Percepatan RPerpres SNT: finalisasi regulasi, usulan status PSN, kepastian lahan & NPSN, rekrutmen GTK, dan rencana anggaran',
     },
     {
-      title: 'SUG baru',
+      title: 'Sekolah Unggul Garuda Baru',
       value: '3',
-      unit: 'unit',
+      unit: 'satuan pendidikan',
       status: 'Capaian 2026',
-      target: 'Target 2026: 4 unit (75%)',
+      target: 'Target 2026: 4 satuan pendidikan',
+      kendala: 'Perpres Tunjangan GTK belum ditetapkan',
+      tindakLanjut: 'Percepatan Perpres Tunjangan GTK SUG, penegasan kewenangan, dan penyelesaian pembangunan',
     },
     {
-      title: 'SUG Transformasi',
-      value: '30',
-      unit: 'unit',
-      status: 'Capaian 2026',
-      target: 'Target 2026: 30 unit (100%)',
+      title: 'Sekolah Unggul Garuda Transformasi',
+      value: '42',
+      unit: 'satuan pendidikan',
+      status: 'Capaian 2026: 30 satuan pendidikan',
+      target: 'Target 2026: 30 satuan pendidikan',
+      subtext: 'Capaian 2025 : 12 satuan pendidikan',
+      kendala: 'Perpres Tunjangan GTK belum ditetapkan',
+      tindakLanjut: 'Percepatan Perpres Tunjangan GTK SUG, penegasan kewenangan, dan penyelesaian pembangunan',
     },
     {
-      title: 'IFP diproduksi dan disalurkan',
+      title: 'Digitalisasi Pendidikan',
       value: '727.436',
-      unit: 'perangkat & satdik',
-      status: 'Capaian 2026',
-      target: 'Target 2026: 727.436 (100%)',
-      subtext: '(Berproses disalurkan)',
+      unit: 'unit',
+      status: 'Capaian 2026 (Berproses disalurkan)',
+      target: 'Target 2026: 727.436 unit',
     },
     {
-      title: 'Indeks Modal Manusia',
-      value: '0,56',
+      title: 'Indeks Modal Manusia (IMM)',
+      value: '0,562',
       unit: 'poin',
       status: 'Capaian 2025',
       target: 'Target 2026: 0.57',
@@ -85,10 +97,20 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
     },
   ];
 
-  // 2. Exact 7 Table Rows from the provided image
+  // 2. Exact 6 Table Rows from Gambar 3
   const tableRows: AnnualIndicatorRow[] = [
     {
+      name: 'Revitalisasi satuan pendidikan',
+      subUnit: 'satdik · target per tahun',
+      y2025: { t: '12.825', c: '17.508' },
+      y2026: { t: '80.282', c: '36.669' },
+      y2027: { t: '99.423', c: '—' },
+      y2028: { t: '116.614', c: '—' },
+      y2029: { t: '98.375', c: '—' },
+    },
+    {
       name: 'Indeks Modal Manusia',
+      subUnit: 'poin',
       y2025: { t: '0,56', c: '—' },
       y2026: { t: '0.57', c: '—' },
       y2027: { t: '0.575', c: '—' },
@@ -96,34 +118,25 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
       y2029: { t: '0.59', c: '—' },
     },
     {
-      name: 'Revitalisasi (satdik)',
-      subUnit: 'satdik · target per tahun',
-      y2025: { t: '12.825', c: '17.508' },
-      y2026: { t: '80.282', c: '36.669 (45,7%)' },
-      y2027: { t: '99.423', c: '—' },
-      y2028: { t: '116.614', c: '—' },
-      y2029: { t: '98.375', c: '—' },
-    },
-    {
-      name: 'SNT operasional (unit - kumulatif)',
+      name: 'SNT operasional',
       subUnit: 'unit · kumulatif',
       y2025: { t: '—', c: '—' },
-      y2026: { t: '35', c: '17 (45,9%)' },
+      y2026: { t: '35', c: '17' },
       y2027: { t: '135', c: '—' },
       y2028: { t: '335', c: '—' },
       y2029: { t: '500', c: '—' },
     },
     {
-      name: 'SUG baru (unit)',
+      name: 'SUG baru',
       subUnit: 'unit · target per tahun',
       y2025: { t: '4', c: '—' },
-      y2026: { t: '4', c: '3 (75%)' },
+      y2026: { t: '4', c: '3' },
       y2027: { t: '5', c: '—' },
       y2028: { t: '4', c: '—' },
       y2029: { t: '3', c: '—' },
     },
     {
-      name: 'SUG Transformasi (unit)',
+      name: 'SUG Transformasi',
       subUnit: 'unit',
       y2025: { t: '12', c: '12' },
       y2026: { t: '30', c: '30' },
@@ -132,7 +145,7 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
       y2029: { t: '—', c: '—' },
     },
     {
-      name: 'IFP diproduksi dan disalurkan (perangkat & satdik)',
+      name: 'IFP diproduksi dan disalurkan',
       subUnit: '(perangkat & satdik)',
       y2025: { t: '288.865', c: '288.865 (100%)' },
       y2026: {
@@ -141,14 +154,6 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
         note: '(Berproses disalurkan)',
       },
       y2027: { t: '—', c: '—' },
-      y2028: { t: '—', c: '—' },
-      y2029: { t: '—', c: '—' },
-    },
-    {
-      name: 'Studio Guru',
-      y2025: { t: '—', c: '—' },
-      y2026: { t: 'Peluncuran Nov 2027', c: '—' },
-      y2027: { t: 'Operasional', c: '—' },
       y2028: { t: '—', c: '—' },
       y2029: { t: '—', c: '—' },
     },
@@ -232,9 +237,11 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
                   className="bg-white p-5 md:p-6 flex flex-col justify-between hover:bg-slate-50/50 transition-colors"
                 >
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-800 tracking-tight leading-snug">
-                      {card.title}
-                    </h3>
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-slate-800 tracking-tight leading-snug">
+                        {card.title}
+                      </h3>
+                    </div>
 
                     <div className="flex items-baseline gap-2 mt-2 mb-3 flex-wrap">
                       <span className="text-2xl lg:text-3xl font-bold text-slate-900 tabular-nums tracking-tight">
@@ -246,22 +253,48 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="space-y-0.5 pt-2.5 border-t border-slate-100 text-xs">
-                    <div className="font-semibold text-slate-700">
-                      {card.status}
-                    </div>
-                    <div className="text-slate-600 font-medium">
-                      {card.target}
-                    </div>
-                    {card.subtext && (
+                  <div className="pt-2.5 mt-2 border-t border-slate-100 text-xs flex-1 flex flex-col justify-between">
+                    <div className="space-y-0.5">
+                      <div className="font-semibold text-slate-700">
+                        {card.status}
+                      </div>
                       <div className="text-slate-600 font-medium">
-                        {card.subtext}
+                        {card.target}
+                      </div>
+                      {card.subtext && (
+                        <div className="text-slate-600 font-medium">
+                          {card.subtext}
+                        </div>
+                      )}
+                    </div>
+
+                    {card.kendala && (
+                      <div className="pt-3 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedKendalaCard(card)}
+                          className="w-full h-[40px] min-h-[40px] inline-flex items-center justify-between px-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200/90 hover:border-slate-300 text-xs font-semibold transition-all cursor-pointer shadow-2xs group"
+                        >
+                          <span className="flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-slate-500 shrink-0" />
+                            <span>Kendala &amp; Tindak Lanjut</span>
+                          </span>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform group-hover:translate-x-0.5 shrink-0" />
+                        </button>
                       </div>
                     )}
                   </div>
                 </div>
               ))}
             </div>
+
+            {/* Modal Detail Kendala & Tindak Lanjut Per Kartu */}
+            <CardKendalaModal
+              isOpen={!!selectedKendalaCard}
+              onClose={() => setSelectedKendalaCard(null)}
+              item={selectedKendalaCard}
+              pillarTitle="Pendidikan"
+            />
           </div>
         )}
 

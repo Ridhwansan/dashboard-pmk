@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ArrowLeft, LayoutDashboard, TableProperties, AlertCircle } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, TableProperties, AlertCircle, ChevronRight } from 'lucide-react';
 import { PillarData } from '@/types/dashboard';
 import { PillarKendalaSection } from './PillarKendalaSection';
 import { PillButton } from '@/components/atoms/PillButton';
 import { PillarIndicatorSection } from './PillarIndicatorSection';
+import { CardKendalaModal } from '@/components/molecules/CardKendalaModal';
 
 type DetailTab = 'ringkasan' | 'indikator' | 'kendala';
 
@@ -19,6 +20,8 @@ interface MetricCardItem {
   status?: string;
   target?: string;
   subtext?: string;
+  kendala?: string;
+  tindakLanjut?: string;
 }
 
 interface AnnualIndicatorRow {
@@ -36,14 +39,17 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
   pillar,
 }) => {
   const [activeTab, setActiveTab] = useState<DetailTab>('ringkasan');
+  const [selectedKendalaCard, setSelectedKendalaCard] = useState<MetricCardItem | null>(null);
 
-  // Exact 9 Metric Cards from Image 3 (Gambar 3 - Detail Penurunan Kemiskinan)
+  // Exact 9 Metric Cards from Image 5 (Gambar 5 - Penurunan Kemiskinan)
   const metricCards: MetricCardItem[] = [
     {
       title: 'Tingkat kemiskinan',
       value: '8,07',
       status: 'Capaian 2026 • % penduduk',
       target: 'Target 2026: 6,5–7,5',
+      kendala: 'Stunting dan tuberkulosis masih terkonsentrasi tinggi pada kantong-kantong kemiskinan.',
+      tindakLanjut: 'Orkestrasi penetapan sasaran dan intervensi lintas K/L (BGN, Kemenkes, Kemensos).',
     },
     {
       title: 'Kemiskinan ekstrem',
@@ -56,12 +62,16 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
       value: '116.754',
       status: 'Capaian 2025 • orang penerima',
       target: 'Target 2027 ≥116.754 | 2026 terhenti',
+      kendala: 'Program permakanan lansia terhenti pada tahun anggaran 2026.',
+      tindakLanjut: 'Orkestrasi penetapan sasaran lansia pada kantong kemiskinan dan intervensi bantuan nutrisi melalui integrasi skema MBG oleh BGN & Kemensos.',
     },
     {
       title: 'Bantuan permakanan disabilitas',
       value: '36.000',
       status: 'Capaian 2025 • orang penerima',
       target: 'Target 2027 ≥36.000 | 2026 terhenti',
+      kendala: 'Program permakanan penyandang disabilitas terhenti pada tahun anggaran 2026.',
+      tindakLanjut: 'Orkestrasi penetapan sasaran disabilitas pada kantong kemiskinan dan intervensi bantuan nutrisi melalui integrasi skema MBG oleh BGN & Kemensos.',
     },
     {
       title: 'Cakupan lansia desil 1–5',
@@ -91,7 +101,7 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
       title: 'Bantuan Operasional Sekolah Madrasah',
       value: '10.36',
       status: 'Capaian 2026 • juta penerima',
-      target: 'Target 2026 .',
+      target: 'Target 2026',
     },
   ];
 
@@ -231,9 +241,11 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
                   className="bg-white p-5 md:p-6 flex flex-col justify-between hover:bg-slate-50/50 transition-colors"
                 >
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-800 tracking-tight leading-snug">
-                      {card.title}
-                    </h3>
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-slate-800 tracking-tight leading-snug">
+                        {card.title}
+                      </h3>
+                    </div>
 
                     <div className="flex items-baseline gap-2 mt-2 mb-3 flex-wrap">
                       <span className="text-2xl lg:text-3xl font-bold text-slate-900 tabular-nums tracking-tight">
@@ -247,26 +259,52 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="space-y-0.5 pt-2.5 border-t border-slate-100 text-xs">
-                    {card.status && (
-                      <div className="font-semibold text-slate-700">
-                        {card.status}
-                      </div>
-                    )}
-                    {card.target && (
-                      <div className="text-slate-600 font-medium">
-                        {card.target}
-                      </div>
-                    )}
-                    {card.subtext && (
-                      <div className="text-slate-600 font-medium">
-                        {card.subtext}
+                  <div className="pt-2.5 mt-2 border-t border-slate-100 text-xs flex-1 flex flex-col justify-between">
+                    <div className="space-y-0.5">
+                      {card.status && (
+                        <div className="font-semibold text-slate-700">
+                          {card.status}
+                        </div>
+                      )}
+                      {card.target && (
+                        <div className="text-slate-600 font-medium">
+                          {card.target}
+                        </div>
+                      )}
+                      {card.subtext && (
+                        <div className="text-slate-600 font-medium">
+                          {card.subtext}
+                        </div>
+                      )}
+                    </div>
+
+                    {card.kendala && (
+                      <div className="pt-3 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedKendalaCard(card)}
+                          className="w-full h-[40px] min-h-[40px] inline-flex items-center justify-between px-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200/90 hover:border-slate-300 text-xs font-semibold transition-all cursor-pointer shadow-2xs group"
+                        >
+                          <span className="flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-slate-500 shrink-0" />
+                            <span>Kendala &amp; Tindak Lanjut</span>
+                          </span>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform group-hover:translate-x-0.5 shrink-0" />
+                        </button>
                       </div>
                     )}
                   </div>
                 </div>
               ))}
             </div>
+
+            {/* Modal Detail Kendala & Tindak Lanjut Per Kartu */}
+            <CardKendalaModal
+              isOpen={!!selectedKendalaCard}
+              onClose={() => setSelectedKendalaCard(null)}
+              item={selectedKendalaCard}
+              pillarTitle="Penurunan Kemiskinan"
+            />
           </div>
         )}
 

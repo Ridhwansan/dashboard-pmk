@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { LayerType, PillarId } from '@/types/dashboard';
 
@@ -6,13 +9,12 @@ interface BreadcrumbProps {
   currentLayer: LayerType;
   selectedPillar: PillarId;
   viewMode?: 'cards' | 'map';
-  onNavigateHome: () => void;
+  onNavigateHome?: () => void;
 }
 
 export const Breadcrumb: React.FC<BreadcrumbProps> = ({
   currentLayer,
   selectedPillar,
-  viewMode = 'cards',
   onNavigateHome,
 }) => {
   const getPillarTitle = (id: PillarId) => {
@@ -30,12 +32,13 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
 
   return (
     <nav className="flex items-center gap-1.5 text-xs text-slate-700 font-semibold select-none flex-wrap">
-      <button
-        onClick={onNavigateHome}
+      <Link
+        href="/dashboard/eksekutif"
+        onClick={() => onNavigateHome?.()}
         className="hover:text-slate-900 transition-colors cursor-pointer hover:underline underline-offset-4"
       >
         Layer 1
-      </button>
+      </Link>
 
       <ChevronRight className="h-3.5 w-3.5 text-slate-500 shrink-0" />
 
@@ -51,12 +54,13 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
 
       {currentLayer === 'layer2' && (
         <>
-          <button
-            onClick={onNavigateHome}
+          <Link
+            href="/dashboard/pilar"
+            onClick={() => onNavigateHome?.()}
             className="hover:text-slate-900 transition-colors cursor-pointer hover:underline underline-offset-4"
           >
             Pemantauan PKPN
-          </button>
+          </Link>
           <ChevronRight className="h-3.5 w-3.5 text-slate-500 shrink-0" />
           <span className="text-slate-900 font-bold">{getPillarTitle(selectedPillar)}</span>
         </>

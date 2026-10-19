@@ -439,9 +439,9 @@ export const PillarIndicatorSection: React.FC<PillarIndicatorSectionProps> = ({
               </div>
 
               {/* Footer Card */}
-              <div className="p-3 border-t border-slate-100 bg-slate-50/60 shrink-0 flex items-center justify-between text-[10.5px] text-slate-500 font-medium">
-                <span>Bappenas &amp; Kemenko PMK</span>
-                <span className="font-semibold text-slate-600">RPJMN 2025–2029</span>
+              <div className="px-3.5 py-2.5 border-t border-slate-100 bg-slate-50/60 shrink-0 flex items-center justify-between text-[11px] text-slate-600 font-medium">
+                <span>Daftar Indikator Pilar</span>
+                <span className="font-semibold text-slate-700">RPJMN 2025–2029</span>
               </div>
             </div>
 

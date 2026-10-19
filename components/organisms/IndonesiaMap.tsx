@@ -24,6 +24,8 @@ import {
   ChevronDown,
   Check,
   Calendar,
+  AlertTriangle,
+  Target,
 } from 'lucide-react';
 
 interface IndonesiaMapProps {
@@ -35,12 +37,12 @@ interface IndonesiaMapProps {
 export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   className = '',
   onSelectPillar,
-  initialPillar = null,
+  initialPillar = 'pendidikan',
 }) => {
-  // 1. Pillar and Sub-Indicator Filter States (defaults to null so user chooses first)
-  const [activePillar, setActivePillar] = useState<MapPillarId | null>(initialPillar);
+  // 1. Pillar and Sub-Indicator Filter States (default: Pendidikan & Revitalisasi Satdik)
+  const [activePillar, setActivePillar] = useState<MapPillarId | null>(initialPillar || 'pendidikan');
   const [activeIndicatorId, setActiveIndicatorId] = useState<string | null>(() => {
-    return initialPillar ? getDefaultIndicatorForPillar(initialPillar).id : null;
+    return initialPillar ? getDefaultIndicatorForPillar(initialPillar).id : 'revitalisasi_satdik';
   });
 
   // 2. Annual Period Filter State (2025 - 2029, default: 2026)
@@ -80,6 +82,18 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
     setActivePillar(pillarId);
     setActiveIndicatorId(indicatorId);
     setOpenDropdownPillar(null);
+  };
+
+  // Designated Focus Indicator
+  const FOCUS_PILLAR: MapPillarId = 'pendidikan';
+  const FOCUS_INDICATOR_ID = 'revitalisasi_satdik';
+
+  const isAtFocusIndicator =
+    activePillar === FOCUS_PILLAR && activeIndicatorId === FOCUS_INDICATOR_ID;
+
+  const handleResetToFocus = () => {
+    setActivePillar(FOCUS_PILLAR);
+    setActiveIndicatorId(FOCUS_INDICATOR_ID);
   };
 
   // Active indicator definition (null when user hasn't selected a pillar yet)
@@ -213,146 +227,173 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
       {/* ======================================================== */}
       <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-2xs space-y-3">
         {/* Row 1: Filter Wilayah (Lokus Administratif) */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-semibold text-slate-500 shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="text-sm font-semibold text-slate-600 shrink-0">
               Wilayah:
             </span>
 
-            {/* Compact Selects with reduced widths */}
-            <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Selects with 40px height and proportional chevron arrows */}
+            <div className="flex items-center gap-2 flex-wrap">
               {/* Dropdown 1: Provinsi */}
-              <select
-                id="filter-provinsi"
-                aria-label="Pilih Provinsi"
-                value={selectedProvinsiId}
-                onChange={(e) => handleProvinsiChange(e.target.value)}
-                className="w-40 sm:w-44 text-xs font-semibold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200 hover:border-slate-300 rounded-lg py-1.5 px-2 focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors cursor-pointer truncate"
-              >
-                <option value="nasional">Seluruh Indonesia (38 Prov)</option>
-                {PROVINSI_DATA.map((prov) => (
-                  <option key={prov.id} value={prov.id}>
-                    {prov.name} {prov.isPrioritas ? '• Prioritas' : ''}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  id="filter-provinsi"
+                  aria-label="Pilih Provinsi"
+                  value={selectedProvinsiId}
+                  onChange={(e) => handleProvinsiChange(e.target.value)}
+                  className="h-[40px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-semibold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all cursor-pointer w-48 sm:w-56 truncate"
+                >
+                  <option value="nasional">Seluruh Indonesia (38 Prov)</option>
+                  {PROVINSI_DATA.map((prov) => (
+                    <option key={prov.id} value={prov.id}>
+                      {prov.name} {prov.isPrioritas ? '• Prioritas' : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              </div>
 
               {/* Dropdown 2: Kabupaten / Kota */}
-              <select
-                id="filter-kabkota"
-                aria-label="Pilih Kabupaten atau Kota"
-                value={selectedKabKotaId}
-                disabled={!isDetailSupported}
-                onChange={(e) => handleKabKotaChange(e.target.value)}
-                className={`w-28 sm:w-32 text-xs font-semibold rounded-lg py-1.5 px-2 border transition-colors truncate ${
-                  !isDetailSupported
-                    ? 'bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed'
-                    : 'bg-slate-50 hover:bg-white text-slate-900 border-slate-200 hover:border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer'
-                }`}
-              >
-                <option value="">
-                  {!isDetailSupported
-                    ? selectedProvinsiId === 'nasional'
-                      ? 'Kab/Kota'
-                      : 'Detail s.d. Provinsi'
-                    : 'Pilih Kab/Kota'}
-                </option>
-                {availableKabKota.map((kab) => (
-                  <option key={kab.id} value={kab.id}>
-                    {kab.name} {kab.isPrioritas ? '• Prioritas' : ''}
+              <div className="relative">
+                <select
+                  id="filter-kabkota"
+                  aria-label="Pilih Kabupaten atau Kota"
+                  value={selectedKabKotaId}
+                  disabled={!isDetailSupported}
+                  onChange={(e) => handleKabKotaChange(e.target.value)}
+                  className={`h-[40px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-semibold rounded-xl border transition-all truncate w-36 sm:w-44 ${
+                    !isDetailSupported
+                      ? 'bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed'
+                      : 'bg-slate-50 hover:bg-white text-slate-900 border-slate-200/90 hover:border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer'
+                  }`}
+                >
+                  <option value="">
+                    {!isDetailSupported
+                      ? selectedProvinsiId === 'nasional'
+                        ? 'Kab/Kota'
+                        : 'Detail s.d. Provinsi'
+                      : 'Pilih Kab/Kota'}
                   </option>
-                ))}
-              </select>
+                  {availableKabKota.map((kab) => (
+                    <option key={kab.id} value={kab.id}>
+                      {kab.name} {kab.isPrioritas ? '• Prioritas' : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                    !isDetailSupported ? 'text-slate-300' : 'text-slate-400'
+                  }`}
+                />
+              </div>
 
               {/* Dropdown 3: Kecamatan */}
-              <select
-                id="filter-kecamatan"
-                aria-label="Pilih Kecamatan"
-                value={selectedKecamatanId}
-                disabled={!selectedKabKotaId}
-                onChange={(e) => handleKecamatanChange(e.target.value)}
-                className={`w-24 sm:w-28 text-xs font-semibold rounded-lg py-1.5 px-2 border transition-colors truncate ${
-                  !selectedKabKotaId
-                    ? 'bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed'
-                    : 'bg-slate-50 hover:bg-white text-slate-900 border-slate-200 hover:border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer'
-                }`}
-              >
-                <option value="">
-                  {!selectedKabKotaId ? 'Kecamatan' : 'Pilih Kecamatan'}
-                </option>
-                {availableKecamatan.map((kec) => (
-                  <option key={kec.id} value={kec.id}>
-                    {kec.name} {kec.isPrioritas ? '• Prioritas' : ''}
+              <div className="relative">
+                <select
+                  id="filter-kecamatan"
+                  aria-label="Pilih Kecamatan"
+                  value={selectedKecamatanId}
+                  disabled={!selectedKabKotaId}
+                  onChange={(e) => handleKecamatanChange(e.target.value)}
+                  className={`h-[40px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-semibold rounded-xl border transition-all truncate w-32 sm:w-40 ${
+                    !selectedKabKotaId
+                      ? 'bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed'
+                      : 'bg-slate-50 hover:bg-white text-slate-900 border-slate-200/90 hover:border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer'
+                  }`}
+                >
+                  <option value="">
+                    {!selectedKabKotaId ? 'Kecamatan' : 'Pilih Kecamatan'}
                   </option>
-                ))}
-              </select>
+                  {availableKecamatan.map((kec) => (
+                    <option key={kec.id} value={kec.id}>
+                      {kec.name} {kec.isPrioritas ? '• Prioritas' : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                    !selectedKabKotaId ? 'text-slate-300' : 'text-slate-400'
+                  }`}
+                />
+              </div>
 
               {/* Dropdown 4: Desa */}
-              <select
-                id="filter-desa"
-                aria-label="Pilih Desa atau Kelurahan"
-                value={selectedDesaId}
-                disabled={!selectedKecamatanId}
-                onChange={(e) => handleDesaChange(e.target.value)}
-                className={`w-24 sm:w-28 text-xs font-semibold rounded-lg py-1.5 px-2 border transition-colors truncate ${
-                  !selectedKecamatanId
-                    ? 'bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed'
-                    : 'bg-slate-50 hover:bg-white text-slate-900 border-slate-200 hover:border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer'
-                }`}
-              >
-                <option value="">
-                  {!selectedKecamatanId ? 'Desa/Kel' : 'Pilih Desa'}
-                </option>
-                {availableDesa.map((desa) => (
-                  <option key={desa.id} value={desa.id}>
-                    {desa.name} {desa.isPrioritas ? '• Prioritas' : ''}
+              <div className="relative">
+                <select
+                  id="filter-desa"
+                  aria-label="Pilih Desa atau Kelurahan"
+                  value={selectedDesaId}
+                  disabled={!selectedKecamatanId}
+                  onChange={(e) => handleDesaChange(e.target.value)}
+                  className={`h-[40px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-semibold rounded-xl border transition-all truncate w-32 sm:w-40 ${
+                    !selectedKecamatanId
+                      ? 'bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed'
+                      : 'bg-slate-50 hover:bg-white text-slate-900 border-slate-200/90 hover:border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer'
+                  }`}
+                >
+                  <option value="">
+                    {!selectedKecamatanId ? 'Desa/Kel' : 'Pilih Desa'}
                   </option>
-                ))}
-              </select>
+                  {availableDesa.map((desa) => (
+                    <option key={desa.id} value={desa.id}>
+                      {desa.name} {desa.isPrioritas ? '• Prioritas' : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                    !selectedKecamatanId ? 'text-slate-300' : 'text-slate-400'
+                  }`}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Right side of Row 1: Filter Periode Tahun (Dropdown) & Reset Wilayah */}
-          <div className="flex items-center gap-2.5 shrink-0 self-end md:self-auto flex-wrap min-h-[32px]">
+          {/* Right side of Row 1: Filter Periode Tahun & Reset Wilayah */}
+          <div className="flex items-center gap-2.5 shrink-0 self-end md:self-auto flex-wrap">
             {/* Filter Periode Tahun Dropdown */}
-            <div className="flex items-center gap-1.5">
-              <label htmlFor="filter-tahun" className="text-xs font-semibold text-slate-500 shrink-0">
+            <div className="flex items-center gap-2">
+              <label htmlFor="filter-tahun" className="text-sm font-semibold text-slate-600 shrink-0">
                 Tahun:
               </label>
-              <select
-                id="filter-tahun"
-                aria-label="Pilih Periode Tahun"
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value) as PeriodYear)}
-                className="text-xs font-semibold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200 hover:border-slate-300 rounded-lg py-1.5 px-2.5 focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors cursor-pointer"
-              >
-                {AVAILABLE_YEARS.map((yr) => (
-                  <option key={yr} value={yr}>
-                    {yr}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  id="filter-tahun"
+                  aria-label="Pilih Periode Tahun"
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value) as PeriodYear)}
+                  className="h-[40px] appearance-none pl-3.5 pr-8 w-24 sm:w-28 text-xs sm:text-sm font-semibold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all cursor-pointer"
+                >
+                  {AVAILABLE_YEARS.map((yr) => (
+                    <option key={yr} value={yr}>
+                      {yr}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              </div>
             </div>
 
-            {/* Reset Wilayah Button (visible when a specific territory is filtered) */}
+            {/* Reset Wilayah Button */}
             {selectedProvinsiId !== 'nasional' && (
               <button
                 type="button"
                 onClick={handleResetNasional}
                 title="Kembali ke tampilan Seluruh Indonesia"
-                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-200 shrink-0"
+                className="h-[40px] px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-200/90 shrink-0"
               >
-                <RotateCcw className="h-3 w-3 text-slate-500" />
+                <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
                 <span>Reset Wilayah</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Row 2: Filter Pilar & Sub-Indikator (Clean Buttons, No Noise) */}
-        <div className="pt-2.5 border-t border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2 overflow-x-visible flex-wrap sm:flex-nowrap">
-            <span className="text-xs font-semibold text-slate-500 shrink-0 mr-0.5">
+        {/* Row 2: Filter Pilar & Sub-Indikator (Clean 40px Buttons, Proportional Arrows) */}
+        <div className="pt-3 border-t border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 overflow-x-visible flex-wrap sm:flex-nowrap">
+            <span className="text-sm font-semibold text-slate-600 shrink-0 mr-0.5">
               Pilar:
             </span>
 
@@ -376,29 +417,29 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                     }}
                     aria-haspopup="true"
                     aria-expanded={isOpen}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all duration-150 cursor-pointer ${
+                    className={`h-[40px] inline-flex items-center gap-2 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm transition-all duration-150 cursor-pointer ${
                       isSelected
-                        ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                        : 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200/90 font-medium'
+                        ? 'bg-blue-600 text-white font-semibold shadow-xs hover:bg-blue-700'
+                        : 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200/90 font-medium hover:border-slate-300'
                     }`}
                   >
                     <span>{pilar.shortName}</span>
                     <ChevronDown
-                      className={`h-3 w-3 transition-transform duration-150 ${
+                      className={`w-4 h-4 transition-transform duration-150 shrink-0 ${
                         isOpen ? 'rotate-180' : ''
-                      } ${isSelected ? 'text-white/80' : 'text-slate-400'}`}
+                      } ${isSelected ? 'text-white/90' : 'text-slate-400'}`}
                     />
                   </button>
 
                   {/* Clean Floating Dropdown for Sub-Indicators */}
                   {isOpen && (
                     <div
-                      className="absolute left-0 top-full pt-1.5 z-40 w-72 sm:w-80 animate-in fade-in zoom-in-95 duration-100"
+                      className="absolute left-0 top-full pt-2 z-40 w-72 sm:w-80 animate-in fade-in zoom-in-95 duration-100"
                       onMouseEnter={() => handleMouseEnter(pilar.id)}
                       onMouseLeave={handleMouseLeave}
                     >
                       <div className="bg-white rounded-xl border border-slate-200 shadow-xl p-1.5 text-xs">
-                        <div className="space-y-0.5 max-h-64 overflow-y-auto">
+                        <div className="space-y-0.5 max-h-64 overflow-y-auto custom-scrollbar">
                           {pilarIndicators.map((ind) => {
                             const isIndActive = activeIndicatorId === ind.id;
                             return (
@@ -432,19 +473,71 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
             })}
           </div>
 
-          {/* Active Indicator Display or Prompt */}
-          {currentIndicator ? (
-            <div className="flex items-center gap-1.5 text-xs text-slate-600 self-start xl:self-auto py-0.5">
-              <span className="text-slate-400">Indikator:</span>
-              <span className="font-semibold text-slate-900">{currentIndicator.name}</span>
-              <span className="text-slate-300">·</span>
-              <span className="text-slate-500">Target 2026: {currentIndicator.target2026}</span>
+        </div>
+      </div>
+
+      {/* ======================================================== */}
+      {/* 2. INDIKATOR FOKUS BANNER (~80px Height, Pastel Blue)    */}
+      {/* ======================================================== */}
+      <div className="w-full min-h-[76px] md:h-[80px] bg-white rounded-2xl border border-slate-200/90 shadow-2xs px-4 sm:px-5 py-3 md:py-0 flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors">
+        {/* Left Side: Pastel Blue Chip & Indicator Title */}
+        <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap min-w-0">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 font-bold border border-blue-200/80 text-xs shrink-0 shadow-2xs">
+            <Target className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span>Indikator Fokus</span>
+          </span>
+
+          <div className="h-6 w-px bg-slate-200 hidden sm:block shrink-0" />
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm sm:text-base font-bold text-slate-900 truncate">
+                {currentIndicator?.name || 'Revitalisasi (satdik)'}
+              </span>
+              <span className="text-xs font-medium text-slate-500">
+                ({activePillar && activePillar !== 'all' ? MAP_PILLARS.find((p) => p.id === activePillar)?.name : 'Pilar Pendidikan'})
+              </span>
             </div>
+            <p className="text-[11.5px] text-slate-500 truncate max-w-xl hidden lg:block">
+              {currentIndicator?.description || 'Pengawalan target prioritas dan percepatan wilayah tertinggal'}
+            </p>
+          </div>
+        </div>
+
+        {/* Right Side: Metrics & Return to Focus Button */}
+        <div className="flex items-center gap-3 sm:gap-4 shrink-0 flex-wrap sm:flex-nowrap justify-between md:justify-end border-t md:border-t-0 pt-2 md:pt-0 border-slate-100">
+          <div className="flex items-center gap-2.5 sm:gap-3 text-xs text-slate-600 font-medium">
+            <span>
+              Target {selectedYear}:{' '}
+              <strong className="text-slate-900 font-semibold">
+                {currentIndicator?.target2026 || '80.282 satdik'}
+              </strong>
+            </span>
+            <span className="text-slate-300">·</span>
+            <span>
+              Realisasi:{' '}
+              <strong className="text-slate-900 font-semibold">
+                {currentIndicator?.nationalValue || '36.669 satdik (45,7%)'}
+              </strong>
+            </span>
+          </div>
+
+          {/* Quick Button to return to Focus Indicator if changed */}
+          {isAtFocusIndicator ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <span>Sedang Aktif</span>
+            </span>
           ) : (
-            <div className="flex items-center gap-1.5 text-xs text-slate-400 self-start xl:self-auto py-0.5">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-              <span className="italic">Pilih pilar di atas untuk mengaktifkan pemetaan tematik</span>
-            </div>
+            <button
+              type="button"
+              onClick={handleResetToFocus}
+              title="Arahkan kembali ke Indikator Fokus (Revitalisasi Satdik)"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/90 transition-all cursor-pointer shadow-2xs group shrink-0"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-blue-600 group-hover:-rotate-90 transition-transform duration-200" />
+              <span>Ke Indikator Fokus</span>
+            </button>
           )}
         </div>
       </div>
