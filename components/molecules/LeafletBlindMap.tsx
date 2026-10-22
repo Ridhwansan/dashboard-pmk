@@ -16,6 +16,9 @@ import {
   getDefaultIndicatorForPillar,
   getIndicatorChoroplethColor,
   getIndicatorLegendStops,
+  SUG_LOCATIONS,
+  SUMATERA_REHAB_PROVINCES,
+  SUMATERA_REHAB_KODE_BPS,
 } from '@/data/mapIndicators';
 import { RotateCcw, Plus, Minus, Info } from 'lucide-react';
 
@@ -56,6 +59,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const geojsonLayerRef = useRef<L.GeoJSON | null>(null);
+  const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const [showInfo, setShowInfo] = useState(false);
 
   // Active indicator definition (null when no pillar is chosen yet)
@@ -198,13 +202,132 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
             }
 
             const targetWilayah = matched || NASIONAL_DATA;
+
+            // 1. Capaian Masih Nasional Saja -> Seluruh Area Putih Bersih (#ffffff)
+            if (currentInd.isNationalOnly) {
+              return {
+                fillColor: '#ffffff',
+                fillOpacity: 0.96,
+                color: isSelected ? getPillarStrokeColor(selectedPillar) : '#cbd5e1',
+                weight: isSelected ? 3.5 : 1.2,
+                opacity: 0.95,
+                className: 'executive-choropleth-feature cursor-pointer transition-all duration-150',
+              };
+            }
+
+            // 2. SUG Gabungan (SUGT & SUGB): Sesuai Gambar 2
+            if (currentInd.customRegionType === 'sug_all') {
+              const sugLoc = SUG_LOCATIONS.find(
+                (l) => l.provinceId === targetWilayah.id || l.kodeBps === targetWilayah.kodeBps
+              );
+              if (sugLoc) {
+                const isSugt = sugLoc.type === 'SUGT';
+                return {
+                  fillColor: isSugt ? '#991b1b' : '#0f3b73', // SUGT Merah Marun, SUGB Biru Tua
+                  fillOpacity: isSelected ? 0.98 : 0.92,
+                  color: isSelected ? '#fbbf24' : '#ffffff',
+                  weight: isSelected ? 3.5 : 1.2,
+                  opacity: 0.95,
+                  className: 'executive-choropleth-feature cursor-pointer transition-all duration-150',
+                };
+              }
+              // Bukan lokasi SUG -> Area Putih Saja!
+              return {
+                fillColor: '#ffffff',
+                fillOpacity: 0.96,
+                color: isSelected ? getPillarStrokeColor(selectedPillar) : '#cbd5e1',
+                weight: isSelected ? 3.5 : 1.2,
+                opacity: 0.95,
+                className: 'executive-choropleth-feature cursor-pointer transition-all duration-150',
+              };
+            }
+
+            // 3. SUGT Transformasi Saja (15 Provinsi Merah Marun)
+            if (currentInd.customRegionType === 'sugt') {
+              const sugtLoc = SUG_LOCATIONS.find(
+                (l) => l.type === 'SUGT' && (l.provinceId === targetWilayah.id || l.kodeBps === targetWilayah.kodeBps)
+              );
+              if (sugtLoc) {
+                return {
+                  fillColor: '#991b1b', // Merah Marun
+                  fillOpacity: isSelected ? 0.98 : 0.92,
+                  color: isSelected ? '#fbbf24' : '#ffffff',
+                  weight: isSelected ? 3.5 : 1.2,
+                  opacity: 0.95,
+                  className: 'executive-choropleth-feature cursor-pointer transition-all duration-150',
+                };
+              }
+              // Bukan lokasi SUGT -> Area Putih Saja!
+              return {
+                fillColor: '#ffffff',
+                fillOpacity: 0.96,
+                color: isSelected ? getPillarStrokeColor(selectedPillar) : '#cbd5e1',
+                weight: isSelected ? 3.5 : 1.2,
+                opacity: 0.95,
+                className: 'executive-choropleth-feature cursor-pointer transition-all duration-150',
+              };
+            }
+
+            // 4. SUGB Baru Saja (4 Provinsi Biru Tua)
+            if (currentInd.customRegionType === 'sugb') {
+              const sugbLoc = SUG_LOCATIONS.find(
+                (l) => l.type === 'SUGB' && (l.provinceId === targetWilayah.id || l.kodeBps === targetWilayah.kodeBps)
+              );
+              if (sugbLoc) {
+                return {
+                  fillColor: '#0f3b73', // Biru Tua
+                  fillOpacity: isSelected ? 0.98 : 0.92,
+                  color: isSelected ? '#38bdf8' : '#ffffff',
+                  weight: isSelected ? 3.5 : 1.2,
+                  opacity: 0.95,
+                  className: 'executive-choropleth-feature cursor-pointer transition-all duration-150',
+                };
+              }
+              // Bukan lokasi SUGB -> Area Putih Saja!
+              return {
+                fillColor: '#ffffff',
+                fillOpacity: 0.96,
+                color: isSelected ? getPillarStrokeColor(selectedPillar) : '#cbd5e1',
+                weight: isSelected ? 3.5 : 1.2,
+                opacity: 0.95,
+                className: 'executive-choropleth-feature cursor-pointer transition-all duration-150',
+              };
+            }
+
+            // 5. Rehabilitasi & Rekonstruksi Sumatera (Hanya Aceh, Sumut, Sumbar)
+            if (currentInd.customRegionType === 'sumatera_rehab') {
+              const isSumatera =
+                SUMATERA_REHAB_PROVINCES.includes(targetWilayah.id) ||
+                SUMATERA_REHAB_KODE_BPS.includes(targetWilayah.kodeBps);
+              if (isSumatera) {
+                return {
+                  fillColor: '#7a4b27',
+                  fillOpacity: isSelected ? 0.98 : 0.92,
+                  color: isSelected ? '#d97706' : '#ffffff',
+                  weight: isSelected ? 3.5 : 1.2,
+                  opacity: 0.95,
+                  className: 'executive-choropleth-feature cursor-pointer transition-all duration-150',
+                };
+              }
+              // Bukan lokasi bencana Sumatera -> Area Putih Saja!
+              return {
+                fillColor: '#ffffff',
+                fillOpacity: 0.96,
+                color: isSelected ? getPillarStrokeColor(selectedPillar) : '#cbd5e1',
+                weight: isSelected ? 3.5 : 1.2,
+                opacity: 0.95,
+                className: 'executive-choropleth-feature cursor-pointer transition-all duration-150',
+              };
+            }
+
+            // Default: Continuous Choropleth Coloring
             const indVal = currentInd.getValue(targetWilayah);
             const fillColor = getIndicatorChoroplethColor(currentInd, indVal.num, selectedPillar);
 
             return {
               fillColor: fillColor,
               fillOpacity: isSelected ? 0.96 : 0.88,
-              color: isSelected ? getPillarStrokeColor(selectedPillar) : '#ffffff', // Selected: Pillar Color; Default: Crisp white separator
+              color: isSelected ? getPillarStrokeColor(selectedPillar) : '#ffffff',
               weight: isSelected ? 3.5 : 1.2,
               opacity: 0.95,
               className: 'executive-choropleth-feature cursor-pointer transition-all duration-150',
@@ -242,45 +365,129 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
               );
             } else {
               const indVal = currentInd.getValue(targetWilayah);
-              const statusBadge = indVal.statusLabel
-                ? `<span style="display:inline-block; margin-top:3px; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700; ${
-                    indVal.statusType === 'success'
-                      ? 'background-color:#dcfce7; color:#14532d; border:1px solid #86efac;'
-                      : indVal.statusType === 'warning'
-                      ? 'background-color:#fef3c7; color:#78350f; border:1px solid #fde68a;'
-                      : indVal.statusType === 'alert'
-                      ? 'background-color:#ffe4e6; color:#881337; border:1px solid #fecdd3;'
-                      : 'background-color:#f1f5f9; color:#1e293b; border:1px solid #cbd5e1;'
-                  }">${indVal.statusLabel}</span>`
-                : '';
+              let tooltipHtml = '';
 
-              layer.bindTooltip(
-                `
-                <div style="font-family: inherit; padding: 7px 10px; text-align: left; min-width: 175px; line-height: 1.35;">
-                  <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom: 4px;">
-                    <span style="font-size: 13px; font-weight: 800; color: #0f172a;">${targetWilayah.name}</span>
-                    ${targetWilayah.isPrioritas ? '<span style="color:#b91c1c; font-size:9.5px; font-weight:700; background:#fee2e2; padding:1px 5px; border-radius:3px;">3T Prioritas</span>' : ''}
+              if (currentInd.isNationalOnly) {
+                tooltipHtml = `
+                  <div style="font-family: inherit; padding: 7px 10px; text-align: left; min-width: 180px; line-height: 1.35;">
+                    <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 2px;">${targetWilayah.name}</div>
+                    <div style="font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b; font-weight: 700; margin-bottom: 2px;">
+                      ${currentInd.shortName}
+                    </div>
+                    <div style="font-size: 12px; color: #334155; margin-bottom: 3px;">
+                      Capaian Nasional: <strong style="color:#0f172a; font-weight:900;">${currentInd.nationalValue}</strong>
+                    </div>
+                    <div style="font-size: 10px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px;">
+                      <span style="display:inline-block; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:700; background-color:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">Capaian Nasional (Area Putih)</span>
+                    </div>
                   </div>
-                  <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b; font-weight: 700; margin-bottom: 2px;">
-                    ${currentInd.shortName}
-                  </div>
-                  <div style="display: flex; align-items: baseline; justify-content: space-between; font-size: 11.5px; color: #334155; margin-bottom: 3px;">
-                    <span>Capaian Terkini:</span>
-                    <strong style="color: #0f172a; font-size: 14px; font-weight: 900;">${indVal.display}</strong>
-                  </div>
-                  ${indVal.subtext ? `<div style="font-size: 10.5px; color: #475569; margin-bottom: 3px;">${indVal.subtext}</div>` : ''}
-                  <div style="font-size: 10px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>Target: <strong>${currentInd.target2026}</strong></span>
-                    ${statusBadge}
-                  </div>
-                </div>
-                `,
-                {
-                  sticky: true,
-                  direction: 'top',
-                  className: 'shadow-xl border border-slate-200/90 rounded-xl bg-white/95 backdrop-blur-xs',
+                `;
+              } else if (
+                currentInd.customRegionType === 'sug_all' ||
+                currentInd.customRegionType === 'sugt' ||
+                currentInd.customRegionType === 'sugb'
+              ) {
+                const sugLoc = SUG_LOCATIONS.find(
+                  (l) => l.provinceId === targetWilayah.id || l.kodeBps === targetWilayah.kodeBps
+                );
+                if (sugLoc) {
+                  const isSugt = sugLoc.type === 'SUGT';
+                  tooltipHtml = `
+                    <div style="font-family: inherit; padding: 7px 10px; text-align: left; min-width: 185px; line-height: 1.35;">
+                      <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 2px;">${targetWilayah.name}</div>
+                      <div style="font-size: 11px; font-weight: 700; color: ${isSugt ? '#991b1b' : '#0f3b73'}; margin-bottom: 3px;">
+                        ${isSugt ? 'Sekolah Unggul Garuda Transformasi (SUGT)' : 'Sekolah Unggul Garuda Baru (SUGB)'}
+                      </div>
+                      <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:12px; color:#1e293b; margin-bottom:4px;">
+                        <span>Alokasi Wilayah:</span>
+                        <strong style="font-size:15px; font-weight:900; color:${isSugt ? '#991b1b' : '#0f3b73'};">${sugLoc.count} Unit</strong>
+                      </div>
+                      <div style="font-size: 10px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px;">
+                        Target Nasional: <strong>${currentInd.target2026}</strong> · Realisasi: <strong>${currentInd.nationalValue}</strong>
+                      </div>
+                    </div>
+                  `;
+                } else {
+                  tooltipHtml = `
+                    <div style="font-family: inherit; padding: 7px 10px; text-align: left; min-width: 175px; line-height: 1.35;">
+                      <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 2px;">${targetWilayah.name}</div>
+                      <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">Belum Ada Alokasi SUGT / SUGB</div>
+                      <div style="font-size: 10px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px;">
+                        <span style="display:inline-block; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:700; background-color:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">Area Putih (Capaian Nasional)</span>
+                      </div>
+                    </div>
+                  `;
                 }
-              );
+              } else if (currentInd.customRegionType === 'sumatera_rehab') {
+                const isSumatera =
+                  SUMATERA_REHAB_PROVINCES.includes(targetWilayah.id) ||
+                  SUMATERA_REHAB_KODE_BPS.includes(targetWilayah.kodeBps);
+                if (isSumatera) {
+                  tooltipHtml = `
+                    <div style="font-family: inherit; padding: 7px 10px; text-align: left; min-width: 185px; line-height: 1.35;">
+                      <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 2px;">${targetWilayah.name}</div>
+                      <div style="font-size: 11px; font-weight: 700; color: #7a4b27; margin-bottom: 3px;">
+                        Wilayah Intervensi Rehabilitasi &amp; Rekonstruksi Sumatera
+                      </div>
+                      <div style="font-size: 11px; color: #334155; margin-bottom: 4px;">
+                        Fokus: Huntap, Huntara, Sabodam &amp; Infrastruktur
+                      </div>
+                      <div style="font-size: 10px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px;">
+                        Target: <strong>39.501 Huntap · 20.544 Huntara</strong>
+                      </div>
+                    </div>
+                  `;
+                } else {
+                  tooltipHtml = `
+                    <div style="font-family: inherit; padding: 7px 10px; text-align: left; min-width: 175px; line-height: 1.35;">
+                      <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 2px;">${targetWilayah.name}</div>
+                      <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">Di Luar Wilayah Intervensi Program</div>
+                      <div style="font-size: 10px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px;">
+                        <span style="display:inline-block; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:700; background-color:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">Area Putih (Khusus Sumatera)</span>
+                      </div>
+                    </div>
+                  `;
+                }
+              } else {
+                const statusBadge = indVal.statusLabel
+                  ? `<span style="display:inline-block; margin-top:3px; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700; ${
+                      indVal.statusType === 'success'
+                        ? 'background-color:#dcfce7; color:#14532d; border:1px solid #86efac;'
+                        : indVal.statusType === 'warning'
+                        ? 'background-color:#fef3c7; color:#78350f; border:1px solid #fde68a;'
+                        : indVal.statusType === 'alert'
+                        ? 'background-color:#ffe4e6; color:#881337; border:1px solid #fecdd3;'
+                        : 'background-color:#f1f5f9; color:#1e293b; border:1px solid #cbd5e1;'
+                    }">${indVal.statusLabel}</span>`
+                  : '';
+
+                tooltipHtml = `
+                  <div style="font-family: inherit; padding: 7px 10px; text-align: left; min-width: 175px; line-height: 1.35;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom: 4px;">
+                      <span style="font-size: 13px; font-weight: 800; color: #0f172a;">${targetWilayah.name}</span>
+                      ${targetWilayah.isPrioritas ? '<span style="color:#b91c1c; font-size:9.5px; font-weight:700; background:#fee2e2; padding:1px 5px; border-radius:3px;">3T Prioritas</span>' : ''}
+                    </div>
+                    <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b; font-weight: 700; margin-bottom: 2px;">
+                      ${currentInd.shortName}
+                    </div>
+                    <div style="display: flex; align-items: baseline; justify-content: space-between; font-size: 11.5px; color: #334155; margin-bottom: 3px;">
+                      <span>Capaian Terkini:</span>
+                      <strong style="color: #0f172a; font-size: 14px; font-weight: 900;">${indVal.display}</strong>
+                    </div>
+                    ${indVal.subtext ? `<div style="font-size: 10.5px; color: #475569; margin-bottom: 3px;">${indVal.subtext}</div>` : ''}
+                    <div style="font-size: 10px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px; display:flex; justify-content:space-between; align-items:center;">
+                      <span>Target: <strong>${currentInd.target2026}</strong></span>
+                      ${statusBadge}
+                    </div>
+                  </div>
+                `;
+              }
+
+              layer.bindTooltip(tooltipHtml, {
+                sticky: true,
+                direction: 'top',
+                className: 'shadow-xl border border-slate-200/90 rounded-xl bg-white/95 backdrop-blur-xs',
+              });
             }
 
             // Hover interactions
@@ -312,6 +519,78 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
 
         newLayer.addTo(mapInstanceRef.current);
         geojsonLayerRef.current = newLayer;
+
+        // Render SUG Location Pin Badges (Exact match to Image 2)
+        if (markersLayerRef.current && mapInstanceRef.current) {
+          mapInstanceRef.current.removeLayer(markersLayerRef.current);
+          markersLayerRef.current = null;
+        }
+
+        if (
+          currentInd &&
+          (currentInd.customRegionType === 'sug_all' ||
+            currentInd.customRegionType === 'sugt' ||
+            currentInd.customRegionType === 'sugb') &&
+          mapInstanceRef.current
+        ) {
+          const markerGroup = L.layerGroup();
+          const filteredLocs =
+            currentInd.customRegionType === 'sugt'
+              ? SUG_LOCATIONS.filter((l) => l.type === 'SUGT')
+              : currentInd.customRegionType === 'sugb'
+              ? SUG_LOCATIONS.filter((l) => l.type === 'SUGB')
+              : SUG_LOCATIONS;
+
+          filteredLocs.forEach((loc) => {
+            const isSugt = loc.type === 'SUGT';
+            const pinHtml = isSugt
+              ? `<div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" title="${loc.provinceName}: ${loc.count} Unit SUGT">
+                   <div style="background:#facc15; color:#0f172a; font-weight:900; font-size:12px; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2.5px solid #991b1b; box-shadow:0 3px 8px rgba(0,0,0,0.35); font-family:system-ui, -apple-system, sans-serif;">
+                     ${loc.count}
+                   </div>
+                   <div style="width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid #991b1b; margin-top:-1px;"></div>
+                 </div>`
+              : `<div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" title="${loc.provinceName}: ${loc.count} Unit SUGB">
+                   <div style="background:#38bdf8; color:#ffffff; font-weight:900; font-size:12px; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2.5px solid #0f3b73; box-shadow:0 3px 8px rgba(0,0,0,0.35); font-family:system-ui, -apple-system, sans-serif;">
+                     ${loc.count}
+                   </div>
+                   <div style="width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid #0f3b73; margin-top:-1px;"></div>
+                 </div>`;
+
+            const icon = L.divIcon({
+              html: pinHtml,
+              className: 'sug-pin-badge',
+              iconSize: [26, 32],
+              iconAnchor: [13, 30],
+            });
+
+            const marker = L.marker([loc.lat, loc.lng], { icon });
+            marker.bindTooltip(
+              `
+              <div style="font-family: inherit; padding: 6px 9px; text-align: left; min-width: 165px; line-height: 1.35;">
+                <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 2px;">${loc.provinceName}</div>
+                <div style="font-size: 11px; font-weight: 700; color: ${isSugt ? '#991b1b' : '#0f3b73'};">
+                  ${isSugt ? 'SUGT (Transformasi)' : 'SUGB (Baru)'}: <strong>${loc.count} Unit</strong>
+                </div>
+                <div style="font-size: 10px; color: #64748b; margin-top: 3px;">
+                  Peta Sebaran Lokasi SUG tahun 2025–2026
+                </div>
+              </div>
+              `,
+              { direction: 'top', className: 'shadow-lg rounded-xl bg-white/95' }
+            );
+
+            marker.on('click', () => {
+              const prov = PROVINSI_DATA.find((p) => p.id === loc.provinceId || p.kodeBps === loc.kodeBps);
+              if (prov) onSelectWilayah(prov);
+            });
+
+            marker.addTo(markerGroup);
+          });
+
+          markerGroup.addTo(mapInstanceRef.current);
+          markersLayerRef.current = markerGroup;
+        }
 
         // Camera positioning: smoothly focus on active selection or root Indonesia
         if (selectedWilayah.level === 'nasional') {
@@ -438,7 +717,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
 
       {/* 3. Bottom-Left: Dynamic Thematic Choropleth Pill Legend or Initial Guide */}
       {isPillarActive && indicatorDef && legendStops && activeWilayahIndVal ? (
-        <div className="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-2xl px-4 py-3 shadow-md text-xs select-none min-w-[270px] sm:min-w-[320px] max-w-[380px]">
+        <div className="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-2xl px-4 py-3 shadow-md text-xs select-none min-w-[270px] sm:min-w-[320px] max-w-[390px]">
           <div className="flex items-center justify-between text-xs font-bold text-slate-900 mb-1.5 tracking-tight gap-2">
             <span className="truncate">{indicatorDef.name}</span>
             <span className="text-[11px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 shrink-0 tabular-nums">
@@ -448,35 +727,100 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
             </span>
           </div>
 
-          {/* Dynamic Continuous Gradient Bar for the Selected Indicator */}
-          <div
-            className="w-full h-2.5 rounded-full border border-black/10 shadow-inner mb-2"
-            style={{
-              background: `linear-gradient(to right, ${legendStops.minColor}, ${legendStops.midColor}, ${legendStops.maxColor})`,
-            }}
-          />
-
-          {/* Min / Max Labels */}
-          <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-2">
-            <span className="flex items-center gap-1.5">
-              <span
-                className="w-2.5 h-2.5 rounded-full border border-slate-300"
-                style={{ backgroundColor: legendStops.minColor }}
+          {/* Contextual Legend Rendering */}
+          {indicatorDef.customRegionType === 'sug_all' ||
+          indicatorDef.customRegionType === 'sugt' ||
+          indicatorDef.customRegionType === 'sugb' ? (
+            /* SUG Indicator Legend (Image 2 Match) */
+            <div className="space-y-1.5 py-1 mb-2">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700">
+                <span className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-full bg-[#991b1b] border border-white shadow-xs" />
+                  <span>SUGT (Transformasi)</span>
+                </span>
+                <span className="font-bold text-[#991b1b] bg-red-50 px-2 py-0.5 rounded border border-red-200">
+                  15 Prov · 42 Unit
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700">
+                <span className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-full bg-[#0f3b73] border border-white shadow-xs" />
+                  <span>SUGB (Baru)</span>
+                </span>
+                <span className="font-bold text-[#0f3b73] bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                  4 Prov · 4 Unit
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+                <span className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-md bg-white border border-slate-300 shadow-2xs" />
+                  <span>Area Putih: Belum Ada Alokasi</span>
+                </span>
+                <span className="text-[10px] text-slate-400">19 Prov</span>
+              </div>
+            </div>
+          ) : indicatorDef.customRegionType === 'sumatera_rehab' ? (
+            /* Sumatera Rehab Legend */
+            <div className="space-y-1.5 py-1 mb-2">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700">
+                <span className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-full bg-[#7a4b27] border border-white shadow-xs" />
+                  <span>Area Terdampak Prioritas</span>
+                </span>
+                <span className="font-bold text-[#7a4b27] bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                  Aceh, Sumut, Sumbar
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+                <span className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-md bg-white border border-slate-300 shadow-2xs" />
+                  <span>Area Putih: Di Luar Prioritas Bencana</span>
+                </span>
+                <span className="text-[10px] text-slate-400">35 Prov</span>
+              </div>
+            </div>
+          ) : indicatorDef.isNationalOnly ? (
+            /* National-Only Area Putih Legend */
+            <div className="space-y-1.5 py-1.5 mb-2 bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/80">
+              <div className="flex items-center gap-2 text-[11px] font-bold text-slate-800">
+                <span className="w-3.5 h-3.5 rounded-md bg-white border border-slate-300 shadow-2xs shrink-0" />
+                <span>Area Putih: Capaian Berskala Nasional</span>
+              </div>
+              <p className="text-[10.5px] text-slate-500 leading-relaxed pl-5.5">
+                Data program ini saat ini dihimpun secara agregat nasional ({indicatorDef.nationalValue}) dan belum dialokasikan secara kuota spasial provinsi.
+              </p>
+            </div>
+          ) : (
+            /* Standard Continuous Gradient Bar */
+            <>
+              <div
+                className="w-full h-2.5 rounded-full border border-black/10 shadow-inner mb-2"
+                style={{
+                  background: `linear-gradient(to right, ${legendStops.minColor}, ${legendStops.midColor}, ${legendStops.maxColor})`,
+                }}
               />
-              {indicatorDef.isLowerBetter
-                ? `Min: ${indicatorDef.minVal}${indicatorDef.unit.startsWith('%') ? '' : ' '}${indicatorDef.unit} (Optimal)`
-                : `Min: ${indicatorDef.minVal}${indicatorDef.unit.startsWith('%') ? '' : ' '}${indicatorDef.unit} (Akselerasi)`}
-            </span>
-            <span className="flex items-center gap-1.5">
-              {indicatorDef.isLowerBetter
-                ? `Max: ${indicatorDef.maxVal}${indicatorDef.unit.startsWith('%') ? '' : ' '}${indicatorDef.unit} (Akselerasi)`
-                : `Max: ${indicatorDef.maxVal}${indicatorDef.unit.startsWith('%') ? '' : ' '}${indicatorDef.unit} (Optimal)`}
-              <span
-                className="w-2.5 h-2.5 rounded-full border border-slate-700"
-                style={{ backgroundColor: legendStops.maxColor }}
-              />
-            </span>
-          </div>
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-2">
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full border border-slate-300"
+                    style={{ backgroundColor: legendStops.minColor }}
+                  />
+                  {indicatorDef.isLowerBetter
+                    ? `Min: ${indicatorDef.minVal}${indicatorDef.unit.startsWith('%') ? '' : ' '}${indicatorDef.unit} (Optimal)`
+                    : `Min: ${indicatorDef.minVal}${indicatorDef.unit.startsWith('%') ? '' : ' '}${indicatorDef.unit} (Akselerasi)`}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  {indicatorDef.isLowerBetter
+                    ? `Max: ${indicatorDef.maxVal}${indicatorDef.unit.startsWith('%') ? '' : ' '}${indicatorDef.unit} (Akselerasi)`
+                    : `Max: ${indicatorDef.maxVal}${indicatorDef.unit.startsWith('%') ? '' : ' '}${indicatorDef.unit} (Optimal)`}
+                  <span
+                    className="w-2.5 h-2.5 rounded-full border border-slate-700"
+                    style={{ backgroundColor: legendStops.maxColor }}
+                  />
+                </span>
+              </div>
+            </>
+          )}
 
           {/* Quick Strategic Target */}
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10.5px] text-slate-600 font-semibold gap-1.5 flex-wrap">

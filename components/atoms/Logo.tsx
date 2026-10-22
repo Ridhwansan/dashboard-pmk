@@ -35,11 +35,14 @@ export const Logo: React.FC<LogoProps> = ({ className = '' }) => {
 
       {/* Two-Line Title */}
       <div className="flex flex-col leading-snug">
-        <span className="text-base font-bold tracking-heading text-slate-900">
+        <span className="text-sm sm:text-base font-bold tracking-heading text-slate-900 leading-tight">
           Dashboard
         </span>
-        <span className="text-xs font-semibold text-slate-700 tracking-normal">
+        <span className="text-[11px] sm:text-xs font-semibold text-slate-700 tracking-normal hidden sm:inline">
           Pembangunan Manusia dan Kebudayaan
+        </span>
+        <span className="text-[11px] font-semibold text-slate-700 tracking-normal sm:hidden">
+          Kemenko PMK
         </span>
       </div>
     </div>

@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Navbar } from '@/components/organisms/Navbar';
-import { SubHeader } from '@/components/organisms/SubHeader';
 import { Layer1BentoGrid } from '@/components/organisms/Layer1BentoGrid';
 import { Layer2PillarDetail } from '@/components/organisms/Layer2PillarDetail';
 import { Layer3MasterData } from '@/components/organisms/Layer3MasterData';
@@ -40,16 +39,7 @@ export const DashboardShell: React.FC = () => {
         onSelectMasterData={handleSelectMasterData}
       />
 
-      {/* 2. Sub-Header Area (White Theme) */}
-      <SubHeader
-        currentLayer={currentLayer}
-        selectedPillar={selectedPillar}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        onNavigateHome={handleSelectLayer1}
-      />
-
-      {/* 3. Main Dashboard Content Area - Perfectly aligned with Navbar */}
+      {/* 2. Main Dashboard Content Area - Perfectly aligned with Navbar */}
       <div className="w-full px-4 lg:px-8 flex-1 flex flex-col">
         <main className="flex-1 w-full max-w-[1600px] mx-auto py-6">
           {currentLayer === 'layer1' && (

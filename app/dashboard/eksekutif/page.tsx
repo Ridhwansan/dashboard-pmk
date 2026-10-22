@@ -1,16 +1,17 @@
-'use client';
-
-import React from 'react';
-import { useRouter } from 'next/navigation';
-import { Layer1BentoGrid } from '@/components/organisms/Layer1BentoGrid';
-import { PillarId } from '@/types/dashboard';
+import React, { Suspense } from 'react';
+import { EksekutifClient } from './EksekutifClient';
 
 export default function EksekutifPage() {
-  const router = useRouter();
-
-  const handleSelectPillar = (pillarId: PillarId) => {
-    router.push(`/dashboard/pilar/${pillarId}`);
-  };
-
-  return <Layer1BentoGrid onSelectPillar={handleSelectPillar} />;
+  return (
+    <Suspense
+      fallback={
+        <div className="py-16 text-center text-slate-500 text-sm flex flex-col items-center justify-center gap-2">
+          <div className="w-7 h-7 border-2 border-slate-300 border-t-blue-600 rounded-full animate-spin"></div>
+          <span>Memuat Dashboard Eksekutif Kemenko PMK...</span>
+        </div>
+      }
+    >
+      <EksekutifClient />
+    </Suspense>
+  );
 }
