@@ -13,6 +13,7 @@ interface KemiskinanDetailViewProps {
 
 interface WidgetCardItem {
   id: string;
+  chipLabel?: string;
   title: string;
   value: string;
   unit?: string;
@@ -36,93 +37,93 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = () => {
     );
   }
 
-  // 9 Executive Program Widgets for Penurunan Kemiskinan
+  // 9 Executive Program Widgets for Penurunan Kemiskinan (Gambar 4 Verbatim)
   const widgetCards: WidgetCardItem[] = [
     {
-      id: 'kemiskinan',
-      title: 'Tingkat Kemiskinan',
+      id: 'tingkat_kemiskinan',
+      chipLabel: 'PKPN',
+      title: 'Tingkat kemiskinan',
       value: '8,07',
-      unit: '% penduduk',
-      status: 'Capaian Maret 2026',
-      target: 'Target 2026: 6,5–7,5%',
+      status: 'Capaian 2026 • % penduduk',
+      target: 'Target 2026: 6,5–7,5',
       percent: 91.0,
-      subtext: 'Realisasi September 2025: 8,25% (turun 0,18% poin)',
+      subtext: 'Pemantauan laju penurunan kemiskinan nasional',
     },
     {
       id: 'kemiskinan_ekstrem',
-      title: 'Kemiskinan Ekstrem',
-      value: '0,78',
-      unit: '% penduduk',
-      status: 'Capaian 2025',
-      target: 'Target 2026: 0–0,5%',
+      chipLabel: 'PKPN',
+      title: 'Kemiskinan ekstrem',
+      value: '0.78',
+      status: 'Capaian 2025 • % penduduk',
+      target: 'Target 2026: 0–0,5',
       percent: 85.0,
-      subtext: 'Target RPJMN 2027: 0,0% secara tuntas nasional',
+      subtext: 'Target penurunan kemiskinan ekstrem mendekati 0%',
     },
     {
-      id: 'permakanan_lansia',
-      title: 'Bantuan Permakanan Lansia',
+      id: 'bantuan_permakanan_lansia',
+      chipLabel: 'PKPN',
+      title: 'Bantuan permakanan lansia',
       value: '116.754',
-      unit: 'orang penerima',
-      status: 'Realisasi 2025 (2026 Terhenti)',
-      target: 'Target 2027: ≥116.754 orang',
-      subtext: 'Dalam proses integrasi ke program MBG Badan Gizi Nasional',
+      status: 'Capaian 2025 • orang penerima',
+      target: 'Target 2027 ≥116.754 | 2026 terhenti',
+      subtext: 'Dalam proses peralihan & sinkronisasi program',
     },
     {
-      id: 'permakanan_disabilitas',
-      title: 'Bantuan Permakanan Disabilitas',
+      id: 'bantuan_permakanan_disabilitas',
+      chipLabel: 'PKPN',
+      title: 'Bantuan permakanan disabilitas',
       value: '36.000',
-      unit: 'orang penerima',
-      status: 'Realisasi 2025 (2026 Terhenti)',
-      target: 'Target 2027: ≥36.000 orang',
-      subtext: 'Dalam proses integrasi ke program MBG Badan Gizi Nasional',
+      status: 'Capaian 2025 • orang penerima',
+      target: 'Target 2027 ≥36.000 | 2026 terhenti',
+      subtext: 'Dalam proses peralihan & sinkronisasi program',
     },
     {
-      id: 'desil_lansia',
-      title: 'Cakupan Lansia Desil 1–5',
+      id: 'cakupan_lansia_desil',
+      chipLabel: 'PKPN',
+      title: 'Cakupan lansia desil 1–5',
       value: '0,66',
-      unit: '% sasaran',
-      status: 'Capaian Basis 2025',
-      target: 'Target: Perlindungan Lansia Rentan',
-      subtext: 'Fokus asistensi sosial dan jaminan kesehatan KIS',
+      status: 'Capaian 2025 • % sasaran',
+      target: '2026 belum tersedia',
+      subtext: 'Perlindungan sosial & jaminan kesejahteraan lanjut usia',
     },
     {
-      id: 'desil_disabilitas',
-      title: 'Cakupan Disabilitas Desil 1–5',
+      id: 'cakupan_disabilitas_desil',
+      chipLabel: 'PKPN',
+      title: 'Cakupan disabilitas desil 1–5',
       value: '0,41',
-      unit: '% sasaran',
-      status: 'Capaian Basis 2025',
-      target: 'Target: Asistensi Rehabilitasi Sosial',
-      subtext: 'Pemberian alat bantu adaptif dan pemenuhan nutrisi',
+      status: 'Capaian 2025 • % sasaran',
+      target: '2026 belum tersedia',
+      subtext: 'Perlindungan sosial & pemenuhan hak penyandang disabilitas',
     },
     {
       id: 'bos_reguler',
-      title: 'Bantuan Operasional Sekolah (BOS) Reguler',
-      value: '432.654',
-      unit: 'sekolah (99%)',
-      status: 'Capaian 2026',
-      target: 'Target 2026: 432.716 sekolah',
+      chipLabel: 'PKPN',
+      title: 'Bantuan Operasional Sekolah Reguler',
+      value: '432.654 (99%)',
+      status: 'Capaian 2026 • sekolah penerima',
+      target: 'Target 2026 432.716',
       percent: 99.9,
-      subtext: 'Penyaluran dana afirmasi pendidikan dasar-menengah',
+      subtext: 'Penyaluran dana BOS reguler sekolah dasar & menengah',
     },
     {
       id: 'bop_pendidikan',
-      title: 'Bantuan Operasional Pendidikan (BOP)',
+      chipLabel: 'PKPN',
+      title: 'Bantuan Operasional Pendidikan',
       value: '396.618',
-      unit: 'lembaga',
-      status: 'Capaian 2026 (97,5%)',
-      target: 'Target 2026: 406.741 lembaga',
+      status: 'Capaian 2026 • Lembaga Penerima',
+      target: 'Target 2026 406.741',
       percent: 97.5,
-      subtext: 'Dukungan PAUD dan pendidikan non-formal kantong kemiskinan',
+      subtext: 'Dukungan operasional PAUD & pendidikan non-formal',
     },
     {
       id: 'bos_madrasah',
-      title: 'BOS Madrasah',
-      value: '10,36',
-      unit: 'juta siswa',
-      status: 'Capaian Penyaluran 2026',
-      target: 'Target 2026: Terpenuhi 100%',
+      chipLabel: 'PKPN',
+      title: 'Bantuan Operasional Sekolah Madrasah',
+      value: '10.36',
+      status: 'Capaian 2026 • juta penerima',
+      target: 'Target 2026.',
       percent: 100,
-      subtext: 'Bantuan operasional pendidikan keagamaan Kemenag',
+      subtext: 'Penyaluran BOS madrasah di lingkungan Kementerian Agama',
     },
   ];
 
@@ -145,15 +146,31 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = () => {
         </div>
       </div>
 
-      {/* 2. Grid of Separated Widget Cards (No Kendala section on this initial page) */}
+      {/* 2. Grid of Separated Widget Cards (Whole Card Clickable, Compact Height) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {widgetCards.map((card) => {
           return (
             <div
               key={card.id}
-              className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg hover:border-rose-400 p-6 sm:p-7 flex flex-col justify-between group transition-all duration-200"
+              onClick={() => setSelectedProgramId(card.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelectedProgramId(card.id);
+                }
+              }}
+              className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg hover:border-rose-400 p-6 sm:p-7 flex flex-col justify-between group transition-all duration-200 cursor-pointer select-none"
             >
               <div>
+                {/* PKPN Chip Label */}
+                <div className="mb-2.5">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200/90 shadow-2xs">
+                    {card.chipLabel || 'PKPN'}
+                  </span>
+                </div>
+
                 {/* Header Widget */}
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-rose-900 transition-colors leading-snug">
@@ -206,19 +223,15 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = () => {
                 </div>
               </div>
 
-              {/* Action: Detail Program Button */}
+              {/* Action: Detail Program Button Affordance */}
               <div className="mt-5 pt-3.5 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setSelectedProgramId(card.id)}
-                  className="w-full py-2.5 px-3 rounded-xl bg-slate-50 group-hover:bg-rose-50 text-slate-700 group-hover:text-rose-700 border border-slate-200/80 group-hover:border-rose-200 text-xs font-bold transition-all duration-150 flex items-center justify-between cursor-pointer"
-                >
+                <div className="w-full py-2.5 px-3 rounded-xl bg-slate-50 group-hover:bg-rose-50 text-slate-700 group-hover:text-rose-700 border border-slate-200/80 group-hover:border-rose-200 text-xs font-bold transition-all duration-150 flex items-center justify-between pointer-events-none">
                   <span className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-rose-600" />
                     <span>Lihat Detail Program</span>
                   </span>
                   <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                </button>
+                </div>
               </div>
             </div>
           );

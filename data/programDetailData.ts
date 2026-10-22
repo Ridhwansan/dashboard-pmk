@@ -81,10 +81,22 @@ function generateMonthlyData(options: {
   isCumulative?: boolean;
   isPercentage?: boolean;
 }): Record<number, MonthlyDataPoint[]> {
+  const isIntegerUnit =
+    !options.isPercentage &&
+    !options.unit.includes('%') &&
+    !options.unit.includes('juta') &&
+    !options.unit.includes('jt') &&
+    !options.unit.includes('poin') &&
+    !options.unit.includes('indeks') &&
+    !options.unit.includes('PDB');
+
   const formatVal = (val: number | null) => {
     if (val === null) return '—';
     if (options.isPercentage) {
       return `${val.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`;
+    }
+    if (isIntegerUnit) {
+      return `${Math.round(val).toLocaleString('id-ID')} ${options.unit}`;
     }
     if (val >= 1000) {
       return `${val.toLocaleString('id-ID')} ${options.unit}`;
@@ -96,8 +108,11 @@ function generateMonthlyData(options: {
   const data2025: MonthlyDataPoint[] = MONTH_NAMES.map((name, i) => {
     const monthNum = i + 1;
     const progressRatio = monthNum / 12;
-    const t = Math.round(options.target2025 * progressRatio * 10) / 10;
-    const c = Math.round(options.capaian2025 * (progressRatio * (0.92 + Math.sin(monthNum) * 0.08)) * 10) / 10;
+    const rawT = options.target2025 * progressRatio;
+    const rawC = options.capaian2025 * (progressRatio * (0.92 + Math.sin(monthNum) * 0.08));
+
+    const t = isIntegerUnit ? Math.round(rawT) : Math.round(rawT * 10) / 10;
+    const c = isIntegerUnit ? Math.round(rawC) : Math.round(rawC * 10) / 10;
     const pct = t > 0 ? Math.round((c / t) * 100) : 100;
     const status: MonthlyDataPoint['status'] = pct >= 95 ? 'Tercapai' : pct >= 80 ? 'Sesuai Target' : 'Perlu Percepatan';
 
@@ -117,16 +132,19 @@ function generateMonthlyData(options: {
   const data2026: MonthlyDataPoint[] = MONTH_NAMES.map((name, i) => {
     const monthNum = i + 1;
     const targetProgress = monthNum / 12;
-    const t = Math.round(options.target2026 * targetProgress * 10) / 10;
+    const rawT = monthNum === 12 ? options.target2026 : options.target2026 * targetProgress;
+    const t = isIntegerUnit ? Math.round(rawT) : Math.round(rawT * 10) / 10;
 
     if (monthNum <= 10) {
       // Past / Current month up to Oktober (cutoff)
       const actualProgress = monthNum / 10;
-      // Add slight realistic variation
-      const c =
-        monthNum === 10
-          ? options.capaian2026Okt
-          : Math.round(options.capaian2026Okt * actualProgress * (0.95 + (monthNum % 3) * 0.03) * 10) / 10;
+      let c: number;
+      if (monthNum === 10) {
+        c = options.capaian2026Okt;
+      } else {
+        const rawC = options.capaian2026Okt * actualProgress * (0.95 + (monthNum % 3) * 0.03);
+        c = isIntegerUnit ? Math.min(options.capaian2026Okt, Math.round(rawC)) : Math.round(rawC * 10) / 10;
+      }
       const pct = t > 0 ? Math.round((c / t) * 100) : 100;
       const status: MonthlyDataPoint['status'] =
         pct >= 95 ? 'Tercapai' : pct >= 75 ? 'Sesuai Target' : 'Perlu Percepatan';
@@ -160,7 +178,8 @@ function generateMonthlyData(options: {
   // 2027: Projections
   const data2027: MonthlyDataPoint[] = MONTH_NAMES.map((name, i) => {
     const monthNum = i + 1;
-    const t = Math.round(options.target2027 * (monthNum / 12) * 10) / 10;
+    const rawT = options.target2027 * (monthNum / 12);
+    const t = isIntegerUnit ? Math.round(rawT) : Math.round(rawT * 10) / 10;
     return {
       month: monthNum,
       monthName: name,
@@ -300,7 +319,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     pillarTitle: 'Pendidikan',
     category: 'Transformasi Mutu Sekolah',
     description:
-      'Program pengembangan sekolah menengah atas unggulan melalui transformasi SMA yang sudah ada, dengan penguatan pendidikan sains dan teknologi untuk menyiapkan talenta berprestasi dan berdaya saing global di 15 provinsi (42 unit total).',
+      'Program pengembangan sekolah menengah atas unggulan melalui pembangunan Sekolah Garuda Baru dan transformasi SMA yang sudah ada, dengan penguatan pendidikan sains dan teknologi untuk menyiapkan talenta berprestasi dan berdaya saing global.',
     picKementerian: 'Kemendikdasmen, Bappenas, Kemenkeu',
     unit: 'satuan pendidikan',
     currentValue: '42',
@@ -325,7 +344,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     pillarTitle: 'Pendidikan',
     category: 'Pendidikan Keunggulan',
     description:
-      'Program pengembangan sekolah menengah atas unggulan melalui pembangunan Sekolah Garuda Baru berasrama dengan kurikulum sains & teknologi global di 4 provinsi (Bangka Belitung, Kalimantan Utara, Sulawesi Tenggara, Nusa Tenggara Timur).',
+      'Program pengembangan sekolah menengah atas unggulan melalui pembangunan Sekolah Garuda Baru dan transformasi SMA yang sudah ada, dengan penguatan pendidikan sains dan teknologi untuk menyiapkan talenta berprestasi dan berdaya saing global.',
     picKementerian: 'Kemendikdasmen, Kemenkeu, Kementerian PUPR, Setneg',
     unit: 'satuan pendidikan',
     currentValue: '4',
@@ -567,7 +586,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     pillarTitle: 'Kesehatan',
     category: 'Gizi Ibu & Anak (3B)',
     description:
-      'Pemberian Makanan Bergizi Gratis (MBG) bernutrisi lengkap bagi balita usia 6-59 bulan non-PAUD pada kantong kemiskinan dan kawasan rawan pangan.',
+      'Program pemberian makanan bergizi gratis kepada ibu hamil, ibu menyusui, dan balita untuk memenuhi kebutuhan gizi kelompok rentan, mendukung kesehatan ibu dan tumbuh kembang anak, serta mencegah stunting sejak dini.',
     picKementerian: 'Badan Gizi Nasional (BGN), Kemenkes, Kemendagri',
     unit: 'juta jiwa',
     currentValue: '4,89',
@@ -595,7 +614,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     pillarTitle: 'Kesehatan',
     category: 'Gizi Ibu & Anak (3B)',
     description:
-      'Suplementasi dan pemenuhan gizi seimbang bagi ibu hamil berisiko KEK (Kurang Energi Kronis) untuk mencegah BBLR dan stunting sejak dini.',
+      'Program pemberian makanan bergizi gratis kepada ibu hamil, ibu menyusui, dan balita untuk memenuhi kebutuhan gizi kelompok rentan, mendukung kesehatan ibu dan tumbuh kembang anak, serta mencegah stunting sejak dini.',
     picKementerian: 'Badan Gizi Nasional (BGN), Kemenkes, Kemendagri',
     unit: 'ribu jiwa',
     currentValue: '656',
@@ -623,7 +642,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     pillarTitle: 'Kesehatan',
     category: 'Gizi Ibu & Anak (3B)',
     description:
-      'Bantuan makanan bergizi tinggi protein hewani dan mikro-nutrien bagi ibu menyusui hingga usia bayi 6 bulan untuk menjamin kualitas ASI eksklusif.',
+      'Program pemberian makanan bergizi gratis kepada ibu hamil, ibu menyusui, dan balita untuk memenuhi kebutuhan gizi kelompok rentan, mendukung kesehatan ibu dan tumbuh kembang anak, serta mencegah stunting sejak dini.',
     picKementerian: 'Badan Gizi Nasional (BGN), Kemenkes',
     unit: 'juta jiwa',
     currentValue: '1,77',
@@ -1066,14 +1085,29 @@ const PROGRAM_ALIASES: Record<string, string> = {
   sekolah_unggul_garuda: 'sug_transformasi',
   // Kesehatan
   penuntasan_tb: 'tb',
+  penemuan_kasus_tb: 'tb',
   revitalisasi_rsud: 'rsud',
   cek_kesehatan_gratis: 'ckg',
   mbg_kesehatan: 'mbg_3b',
+  mbg_balita: 'mbg_3b',
+  mbg_ibu_hamil: 'mbg_3b',
+  mbg_ibu_menyusui: 'mbg_3b',
+  revitalisasi_rs: 'rsud',
   // Bencana
   rehabilitasi_sumatera: 'rehabilitasi_rekonstruksi_sumatera',
   rehabilitasi_dan_rekonstruksi_sumatera: 'rehabilitasi_rekonstruksi_sumatera',
+  huntara_sumatera: 'huntara',
+  huntap_sumatera: 'huntap',
   huntara_bencana: 'huntara',
   huntap_bencana: 'huntap',
+  jumlah_kejadian_bencana: 'jumlah_bencana',
+  kerugian_bencana: 'kerugian',
+  // Kemiskinan
+  tingkat_kemiskinan: 'kemiskinan',
+  bantuan_permakanan_lansia: 'permakanan_lansia',
+  bantuan_permakanan_disabilitas: 'permakanan_disabilitas',
+  cakupan_lansia_desil: 'desil_lansia',
+  cakupan_disabilitas_desil: 'desil_disabilitas',
 };
 
 /**

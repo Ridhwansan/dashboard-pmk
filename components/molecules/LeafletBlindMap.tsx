@@ -9,6 +9,7 @@ import {
   PROVINSI_DATA,
   KABKOTA_DATA,
   KECAMATAN_DATA,
+  getWilayahCapaianRpjmn,
 } from '@/data/wilayahData';
 import {
   MapPillarId,
@@ -212,14 +213,14 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
               (matched.id === selectedWilayah.id ||
                 matched.kodeBps === selectedWilayah.kodeBps);
 
-            // If no pillar selected yet, render clean neutral boundaries
+            // If no pillar selected yet (Territory-First Mode), render clean interactive boundaries
             if (!isPillarActive || !currentInd) {
               return {
-                fillColor: '#f1f5f9',
-                fillOpacity: isSelected ? 0.92 : 0.65,
-                color: isSelected ? '#1d4ed8' : '#cbd5e1',
-                weight: isSelected ? 3.0 : 1.0,
-                opacity: 0.9,
+                fillColor: isSelected ? '#2563eb' : '#f1f5f9',
+                fillOpacity: isSelected ? 0.95 : 0.72,
+                color: isSelected ? '#1e3a8a' : '#cbd5e1',
+                weight: isSelected ? 3.2 : 1.0,
+                opacity: 0.95,
                 className: 'executive-choropleth-feature cursor-pointer transition-all duration-150',
               };
             }
@@ -339,24 +340,23 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
               (matched.id === selectedWilayah.id ||
                 matched.kodeBps === selectedWilayah.kodeBps);
 
-            // If no pillar selected yet, show gentle prompt in tooltip
+            // Territory tooltip: show ONLY Wilayah name and IMM
             if (!isPillarActive || !currentInd) {
               layer.bindTooltip(
                 `
-                <div style="font-family: inherit; padding: 7px 10px; text-align: left; min-width: 150px; line-height: 1.35;">
-                  <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom: 3px;">
-                    <span style="font-size: 13px; font-weight: 800; color: #0f172a;">${targetWilayah.name}</span>
-                    ${targetWilayah.isPrioritas ? '<span style="color:#b91c1c; font-size:9.5px; font-weight:700; background:#fee2e2; padding:1px 5px; border-radius:3px;">3T Prioritas</span>' : ''}
+                <div style="font-family: inherit; padding: 6px 10px; text-align: left; min-width: 120px; line-height: 1.35;">
+                  <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 3px;">
+                    ${targetWilayah.name}
                   </div>
-                  <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
-                    Pilih pilar di atas untuk melihat capaian daerah ini
+                  <div style="font-size: 11.5px; color: #475569; font-weight: 600;">
+                    IMM: <strong style="color: #0f172a; font-weight: 800;">${targetWilayah.imm || '—'}</strong>
                   </div>
                 </div>
                 `,
                 {
                   sticky: true,
                   direction: 'top',
-                  className: 'shadow-xl border border-slate-200/90 rounded-xl bg-white/95 backdrop-blur-xs',
+                  className: 'shadow-md border border-slate-200/90 rounded-xl bg-white/95 backdrop-blur-xs',
                 }
               );
             } else {
@@ -482,9 +482,10 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
                 const l = e.target;
                 if (!isSelected) {
                   l.setStyle({
-                    weight: 2.6,
-                    color: '#ffffff',
-                    fillOpacity: 0.98,
+                    weight: 2.8,
+                    color: !isPillarActive ? '#1d4ed8' : '#ffffff',
+                    fillColor: !isPillarActive ? '#93c5fd' : undefined,
+                    fillOpacity: 0.95,
                   });
                   l.bringToFront();
                 }
@@ -777,7 +778,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
               }`}
             >
               {activePillarId === 'bencana'
-                ? 'Ketahanan Bencana'
+                ? 'Bencana'
                 : activePillarId === 'kemiskinan'
                 ? 'Penurunan Kemiskinan'
                 : activePillarId === 'kesehatan'
@@ -788,12 +789,25 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
         </div>
       ) : (
         <div className="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-2xl p-3.5 shadow-md text-xs select-none max-w-xs">
-          <div className="font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            <span>Peta Spasial Indonesia</span>
+          <div className="font-extrabold text-slate-900 mb-1 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
+              <span className="truncate">{selectedWilayah.level === 'nasional' ? 'Agregat Nasional' : selectedWilayah.name}</span>
+            </div>
+            {selectedWilayah.level !== 'nasional' && (
+              <button
+                type="button"
+                onClick={onResetNasional}
+                className="text-[10px] text-blue-600 font-bold hover:underline shrink-0 cursor-pointer"
+              >
+                Reset
+              </button>
+            )}
           </div>
-          <p className="text-[11px] text-slate-500 leading-relaxed">
-            Silakan pilih salah satu Pilar (Pendidikan, Kesehatan, Ketahanan Bencana, Penurunan Kemiskinan) di toolbar atas untuk mengaktifkan pemetaan tematik dan capaian daerah.
+          <p className="text-[11px] text-slate-600 leading-relaxed">
+            {selectedWilayah.level === 'nasional'
+              ? 'Klik wilayah provinsi pada peta untuk memuat data capaian 4 pilar dan rincian seluruh indikator daerah tersebut.'
+              : `Menampilkan profil wilayah ${selectedWilayah.name} (Kode BPS: ${selectedWilayah.kodeBps}).`}
           </p>
         </div>
       )}

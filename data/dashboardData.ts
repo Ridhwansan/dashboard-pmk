@@ -113,8 +113,8 @@ export const ORCHESTRATION_AGENDA = [
     summary: 'Peningkatan alokasi anggaran TB dari Kemenkeu; Pelibatan Faskes TNI Polri untuk CKG di Indonesia Timur; Percepatan 7 dokter spesialis dasar RSUD (Kemenkes & Kemendikti); Percepatan revisi Perpres 72/2021 Stunting (Bappenas).',
   },
   {
-    pillar: 'Ketahanan Bencana',
-    topic: 'Ketahanan Bencana',
+    pillar: 'Bencana',
+    topic: 'Bencana',
     summary: 'RTM Satgas PRRP Sumatera (kebutuhan huntap & lahan); Inpres pelaksanaan kegiatan strategis kewenangan daerah oleh pusat; Percepatan regulasi bantuan stimulan rumah rusak berat Rp70 juta secara nasional.',
   },
   {
@@ -273,8 +273,8 @@ export const PILLARS_DATA: Record<string, PillarData> = {
   bencana: {
     id: 'bencana',
     number: 3,
-    name: '3. Pilar Ketahanan Bencana',
-    title: 'Pilar Ketahanan Bencana',
+    name: '3. Pilar Bencana',
+    title: 'Pilar Bencana',
     subtitle: 'Kesiapsiagaan · Penyelamatan · Pemulihan Pascabencana · KITA TANGGUH',
     summaryIndicators: [
       { label: 'Jumlah Bencana (tahun)', target: '—', achievement: '2.096 kejadian (Okt’26)', note: '2025: 3.176 kejadian bencana' },

@@ -28,7 +28,7 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
           </div>
           <div className="text-left">
             <span className="block text-xs font-extrabold text-white tracking-wider uppercase">
-              Kemenko PMK RI
+              KEMENKO PMK
             </span>
             <span className="block text-[10px] font-medium text-slate-300">
               Pembangunan Manusia dan Kebudayaan
@@ -75,7 +75,7 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
               </h2>
 
               <p className="text-sm text-slate-600 font-medium leading-relaxed">
-                Monitoring komprehensif target, capaian 2026, trajektori RPJMN 2025–2029, dan matriks kendala yang terbagi dalam 4 pilar: Pendidikan, Kesehatan, Kebencanaan, dan Penurunan Kemiskinan.
+                Monitoring komprehensif target, capaian 2026, trajektori RPJMN 2025–2029, dan matriks kendala yang terbagi dalam 4 pilar: Pendidikan, Kesehatan, Bencana, dan Penurunan Kemiskinan.
               </p>
             </div>
           </div>

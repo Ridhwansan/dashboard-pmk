@@ -13,6 +13,7 @@ interface BencanaDetailViewProps {
 
 interface WidgetCardItem {
   id: string;
+  chipLabel?: string;
   title: string;
   value: string;
   unit?: string;
@@ -36,80 +37,76 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = () => {
     );
   }
 
-  // Executive Program Widgets for Ketahanan Bencana (Aligned with Image 1)
+  // 6 Priority Program Widgets for Bencana (Gambar 3 Verbatim)
   const widgetCards: WidgetCardItem[] = [
     {
-      id: 'rehabilitasi_rekonstruksi_sumatera',
-      title: 'Rehabilitasi dan Rekonstruksi Sumatera',
-      value: '21.974',
-      unit: 'unit hunian terfasilitasi',
-      status: 'Prioritas: Aceh, Sumut, Sumbar',
-      target: 'Target 2026: 60.045 unit huntara & huntap',
-      percent: 36.6,
-      subtext: 'Pemulihan perumahan, konektivitas & layanan publik pascabencana',
-    },
-    {
-      id: 'huntap',
-      title: 'Hunian Tetap (Huntap) Sumatera',
-      value: '1.707',
-      unit: 'unit hunian',
-      status: 'Capaian 2026 (4,3%)',
-      target: 'Target 2026: 39.501 unit',
-      percent: 4.3,
-      subtext: 'Kebutuhan total: 57.027 unit · Target rampung 100% pada 2027',
-    },
-    {
-      id: 'huntara',
-      title: 'Hunian Sementara (Huntara) Sumatera',
-      value: '20.267',
-      unit: 'unit hunian',
-      status: 'Capaian 2026 (99,0%)',
-      target: 'Target 2026: 20.544 unit',
-      percent: 99.0,
-      subtext: 'Penyediaan hunian darurat pengungsi hampir tuntas sempurna',
-    },
-    {
-      id: 'jumlah_bencana',
-      title: 'Jumlah Kejadian Bencana',
-      value: '2.096',
+      id: 'jumlah_kejadian_bencana',
+      chipLabel: 'PKPN',
+      title: 'Jumlah kejadian bencana',
+      value: '2.100',
       unit: 'kejadian',
-      status: 'Posisi s.d. Oktober 2026',
-      target: 'Monitoring Kesiapsiagaan 2026',
-      subtext: 'Tahun 2025: 3.176 kejadian bencana di seluruh Indonesia',
+      status: 'Tercatat s.d. Okt 2026',
+      target: '2025: 4.727 kejadian',
+      subtext: 'Pemantauan kesiapsiagaan darurat bencana nasional',
     },
     {
-      id: 'pengungsi',
-      title: 'Pengungsi Kembali Pascabencana',
-      value: '100%',
-      status: 'Tercapai 100%',
-      target: 'Target: 100% fasilitasi',
-      percent: 100,
-      subtext: 'Seluruh warga binaan telah difasilitasi hunian mandiri',
+      id: 'huntara_sumatera',
+      chipLabel: 'PKPN',
+      title: 'Pembangunan Huntara Sumatera',
+      value: '20.770',
+      unit: 'unit',
+      status: 'Capaian 2026',
+      target: 'Target 2026: 20.803',
+      percent: 99.8,
+      subtext: 'Penyediaan hunian sementara pengungsi pascabencana',
     },
     {
-      id: 'infrastruktur',
-      title: 'Infrastruktur Pascabencana Sumatera',
-      value: '99%',
-      status: 'Progres Fisik Selesai',
-      target: 'Target Kolom 2027: 100%',
-      percent: 99.0,
-      subtext: 'Jembatan, tanggul sungai, dan jalan poros logistik',
+      id: 'huntap_sumatera',
+      chipLabel: 'PKPN',
+      title: 'Pembangunan Huntap Sumatera',
+      value: '1.012',
+      unit: 'unit',
+      status: 'Capaian 2026',
+      target: 'Target 2026: 44.121',
+      percent: 2.3,
+      subtext: 'Pembangunan hunian tetap relokasi bencana',
     },
     {
-      id: 'kerugian',
-      title: 'Kerugian Bencana (% PDB)',
-      value: '0,137%',
-      unit: 'PDB',
-      status: 'Terkendali dalam batas target',
-      target: 'Target 2026: ≤ 0,137% PDB',
-      percent: 100,
-      subtext: 'Target 2027: ≤ 0,136% · Target 2029: ≤ 0,135% PDB',
+      id: 'provinsi_karhutla',
+      chipLabel: 'PKPN',
+      title: 'Provinsi Prioritas Terdampak Karhutla',
+      value: '6',
+      unit: 'Provinsi',
+      status: 'Data 13 Oktober 2026',
+      target: 'Fokus pengendalian & pencegahan terpadu',
+      subtext: 'Wilayah prioritas kerawanan kebakaran hutan dan lahan',
+    },
+    {
+      id: 'luas_karhutla',
+      chipLabel: 'PKPN',
+      title: 'Luas Karhutla yang sudah dipadamkan',
+      value: '129.434,18',
+      unit: 'Ha',
+      status: 'Jumlah Luas Karhutla: 130.097,79 Ha',
+      target: 'Dalam proses pemadaman: 663,61 Ha',
+      percent: 99.5,
+      subtext: 'Efektivitas satgas pemadaman karhutla tuntas 99,5%',
+    },
+    {
+      id: 'kerugian_bencana',
+      chipLabel: 'PKPN',
+      title: 'Kerugian bencana',
+      value: '—',
+      unit: '% PDB',
+      status: 'Capaian 2026 • % PDB',
+      target: 'Target 2026: 0,136',
+      subtext: 'Monitoring dampak kerugian ekonomi terhadap Produk Domestik Bruto',
     },
   ];
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
-      {/* 1. Header Card: Factual Title */}
+      {/* 1. Header Card: Factual Title (Renamed from Ketahanan Bencana to Bencana) */}
       <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-2xl bg-[#fcf8f4] border border-[#a8754b]/30 flex items-center justify-center text-[#7a4b27] shadow-2xs shrink-0">
@@ -117,7 +114,7 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = () => {
           </div>
           <div>
             <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
-              Ketahanan Bencana
+              Bencana
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
               Target dan Realisasi Program Prioritas (RPJMN 2025–2029)
@@ -126,15 +123,31 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = () => {
         </div>
       </div>
 
-      {/* 2. Grid of Separated Widget Cards (No Kendala section on this initial page) */}
+      {/* 2. Grid of Separated Widget Cards (Whole Card Clickable, Compact Height) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {widgetCards.map((card) => {
           return (
             <div
               key={card.id}
-              className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg hover:border-[#a8754b] p-6 sm:p-7 flex flex-col justify-between group transition-all duration-200"
+              onClick={() => setSelectedProgramId(card.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelectedProgramId(card.id);
+                }
+              }}
+              className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg hover:border-[#a8754b] p-6 sm:p-7 flex flex-col justify-between group transition-all duration-200 cursor-pointer select-none"
             >
               <div>
+                {/* PKPN Chip Label */}
+                <div className="mb-2.5">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200/90 shadow-2xs">
+                    {card.chipLabel || 'PKPN'}
+                  </span>
+                </div>
+
                 {/* Header Widget */}
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-[#7a4b27] transition-colors leading-snug">
@@ -187,19 +200,15 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = () => {
                 </div>
               </div>
 
-              {/* Action: Detail Program Button */}
+              {/* Action: Detail Program Button Affordance */}
               <div className="mt-5 pt-3.5 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setSelectedProgramId(card.id)}
-                  className="w-full py-2.5 px-3 rounded-xl bg-slate-50 group-hover:bg-[#fcf8f4] text-slate-700 group-hover:text-[#7a4b27] border border-slate-200/80 group-hover:border-[#a8754b]/40 text-xs font-bold transition-all duration-150 flex items-center justify-between cursor-pointer"
-                >
+                <div className="w-full py-2.5 px-3 rounded-xl bg-slate-50 group-hover:bg-[#fcf8f4] text-slate-700 group-hover:text-[#7a4b27] border border-slate-200/80 group-hover:border-[#a8754b]/40 text-xs font-bold transition-all duration-150 flex items-center justify-between pointer-events-none">
                   <span className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-[#7a4b27]" />
                     <span>Lihat Detail Program</span>
                   </span>
                   <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                </button>
+                </div>
               </div>
             </div>
           );

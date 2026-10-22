@@ -97,8 +97,8 @@ export const MAP_PILLARS: PillarOption[] = [
   },
   {
     id: 'bencana',
-    name: 'Ketahanan Bencana',
-    shortName: 'Ketahanan Bencana',
+    name: 'Bencana',
+    shortName: 'Bencana',
     badge: 'Pilar 3',
     iconName: 'bencana',
   },
@@ -461,10 +461,20 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     maxVal: 100.0,
     colorScheme: 'green',
     getValue: (w) => {
+      if (w.level === 'nasional') {
+        return {
+          num: 90,
+          display: '18 RSUD (90%)',
+          label: 'Kesiapan RS Rujukan',
+          subtext: 'Peningkatan Kelas D ke C & 7 Dokter Spesialis',
+          statusLabel: '18 dari 20 RSUD',
+          statusType: 'success',
+        };
+      }
       const num = w.isPrioritas ? 68.0 : 92.0;
       return {
         num,
-        display: `${num.toString().replace('.', ',')}%`,
+        display: `${num.toString().replace('.', ',')}% Kesiapan`,
         label: 'Kesiapan RS Rujukan',
         subtext: 'Peningkatan Kelas D ke C & 7 Dokter Spesialis',
         statusLabel: num >= 85 ? 'Spesialis Lengkap' : 'Kendala Tenaga Dokter',

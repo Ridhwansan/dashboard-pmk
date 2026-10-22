@@ -24,7 +24,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
       case 'kesehatan':
         return 'Pilar Kesehatan';
       case 'bencana':
-        return 'Pilar Ketahanan Bencana';
+        return 'Pilar Bencana';
       case 'kemiskinan':
         return 'Pilar Penurunan Kemiskinan';
     }

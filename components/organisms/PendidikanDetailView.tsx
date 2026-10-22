@@ -13,6 +13,7 @@ interface PendidikanDetailViewProps {
 
 interface WidgetCardItem {
   id: string;
+  chipLabel?: string;
   title: string;
   value: string;
   unit: string;
@@ -36,77 +37,66 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = () => {
     );
   }
 
-  // 5 Priority Program Widgets from Image 1 (Verbatim) + IMM
+  // 6 Priority Program Widgets from Gambar 2 (Verbatim)
   const widgetCards: WidgetCardItem[] = [
     {
       id: 'revitalisasi_satdik',
-      title: 'Revitalisasi Sarana dan Prasarana Sekolah/Madrasah',
+      chipLabel: 'PKPN',
+      title: 'Revitalisasi Satuan Pendidikan',
       value: '36.669',
-      unit: 'satdik',
+      unit: 'satuan pendidikan',
       status: 'Capaian 2026',
-      target: 'Target 2026: 80.282 satdik',
+      target: 'Target 2026: 80.282 satuan pendidikan',
       percent: 45.7,
-      subtext: 'Realisasi 2025: 17.508 satdik (136,5%)',
     },
     {
       id: 'snt_operasional',
-      title: 'Sekolah Nasional Terintegrasi (SNT)',
+      chipLabel: 'PKPN',
+      title: 'SNT operasional',
       value: '17',
       unit: 'satuan pendidikan',
       status: 'Capaian 2026',
-      target: 'Target 2026: 35 satdik',
+      target: 'Target 2026: 35 satuan pendidikan',
       percent: 48.6,
-      subtext: 'Target Kumulatif 2027: 135 satuan pendidikan',
-    },
-    {
-      id: 'digitalisasi_pendidikan',
-      title: 'Digitalisasi Pembelajaran',
-      value: '727.436',
-      unit: 'unit IFP & perangkat',
-      status: 'Capaian 2026 (Berproses disalurkan)',
-      target: 'Target 2026: 727.436 unit',
-      percent: 100,
-      subtext: 'Realisasi 2025: 288.865 unit (100%)',
-    },
-    {
-      id: 'sug_transformasi',
-      title: 'Sekolah Unggul Garuda Transformasi (SUGT)',
-      value: '42',
-      unit: 'satdik',
-      status: 'Capaian 2026 (15 Provinsi)',
-      target: 'Target 2026: 30 satdik',
-      percent: 140,
-      subtext: 'Realisasi 2025: 12 satdik · Target Kumulatif 2027: 50 unit',
     },
     {
       id: 'sug_baru',
-      title: 'Sekolah Unggul Garuda Baru (SUGB)',
-      value: '4',
-      unit: 'satdik',
-      status: 'Capaian 2026 (4 Provinsi)',
-      target: 'Target 2026: 4 satdik',
+      chipLabel: 'PKPN',
+      title: 'Sekolah Unggul Garuda Baru',
+      value: '3',
+      unit: 'Sekolah Unggul Garuda Baru',
+      status: 'Capaian 2026',
+      target: 'Target 2026: 4 satuan pendidikan',
+      percent: 75,
+    },
+    {
+      id: 'sug_transformasi',
+      chipLabel: 'PKPN',
+      title: 'Sekolah Unggul Garuda Transformasi',
+      value: '42',
+      unit: 'satuan pendidikan',
+      status: 'Capaian 2025 :12 satuan pendidikan; Capaian 2026: 30 satuan pendidikan',
+      target: 'Target 2026: 30 satuan pendidikan',
       percent: 100,
-      subtext: 'Realisasi 2025: 2 satdik · Lokasi: Babel, Kaltara, Sultra, NTT',
+    },
+    {
+      id: 'digitalisasi_pendidikan',
+      chipLabel: 'PKPN',
+      title: 'Digitalisasi Pendidikan',
+      value: '727.436',
+      unit: 'unit',
+      status: 'Capaian 2026 (Berproses disalurkan ke 316.535 sekolah)',
+      target: 'Target 2026: 727.436 unit',
+      percent: 100,
     },
     {
       id: 'studio_guru',
+      chipLabel: 'PKPN',
       title: 'Studio Guru',
-      value: '124',
-      unit: 'studio operasional',
-      status: 'Capaian 2026',
-      target: 'Target 2026: 250 studio',
-      percent: 49.6,
-      subtext: 'Pusat kolaborasi & kreasi media ajar digital guru',
-    },
-    {
-      id: 'imm',
-      title: 'Indeks Modal Manusia (IMM)',
-      value: '0,562',
-      unit: 'poin',
-      status: 'Capaian 2025',
-      target: 'Target 2026: 0,57 poin',
-      percent: 98.6,
-      subtext: 'Target RPJMN 2029: 0,59 poin',
+      value: '1',
+      unit: 'studio pusat + 110 konten pembelajaran',
+      status: 'Launching 25 November 2026',
+      target: 'Target 2026: Studio Guru beroperasi penuh',
     },
   ];
 
@@ -129,15 +119,31 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = () => {
         </div>
       </div>
 
-      {/* 2. Grid of Separated Widget Cards (No Kendala section on this initial page) */}
+      {/* 2. Grid of Separated Widget Cards (Whole Card Clickable, Compact Height) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {widgetCards.map((card) => {
           return (
             <div
               key={card.id}
-              className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg hover:border-blue-400 p-6 sm:p-7 flex flex-col justify-between group transition-all duration-200"
+              onClick={() => setSelectedProgramId(card.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelectedProgramId(card.id);
+                }
+              }}
+              className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg hover:border-blue-400 p-6 sm:p-7 flex flex-col justify-between group transition-all duration-200 cursor-pointer select-none"
             >
               <div>
+                {/* PKPN Chip Label */}
+                <div className="mb-2.5">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200/90 shadow-2xs">
+                    {card.chipLabel || 'PKPN'}
+                  </span>
+                </div>
+
                 {/* Header Widget */}
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-blue-900 transition-colors leading-snug">
@@ -188,19 +194,15 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = () => {
                 </div>
               </div>
 
-              {/* Action: Detail Program Button */}
+              {/* Action: Detail Program Button Affordance */}
               <div className="mt-5 pt-3.5 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setSelectedProgramId(card.id)}
-                  className="w-full py-2.5 px-3 rounded-xl bg-slate-50 group-hover:bg-blue-50 text-slate-700 group-hover:text-blue-700 border border-slate-200/80 group-hover:border-blue-200 text-xs font-bold transition-all duration-150 flex items-center justify-between cursor-pointer"
-                >
+                <div className="w-full py-2.5 px-3 rounded-xl bg-slate-50 group-hover:bg-blue-50 text-slate-700 group-hover:text-blue-700 border border-slate-200/80 group-hover:border-blue-200 text-xs font-bold transition-all duration-150 flex items-center justify-between pointer-events-none">
                   <span className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-blue-600" />
                     <span>Lihat Detail Program</span>
                   </span>
                   <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                </button>
+                </div>
               </div>
             </div>
           );

@@ -9,31 +9,16 @@ import {
   KECAMATAN_DATA,
   DESA_DATA,
 } from '@/data/wilayahData';
-import {
-  MapPillarId,
-  MAP_PILLARS,
-  getIndicatorsByPillar,
-  getIndicatorById,
-  getDefaultIndicatorForPillar,
-} from '@/data/mapIndicators';
+import { MapPillarId } from '@/data/mapIndicators';
 import { AVAILABLE_YEARS, PeriodYear } from '@/data/pillarAgregatData';
 import { LeafletMapWrapper } from '@/components/molecules/LeafletMapWrapper';
-import { WilayahInfoSection } from '@/components/organisms/WilayahInfoSection';
+import { WilayahSidePanel } from '@/components/organisms/WilayahSidePanel';
 import {
   RotateCcw,
   ChevronDown,
   Maximize2,
   Minimize2,
   MapPin,
-  Check,
-  Calendar,
-  AlertTriangle,
-  Target,
-  ArrowLeft,
-  GraduationCap,
-  HeartPulse,
-  ShieldAlert,
-  TrendingDown,
 } from 'lucide-react';
 
 interface IndonesiaMapProps {
@@ -80,68 +65,14 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
     };
   }, [isFullscreen]);
 
-  // 1. Pillar and Sub-Indicator Filter States (default: Pendidikan & Revitalisasi Satdik)
-  const [activePillar, setActivePillar] = useState<MapPillarId | null>(initialPillar || 'pendidikan');
-  const [activeIndicatorId, setActiveIndicatorId] = useState<string | null>(() => {
-    return initialPillar ? getDefaultIndicatorForPillar(initialPillar).id : 'revitalisasi_satdik';
-  });
-
-  // 2. Annual Period Filter State (2025 - 2029, default: 2026)
+  // 1. Annual Period Filter State (2025 - 2029, default: 2026)
   const [selectedYear, setSelectedYear] = useState<PeriodYear>(2026);
 
-  // Dropdown open state for hover / click
-  const [openDropdownPillar, setOpenDropdownPillar] = useState<MapPillarId | null>(null);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const handleMouseEnter = (pillarId: MapPillarId) => {
-    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-    setOpenDropdownPillar(pillarId);
-  };
-
-  const handleMouseLeave = () => {
-    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-    hoverTimeoutRef.current = setTimeout(() => {
-      setOpenDropdownPillar(null);
-    }, 200);
-  };
-
-  // 2. Cascading Territory Filter States
+  // 2. Cascading Territory Filter States (default: Nasional / 38 Provinsi)
   const [selectedProvinsiId, setSelectedProvinsiId] = useState<string>('nasional');
   const [selectedKabKotaId, setSelectedKabKotaId] = useState<string>('');
   const [selectedKecamatanId, setSelectedKecamatanId] = useState<string>('');
   const [selectedDesaId, setSelectedDesaId] = useState<string>('');
-
-  // Handle Pillar Switch: update active pillar and select its default indicator
-  const handlePillarChange = (newPillar: MapPillarId) => {
-    setActivePillar(newPillar);
-    const defaultInd = getDefaultIndicatorForPillar(newPillar);
-    setActiveIndicatorId(defaultInd.id);
-  };
-
-  // Handle Sub-Indicator Select from Dropdown
-  const handleSelectIndicator = (pillarId: MapPillarId, indicatorId: string) => {
-    setActivePillar(pillarId);
-    setActiveIndicatorId(indicatorId);
-    setOpenDropdownPillar(null);
-  };
-
-  // Designated Focus Indicator
-  const FOCUS_PILLAR: MapPillarId = 'pendidikan';
-  const FOCUS_INDICATOR_ID = 'revitalisasi_satdik';
-
-  const isAtFocusIndicator =
-    activePillar === FOCUS_PILLAR && activeIndicatorId === FOCUS_INDICATOR_ID;
-
-  const handleResetToFocus = () => {
-    setActivePillar(FOCUS_PILLAR);
-    setActiveIndicatorId(FOCUS_INDICATOR_ID);
-  };
-
-  // Active indicator definition (null when user hasn't selected a pillar yet)
-  const currentIndicator = useMemo(() => {
-    if (!activeIndicatorId && !activePillar) return null;
-    return getIndicatorById(activeIndicatorId, activePillar);
-  }, [activeIndicatorId, activePillar]);
 
   // 3. Resolve Active Territory Object
   const currentWilayah: WilayahData = useMemo(() => {
@@ -256,11 +187,6 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
       if (wilayah.parentKecamatanId) setSelectedKecamatanId(wilayah.parentKecamatanId);
       handleDesaChange(wilayah.id);
     }
-
-    // Scroll smoothly to territory details under map
-    setTimeout(() => {
-      wilayahInfoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 150);
   };
 
   const isDetailSupported =
@@ -396,10 +322,10 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
             </div>
           </div>
 
-          {/* Right side of Row 1: Filter Periode Tahun & Reset Wilayah with generous whitespace */}
-          <div className="flex items-center gap-4 shrink-0 self-start lg:self-auto ml-auto">
+          {/* Right side: Filter Periode Tahun, Reset Wilayah, and Layar Penuh Peta Button */}
+          <div className="flex items-center gap-3 shrink-0 self-start lg:self-auto ml-auto flex-wrap sm:flex-nowrap">
             {/* Filter Periode Tahun Dropdown */}
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
               <label htmlFor="filter-tahun" className="text-sm font-semibold text-slate-600 shrink-0">
                 Tahun:
               </label>
@@ -427,151 +353,10 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                 type="button"
                 onClick={handleResetNasional}
                 title="Kembali ke tampilan Seluruh Indonesia"
-                className="h-[40px] px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center gap-2 border border-slate-200/90 shrink-0"
+                className="h-[40px] px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center gap-2 border border-slate-200/90 shrink-0"
               >
                 <RotateCcw className="h-4 w-4 text-slate-500" />
                 <span>Reset Wilayah</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Row 2: Filter Pilar & Sub-Indikator with generous whitespace */}
-        <div className="pt-3.5 border-t border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
-          <div className="flex items-center gap-3 overflow-x-visible flex-wrap">
-            <span className="text-sm font-semibold text-slate-700 shrink-0 mr-1">
-              Pilar:
-            </span>
-
-            {MAP_PILLARS.map((pilar, pIdx) => {
-              const isSelected = activePillar === pilar.id;
-              const pilarIndicators = getIndicatorsByPillar(pilar.id);
-              const isOpen = openDropdownPillar === pilar.id;
-              const isRightAligned = pIdx >= 2;
-
-              return (
-                <div
-                  key={pilar.id}
-                  className="relative"
-                  onMouseEnter={() => handleMouseEnter(pilar.id)}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handlePillarChange(pilar.id);
-                      setOpenDropdownPillar((prev) => (prev === pilar.id ? null : pilar.id));
-                    }}
-                    aria-haspopup="true"
-                    aria-expanded={isOpen}
-                    className={`h-[40px] inline-flex items-center gap-2 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm transition-all duration-150 cursor-pointer ${
-                      isSelected
-                        ? 'bg-blue-600 text-white font-semibold shadow-xs hover:bg-blue-700'
-                        : 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200/90 font-medium hover:border-slate-300'
-                    }`}
-                  >
-                    <span>{pilar.shortName}</span>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform duration-150 shrink-0 ${
-                        isOpen ? 'rotate-180' : ''
-                      } ${isSelected ? 'text-white/90' : 'text-slate-400'}`}
-                    />
-                  </button>
-
-                  {/* Clean Floating Dropdown for Sub-Indicators */}
-                  {isOpen && (
-                    <div
-                      className={`absolute ${
-                        isRightAligned ? 'right-0 sm:right-0 left-auto' : 'left-0'
-                      } top-full pt-2 z-40 w-72 sm:w-80 max-w-[calc(100vw-2rem)] animate-in fade-in zoom-in-95 duration-100`}
-                      onMouseEnter={() => handleMouseEnter(pilar.id)}
-                      onMouseLeave={handleMouseLeave}
-                    >
-                      <div className="bg-white rounded-xl border border-slate-200 shadow-xl p-1.5 text-xs">
-                        <div className="space-y-0.5 max-h-64 overflow-y-auto custom-scrollbar">
-                          {pilarIndicators.map((ind) => {
-                            const isIndActive = activeIndicatorId === ind.id;
-                            return (
-                              <button
-                                key={ind.id}
-                                type="button"
-                                onClick={() => handleSelectIndicator(pilar.id, ind.id)}
-                                className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-left transition-colors cursor-pointer ${
-                                  isIndActive
-                                    ? 'bg-blue-50 text-blue-900 font-semibold'
-                                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
-                                }`}
-                              >
-                                <div className="min-w-0 pr-1">
-                                  <div className="text-xs font-medium text-slate-800 truncate">
-                                    {ind.name}
-                                  </div>
-                                </div>
-                                {isIndActive && (
-                                  <Check className="h-4 w-4 text-blue-600 shrink-0" />
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-        </div>
-      </div>
-
-      {/* ======================================================== */}
-      {/* 2. STATUS INDIKATOR & TARGET REALISASI                   */}
-      {/* ======================================================== */}
-      <div className="w-full bg-white rounded-2xl border border-slate-200/90 shadow-2xs px-5 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
-        {/* Left Side: Indicator Title & Pillar Name (Clean typography, no chips) */}
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="min-w-0 space-y-0.5">
-            <h3 className="text-sm sm:text-base font-extrabold text-slate-900 truncate">
-              {currentIndicator?.name || 'Revitalisasi (satdik)'}
-            </h3>
-            <p className="text-xs font-semibold text-slate-500">
-              {activePillar && activePillar !== 'all'
-                ? MAP_PILLARS.find((p) => p.id === activePillar)?.name
-                : 'Pilar Pendidikan'}
-            </p>
-          </div>
-        </div>
-
-        {/* Right Side: Target, Realisasi & Action Button with Generous Whitespace */}
-        <div className="flex items-center gap-4 sm:gap-6 shrink-0 flex-wrap sm:flex-nowrap justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
-          <div className="flex items-center gap-4 text-xs text-slate-600 font-medium">
-            <span>
-              Target {selectedYear}:{' '}
-              <strong className="text-slate-900 font-bold">
-                {currentIndicator?.target2026 || '80.282 satdik'}
-              </strong>
-            </span>
-            <span className="text-slate-300">·</span>
-            <span>
-              Realisasi:{' '}
-              <strong className="text-slate-900 font-bold">
-                {currentIndicator?.nationalValue || '36.669 satdik (45,7%)'}
-              </strong>
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            {/* Quick Button to return to Focus Indicator if changed */}
-            {!isAtFocusIndicator && (
-              <button
-                type="button"
-                onClick={handleResetToFocus}
-                title="Arahkan kembali ke Indikator Fokus (Revitalisasi Satdik)"
-                className="h-[40px] inline-flex items-center gap-2 px-3.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/90 transition-all cursor-pointer shadow-2xs shrink-0"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-                <span>Ke Indikator Fokus</span>
               </button>
             )}
 
@@ -579,7 +364,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
             <button
               type="button"
               onClick={() => setIsFullscreen(true)}
-              className="h-[40px] inline-flex items-center gap-2 px-4 rounded-xl text-xs sm:text-sm font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs transition-all cursor-pointer shrink-0"
+              className="h-[40px] inline-flex items-center gap-2 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs transition-all cursor-pointer shrink-0"
               title="Perbesar Peta ke Layar Penuh"
             >
               <Maximize2 className="w-4 h-4 text-blue-600" />
@@ -590,17 +375,27 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
       </div>
 
       {/* ======================================================== */}
-      {/* 2. PETA GEOSPASIAL INTERAKTIF 100% LEBAR                 */}
+      {/* 2. PETA (70%) & SECTION PENJELASAN WILAYAH (30%)         */}
       {/* ======================================================== */}
-      <div className="w-full h-[540px] sm:h-[600px] lg:h-[650px] xl:h-[700px] flex flex-col rounded-2xl overflow-hidden border border-slate-200/90 shadow-2xs relative">
-        <LeafletMapWrapper
-          selectedWilayah={currentWilayah}
-          availableBoundaries={activeBoundaries}
-          onSelectWilayah={handleBoundaryClick}
-          onResetNasional={handleResetNasional}
-          selectedPillar={activePillar}
-          selectedIndicator={activeIndicatorId}
-        />
+      <div className="grid grid-cols-1 lg:grid-cols-10 gap-5 lg:gap-6 items-stretch">
+        {/* Section Peta Geospasial: 70% Lebar Layar (7 Kolom) */}
+        <div className="lg:col-span-7 h-[560px] sm:h-[620px] lg:h-[720px] flex flex-col rounded-2xl overflow-hidden border border-slate-200/90 shadow-2xs relative bg-slate-50">
+          <LeafletMapWrapper
+            selectedWilayah={currentWilayah}
+            availableBoundaries={activeBoundaries}
+            onSelectWilayah={handleBoundaryClick}
+            onResetNasional={handleResetNasional}
+          />
+        </div>
+
+        {/* Section Penjelasan Wilayah: 30% Lebar Layar (3 Kolom) */}
+        <div className="lg:col-span-3 h-[560px] sm:h-[620px] lg:h-[720px] flex flex-col">
+          <WilayahSidePanel
+            wilayah={currentWilayah}
+            selectedYear={selectedYear}
+            onResetNasional={handleResetNasional}
+          />
+        </div>
       </div>
 
       {/* Fullscreen Map Overlay (when isFullscreen is active) */}
@@ -613,8 +408,6 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
               availableBoundaries={activeBoundaries}
               onSelectWilayah={handleBoundaryClick}
               onResetNasional={handleResetNasional}
-              selectedPillar={activePillar}
-              selectedIndicator={activeIndicatorId}
               isFullscreen={true}
             />
           </div>
@@ -646,85 +439,23 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
               </button>
             </div>
 
-            {/* Filter Section 1: 4 Pillars (Memanjang ke bawah / Vertical stack) */}
+            {/* Quick Territory Dropdown Selector */}
             <div>
               <div className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">
-                Pilih Pilar Prioritas
-              </div>
-              <div className="flex flex-col gap-1.5">
-                {MAP_PILLARS.map((p) => {
-                  const isActive = activePillar === p.id;
-                  const Icon =
-                    p.id === 'pendidikan'
-                      ? GraduationCap
-                      : p.id === 'kesehatan'
-                      ? HeartPulse
-                      : p.id === 'bencana'
-                      ? ShieldAlert
-                      : TrendingDown;
-
-                  const activeColorClass =
-                    p.id === 'pendidikan'
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : p.id === 'kesehatan'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : p.id === 'bencana'
-                      ? 'bg-[#7a4b27] text-white shadow-xs'
-                      : 'bg-red-600 text-white shadow-xs';
-
-                  const inactiveIconColor =
-                    p.id === 'pendidikan'
-                      ? 'text-blue-600'
-                      : p.id === 'kesehatan'
-                      ? 'text-emerald-600'
-                      : p.id === 'bencana'
-                      ? 'text-[#7a4b27]'
-                      : 'text-red-600';
-
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => handlePillarChange(p.id)}
-                      className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between text-left ${
-                        isActive
-                          ? `${activeColorClass} font-extrabold`
-                          : 'text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200/60'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Icon
-                          className={`w-4 h-4 shrink-0 ${
-                            isActive ? 'text-white' : inactiveIconColor
-                          }`}
-                        />
-                        <span>{p.name}</span>
-                      </div>
-                      {isActive && <Check className="w-3.5 h-3.5 shrink-0 text-white" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Filter Section 2: Indicator Dropdown */}
-            <div>
-              <div className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">
-                Pilih Indikator
+                Pilih Lokus Wilayah
               </div>
               <div className="relative w-full">
                 <select
-                  id="fullscreen-indicator-filter"
-                  aria-label="Pilih Indikator Peta"
-                  value={activeIndicatorId || ''}
-                  onChange={(e) =>
-                    handleSelectIndicator(activePillar || 'pendidikan', e.target.value)
-                  }
+                  id="fullscreen-wilayah-filter"
+                  aria-label="Pilih Wilayah Peta"
+                  value={selectedProvinsiId}
+                  onChange={(e) => handleProvinsiChange(e.target.value)}
                   className="w-full h-[38px] appearance-none pl-3 pr-8 text-xs font-bold bg-white text-slate-900 border border-slate-300 hover:border-slate-400 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none transition-all cursor-pointer truncate shadow-2xs"
                 >
-                  {getIndicatorsByPillar(activePillar || 'pendidikan').map((ind) => (
-                    <option key={ind.id} value={ind.id}>
-                      {ind.name} {ind.isNationalOnly ? '• [Capaian Nasional]' : ''}
+                  <option value="nasional">Seluruh Indonesia (38 Prov)</option>
+                  {PROVINSI_DATA.map((prov) => (
+                    <option key={prov.id} value={prov.id}>
+                      {prov.name} {prov.isPrioritas ? '• Prioritas' : ''}
                     </option>
                   ))}
                 </select>
@@ -732,50 +463,44 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
               </div>
             </div>
 
-            {/* Status Info / National Badge */}
-            {currentIndicator?.isNationalOnly && (
-              <div className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
-                Capaian Nasional (Area Putih pada Peta)
+            {/* 4 Pillar Quick Summary Box */}
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex flex-col gap-2 text-xs">
+              <div className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-600 pb-1 border-b border-slate-200/60">
+                Ringkasan 4 Pilar ({currentWilayah.name})
               </div>
-            )}
-
-            {/* Target & Realisasi Summary Box */}
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex flex-col gap-1.5 text-xs">
-              <div className="flex items-center justify-between text-slate-600">
-                <span className="text-[11px] font-medium">Target {selectedYear}:</span>
-                <span className="font-bold text-slate-900">{currentIndicator?.target2026}</span>
+              <div className="flex items-center justify-between text-slate-700">
+                <span className="text-[11px] font-medium">Pendidikan:</span>
+                <span className="font-bold text-slate-900">{currentWilayah.pillarDetails?.pendidikan?.heroValue || '—'}</span>
               </div>
-              <div className="flex items-center justify-between text-slate-600 pt-1 border-t border-slate-200/60">
-                <span className="text-[11px] font-medium">Realisasi:</span>
-                <span className="font-extrabold text-blue-700">{currentIndicator?.nationalValue}</span>
+              <div className="flex items-center justify-between text-slate-700">
+                <span className="text-[11px] font-medium">Kesehatan:</span>
+                <span className="font-bold text-slate-900">{currentWilayah.pillarDetails?.kesehatan?.heroValue || '—'}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-700">
+                <span className="text-[11px] font-medium">Bencana:</span>
+                <span className="font-bold text-slate-900">{currentWilayah.pillarDetails?.bencana?.heroValue || '—'}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-700">
+                <span className="text-[11px] font-medium">Kemiskinan:</span>
+                <span className="font-bold text-slate-900">{currentWilayah.pillarDetails?.kemiskinan?.heroValue || '—'}</span>
               </div>
             </div>
 
             {/* Reset Tampilan Peta */}
-            <button
-              type="button"
-              onClick={handleResetNasional}
-              className="w-full h-[36px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 mt-0.5"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-              <span>Reset Tampilan Peta</span>
-            </button>
+            {selectedProvinsiId !== 'nasional' && (
+              <button
+                type="button"
+                onClick={handleResetNasional}
+                className="w-full h-[36px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 mt-0.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                <span>Kembali ke Nasional</span>
+              </button>
+            )}
           </aside>
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* 3. INFORMASI WILAYAH YANG DITEKAN (DI BAWAH PETA)        */}
-      {/* ======================================================== */}
-      <div ref={wilayahInfoRef} className="w-full pt-1">
-        <WilayahInfoSection
-          wilayah={currentWilayah}
-          activeIndicator={currentIndicator}
-          activePillar={activePillar}
-          selectedYear={selectedYear}
-          onResetNasional={handleResetNasional}
-        />
-      </div>
     </div>
   );
 };
