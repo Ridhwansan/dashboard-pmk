@@ -72,19 +72,7 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
           2029: { target: '—', capaian: '—' },
         },
       },
-      {
-        id: 'sug_semua',
-        mapIndicatorId: 'sug_semua',
-        name: 'Sekolah Unggul Garuda (SUGT & SUGB)',
-        unit: 'unit sekolah',
-        years: {
-          2025: { target: '16', capaian: '14', percent: '87,5%', statusType: 'success' },
-          2026: { target: '34', capaian: '46', percent: '135,3%', statusType: 'success' },
-          2027: { target: '55', capaian: '—' },
-          2028: { target: '—', capaian: '—' },
-          2029: { target: '—', capaian: '—' },
-        },
-      },
+
       {
         id: 'sug_transformasi',
         mapIndicatorId: 'sug_transformasi',

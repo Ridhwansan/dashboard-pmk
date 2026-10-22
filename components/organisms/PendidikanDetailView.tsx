@@ -69,14 +69,24 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = () => {
       subtext: 'Realisasi 2025: 288.865 unit (100%)',
     },
     {
-      id: 'sekolah_unggul_garuda',
-      title: 'Sekolah Unggul Garuda (SUGT & SUGB)',
-      value: '46',
-      unit: 'lokasi satuan pendidikan',
-      status: '42 SUGT + 4 SUGB di 19 Provinsi',
-      target: 'Target 2026: 34 satdik (30 SUGT + 4 SUGB)',
+      id: 'sug_transformasi',
+      title: 'Sekolah Unggul Garuda Transformasi (SUGT)',
+      value: '42',
+      unit: 'satdik',
+      status: 'Capaian 2026 (15 Provinsi)',
+      target: 'Target 2026: 30 satdik',
+      percent: 140,
+      subtext: 'Realisasi 2025: 12 satdik · Target Kumulatif 2027: 50 unit',
+    },
+    {
+      id: 'sug_baru',
+      title: 'Sekolah Unggul Garuda Baru (SUGB)',
+      value: '4',
+      unit: 'satdik',
+      status: 'Capaian 2026 (4 Provinsi)',
+      target: 'Target 2026: 4 satdik',
       percent: 100,
-      subtext: 'SUGT: 15 Prov (42 Unit) · SUGB: 4 Prov (4 Unit)',
+      subtext: 'Realisasi 2025: 2 satdik · Lokasi: Babel, Kaltara, Sultra, NTT',
     },
     {
       id: 'studio_guru',
@@ -102,7 +112,7 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = () => {
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
-      {/* 1. Header Card: Factual Title without segmented control */}
+      {/* 1. Header Card: Factual Title */}
       <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-2xs shrink-0">
@@ -113,15 +123,9 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = () => {
               Pendidikan
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              6 Program Prioritas Nasional • RPJMN 2025–2029
+              Target dan Realisasi Program Prioritas (RPJMN 2025–2029)
             </p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2 self-start sm:self-auto text-xs font-semibold text-slate-600 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200/80">
-          <span>Tahun Berjalan 2026</span>
-          <span className="text-slate-300">•</span>
-          <span className="text-blue-700 font-bold">6 Indikator Kunci</span>
         </div>
       </div>
 

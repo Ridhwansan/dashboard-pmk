@@ -14,18 +14,37 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
   onSelectProfilWilayah,
 }) => {
   return (
-    <div className="w-full max-w-5xl mx-auto py-8 sm:py-14 space-y-10 animate-in fade-in duration-200">
-      {/* 1. Header: Clean title without chips or redundant marketing copy */}
-      <div className="text-center space-y-3 max-w-2xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+    <div className="w-full max-w-5xl mx-auto py-6 sm:py-12 space-y-9 animate-in fade-in duration-300">
+      {/* 1. Header with Official Kemenko PMK Emblem (Navbar is removed on landing) */}
+      <div className="text-center space-y-4 max-w-2xl mx-auto flex flex-col items-center">
+        <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg mb-1">
+          <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-white/20 p-0.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/logo-kemenko-pmk.png"
+              alt="Logo Kemenko PMK"
+              className="h-full w-full object-contain"
+            />
+          </div>
+          <div className="text-left">
+            <span className="block text-xs font-extrabold text-white tracking-wider uppercase">
+              Kemenko PMK RI
+            </span>
+            <span className="block text-[10px] font-medium text-slate-300">
+              Pembangunan Manusia dan Kebudayaan
+            </span>
+          </div>
+        </div>
+
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
           Pusat Pemantauan Program Prioritas Nasional
         </h1>
 
-        <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+        <p className="text-sm sm:text-base text-slate-200 font-normal leading-relaxed max-w-xl">
           Pilih fokus analisis dashboard untuk memantau capaian indikator atau eksplorasi geospasial wilayah.
         </p>
 
-        <p className="text-xs text-slate-500 font-medium pt-1">
+        <p className="text-xs text-slate-300 font-medium pt-0.5">
           Pembaruan data: {DASHBOARD_META.cutoffDate} · RPJMN 2025–2029
         </p>
       </div>
@@ -43,7 +62,7 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
               onSelectIkhtisar();
             }
           }}
-          className="group bg-white rounded-3xl p-8 sm:p-10 border border-slate-200/90 hover:border-blue-600 shadow-2xs hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col justify-between text-left focus:outline-hidden focus:ring-4 focus:ring-blue-500/20"
+          className="group bg-white/95 backdrop-blur-md rounded-3xl p-8 sm:p-10 border border-white/60 hover:border-blue-500 shadow-2xl hover:shadow-blue-500/15 transition-all duration-300 cursor-pointer flex flex-col justify-between text-left focus:outline-hidden focus:ring-4 focus:ring-blue-500/30"
         >
           <div className="space-y-6">
             <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-200">
@@ -83,7 +102,7 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
               onSelectProfilWilayah();
             }
           }}
-          className="group bg-white rounded-3xl p-8 sm:p-10 border border-slate-200/90 hover:border-emerald-600 shadow-2xs hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col justify-between text-left focus:outline-hidden focus:ring-4 focus:ring-emerald-500/20"
+          className="group bg-white/95 backdrop-blur-md rounded-3xl p-8 sm:p-10 border border-white/60 hover:border-emerald-500 shadow-2xl hover:shadow-emerald-500/15 transition-all duration-300 cursor-pointer flex flex-col justify-between text-left focus:outline-hidden focus:ring-4 focus:ring-emerald-500/30"
         >
           <div className="space-y-6">
             <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-200">

@@ -248,9 +248,15 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '35 satuan pendidikan',
     status: 'Capaian 2026 (48,6%)',
     subtext: 'Target Kumulatif 2027: 135 satuan pendidikan · 2029: 500 unit · Capaian Nasional',
-    kendala: 'RPerpres SNT belum ditetapkan; terkendala kesiapan legalitas lahan dan ketersediaan guru tetap.',
-    tindakLanjut:
-      'Percepatan pengesahan RPerpres SNT: finalisasi harmonisasi regulasi, kepastian status Proyek Strategis Nasional (PSN), penataan formasi guru, dan kepastian NPSN.',
+    kendalaList: [
+      {
+        id: 1,
+        title: 'Penetapan Regulasi RPerpres SNT & Kesiapan Lahan Sekolah',
+        kendala: 'Rancangan Peraturan Presiden (RPerpres) SNT belum ditetapkan; proses penataan formasi guru tetap dan kesiapan legalitas lahan percontohan di daerah masih berproses.',
+        tindakLanjut: 'Percepatan pengesahan RPerpres SNT melalui harmonisasi regulasi lintas K/L, kepastian status Proyek Strategis Nasional (PSN), dan penataan formasi guru.',
+        klTerkait: 'Kemendikdasmen, KemenPANRB, Kemendagri, Bappenas',
+      },
+    ],
     monthlyData: generateMonthlyData({
       target2025: 10,
       capaian2025: 10,
@@ -276,9 +282,6 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '34 satuan pendidikan',
     status: 'Capaian 2026 (46 Unit)',
     subtext: 'Terdiri dari 42 unit SUGT (15 provinsi) dan 4 unit SUGB (4 provinsi)',
-    kendala: 'Perpres Tunjangan Guru dan Tenaga Kependidikan (GTK) SUG belum ditetapkan.',
-    tindakLanjut:
-      'Percepatan penetapan Perpres Tunjangan GTK SUG, penegasan pembagian kewenangan pembiayaan, dan penyelesaian fisik kampus.',
     monthlyData: generateMonthlyData({
       target2025: 16,
       capaian2025: 14,
@@ -304,9 +307,6 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '30 satuan pendidikan',
     status: 'Capaian 2026: 42 Unit (15 Provinsi)',
     subtext: 'Sebaran: Aceh (3), Sumut (1), Sumsel (2), DKI (6), Banten (4), Jabar (7), Jateng (6), DIY (3), Jatim (2), Kalsel (1), Kaltim (2), Gorontalo (1), Sulsel (2), Maluku (1), Papua Barat Daya (1)',
-    kendala: 'Kebutuhan standar akreditasi internasional dan penyelarasan tunjangan guru pembina riset.',
-    tindakLanjut:
-      'Pemberian asistensi teknis riset siswa, sertifikasi laboratorium sains, dan integrasi dengan perguruan tinggi mitra terkemuka.',
     monthlyData: generateMonthlyData({
       target2025: 12,
       capaian2025: 12,
@@ -332,9 +332,6 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '4 satuan pendidikan',
     status: 'Capaian 2026: 4 Unit (4 Provinsi)',
     subtext: 'Sebaran: Kepulauan Bangka Belitung (1), Kalimantan Utara (1), Sulawesi Tenggara (1), Nusa Tenggara Timur (1)',
-    kendala: 'Perpres Tunjangan Guru dan Tenaga Kependidikan (GTK) SUG belum ditetapkan.',
-    tindakLanjut:
-      'Percepatan penetapan Perpres Tunjangan GTK SUG, penegasan pembagian kewenangan pembiayaan, dan penyelesaian fisik kampus percontohan.',
     monthlyData: generateMonthlyData({
       target2025: 4,
       capaian2025: 2,
@@ -360,9 +357,6 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '727.436 unit',
     status: 'Capaian 2026 (100% Berproses)',
     subtext: 'Realisasi 2025: 288.865 unit terdistribusi 100% · Capaian Nasional',
-    kendala: 'Tantangan logistik moda transportasi pulau terluar dan keandalan daya listrik di sekolah pedalaman.',
-    tindakLanjut:
-      'Koordinasi jalur distribusi perintis dengan Kemenhub, serta penyediaan paket panel surya hemat energi bagi sekolah off-grid.',
     monthlyData: generateMonthlyData({
       target2025: 288865,
       capaian2025: 288865,
@@ -388,9 +382,6 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: 'Peluncuran Nov 2027',
     status: 'Tahap Penyiapan',
     subtext: 'Target Peluncuran: November 2027 · Operasionalisasi Nasional: 2028 · Capaian Nasional',
-    kendala: 'Standardisasi kurikulum produksi modul digital dan kesiapan studio percontohan wilayah.',
-    tindakLanjut:
-      'Finalisasi pedoman teknis studio guru dan workshop konten digital bersama perguruan tinggi LPTK mitra.',
     monthlyData: generateMonthlyData({
       target2025: 50,
       capaian2025: 50,
@@ -416,9 +407,6 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '0,57 poin',
     status: 'Capaian 2025: 0,562',
     subtext: 'Target 2027: 0,575 · Target 2029: 0,59 poin',
-    kendala: 'Disparitas capaian literasi dan numerasi antar-wilayah serta beban stunting balita masa lalu.',
-    tindakLanjut:
-      'Penguatan kurikulum fondasi di jenjang PAUD-SD kelas awal dan sinkronisasi intervensi spesifik kesehatan ibu-anak.',
     monthlyData: generateMonthlyData({
       target2025: 0.56,
       capaian2025: 0.562,
@@ -785,9 +773,6 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '20.544 unit',
     status: 'Capaian 2026 (99,0%)',
     subtext: 'Realisasi hampir rampung sempurna (99%) di seluruh kantong pengungsian',
-    kendala: 'Pemeliharaan fasilitas sanitasi air bersih di lokasi huntara padat penghuni.',
-    tindakLanjut:
-      'Penyaluran bantuan biaya operasional sanitasi berkala dan pengawasan kesehatan lingkungan oleh puskesmas.',
     monthlyData: generateMonthlyData({
       target2025: 15000,
       capaian2025: 14800,
@@ -928,9 +913,6 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '6,5% – 7,5%',
     status: 'Posisi Maret 2026: 8,07%',
     subtext: 'Realisasi September 2025: 8,25% (turun 0,18% poin)',
-    kendala: 'Kenaikan harga pangan beras dan keterlambatan penyaluran bansos adaptif di wilayah kantong pedesaan.',
-    tindakLanjut:
-      'Penguatan operasi pasar cadangan pangan beras pemerintah dan integrasi sasaran intervensi MBG pada desil 1–2.',
     monthlyData: generateMonthlyData({
       target2025: 8.5,
       capaian2025: 8.25,
@@ -1040,9 +1022,6 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '94,5 poin',
     status: 'Terkendali',
     subtext: 'Target 2027: 95,0 · Target 2029: 96,0 poin',
-    kendala: 'Fasilitas transportasi umum ramah lansia belum merata di luar pulau Jawa.',
-    tindakLanjut:
-      'Penyusunan standar pedoman fasilitas publik ramah lansia dan ramah disabilitas di terminal serta puskesmas daerah.',
     monthlyData: generateMonthlyData({
       target2025: 94,
       capaian2025: 94,
@@ -1067,9 +1046,6 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '69,5 poin',
     status: 'Sesuai Target',
     subtext: 'Target 2027: 70,0 · Target 2029: 71,0 poin',
-    kendala: 'Keterbatasan kuota bantuan alat bantu dengar, kursi roda adaptif, dan kruk di daerah 3T.',
-    tindakLanjut:
-      'Perluasan program bantuan alat bantu berbasis asesmen kebutuhan sentra Kemensos di daerah.',
     monthlyData: generateMonthlyData({
       target2025: 69,
       capaian2025: 69,
@@ -1085,8 +1061,9 @@ const PROGRAM_ALIASES: Record<string, string> = {
   // Pendidikan
   revitalisasi_sarpras: 'revitalisasi_satdik',
   digitalisasi_pembelajaran: 'digitalisasi_pendidikan',
-  sug: 'sekolah_unggul_garuda',
-  sug_semua: 'sekolah_unggul_garuda',
+  sug: 'sug_transformasi',
+  sug_semua: 'sug_transformasi',
+  sekolah_unggul_garuda: 'sug_transformasi',
   // Kesehatan
   penuntasan_tb: 'tb',
   revitalisasi_rsud: 'rsud',

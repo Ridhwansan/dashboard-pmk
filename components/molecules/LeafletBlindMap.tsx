@@ -29,6 +29,7 @@ interface LeafletBlindMapProps {
   onResetNasional: () => void;
   selectedPillar?: MapPillarId | null;
   selectedIndicator?: string | null;
+  isFullscreen?: boolean;
 }
 
 // Module-level in-memory cache for fast GeoJSON switching
@@ -49,12 +50,34 @@ const getPillarStrokeColor = (pillarId?: MapPillarId | null): string => {
   }
 };
 
+const getSugtChoroplethColor = (count: number): string => {
+  if (!count || count <= 0) return '#ffffff';
+  switch (count) {
+    case 1:
+      return '#bfdbfe'; // Sumut (1), Kalsel (1), Gorontalo (1), Maluku (1), Papua Barat Daya (1) - Biru Lembut
+    case 2:
+      return '#93c5fd'; // Sumsel (2), Jatim (2), Kaltim (2), Sulsel (2)
+    case 3:
+      return '#60a5fa'; // Aceh (3), DIY (3)
+    case 4:
+      return '#3b82f6'; // Banten (4)
+    case 5:
+      return '#2563eb';
+    case 6:
+      return '#1d4ed8'; // DKI Jakarta (6), Jawa Tengah (6)
+    case 7:
+    default:
+      return '#1e3a8a'; // Jawa Barat (7) - Biru Terpekat (Maksimal Provinsi)
+  }
+};
+
 export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
   selectedWilayah,
   onSelectWilayah,
   onResetNasional,
   selectedPillar = null,
   selectedIndicator = null,
+  isFullscreen = false,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -215,41 +238,14 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
               };
             }
 
-            // 2. SUG Gabungan (SUGT & SUGB): Sesuai Gambar 2
-            if (currentInd.customRegionType === 'sug_all') {
-              const sugLoc = SUG_LOCATIONS.find(
-                (l) => l.provinceId === targetWilayah.id || l.kodeBps === targetWilayah.kodeBps
-              );
-              if (sugLoc) {
-                const isSugt = sugLoc.type === 'SUGT';
-                return {
-                  fillColor: isSugt ? '#991b1b' : '#0f3b73', // SUGT Merah Marun, SUGB Biru Tua
-                  fillOpacity: isSelected ? 0.98 : 0.92,
-                  color: isSelected ? '#fbbf24' : '#ffffff',
-                  weight: isSelected ? 3.5 : 1.2,
-                  opacity: 0.95,
-                  className: 'executive-choropleth-feature cursor-pointer transition-all duration-150',
-                };
-              }
-              // Bukan lokasi SUG -> Area Putih Saja!
-              return {
-                fillColor: '#ffffff',
-                fillOpacity: 0.96,
-                color: isSelected ? getPillarStrokeColor(selectedPillar) : '#cbd5e1',
-                weight: isSelected ? 3.5 : 1.2,
-                opacity: 0.95,
-                className: 'executive-choropleth-feature cursor-pointer transition-all duration-150',
-              };
-            }
-
-            // 3. SUGT Transformasi Saja (15 Provinsi Merah Marun)
+            // 2. SUGT Transformasi (Gradasi Warna Merah 1 s.d. 7 Unit, Terpekat di Jawa Barat = 7)
             if (currentInd.customRegionType === 'sugt') {
               const sugtLoc = SUG_LOCATIONS.find(
                 (l) => l.type === 'SUGT' && (l.provinceId === targetWilayah.id || l.kodeBps === targetWilayah.kodeBps)
               );
-              if (sugtLoc) {
+              if (sugtLoc && sugtLoc.count > 0) {
                 return {
-                  fillColor: '#991b1b', // Merah Marun
+                  fillColor: getSugtChoroplethColor(sugtLoc.count),
                   fillOpacity: isSelected ? 0.98 : 0.92,
                   color: isSelected ? '#fbbf24' : '#ffffff',
                   weight: isSelected ? 3.5 : 1.2,
@@ -268,14 +264,14 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
               };
             }
 
-            // 4. SUGB Baru Saja (4 Provinsi Biru Tua)
+            // 3. SUGB Baru Saja (Warna Terpekat Biru Navy untuk 1 Unit, lainnya Area Putih)
             if (currentInd.customRegionType === 'sugb') {
               const sugbLoc = SUG_LOCATIONS.find(
                 (l) => l.type === 'SUGB' && (l.provinceId === targetWilayah.id || l.kodeBps === targetWilayah.kodeBps)
               );
-              if (sugbLoc) {
+              if (sugbLoc && sugbLoc.count > 0) {
                 return {
-                  fillColor: '#0f3b73', // Biru Tua
+                  fillColor: '#0f3b73', // Warna terpekat SUGB
                   fillOpacity: isSelected ? 0.98 : 0.92,
                   color: isSelected ? '#38bdf8' : '#ffffff',
                   weight: isSelected ? 3.5 : 1.2,
@@ -382,42 +378,32 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
                     </div>
                   </div>
                 `;
-              } else if (
-                currentInd.customRegionType === 'sug_all' ||
-                currentInd.customRegionType === 'sugt' ||
-                currentInd.customRegionType === 'sugb'
-              ) {
-                const sugLoc = SUG_LOCATIONS.find(
-                  (l) => l.provinceId === targetWilayah.id || l.kodeBps === targetWilayah.kodeBps
+              } else if (currentInd.customRegionType === 'sugt') {
+                const sugtLoc = SUG_LOCATIONS.find(
+                  (l) => l.type === 'SUGT' && (l.provinceId === targetWilayah.id || l.kodeBps === targetWilayah.kodeBps)
                 );
-                if (sugLoc) {
-                  const isSugt = sugLoc.type === 'SUGT';
-                  tooltipHtml = `
-                    <div style="font-family: inherit; padding: 7px 10px; text-align: left; min-width: 185px; line-height: 1.35;">
-                      <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 2px;">${targetWilayah.name}</div>
-                      <div style="font-size: 11px; font-weight: 700; color: ${isSugt ? '#991b1b' : '#0f3b73'}; margin-bottom: 3px;">
-                        ${isSugt ? 'Sekolah Unggul Garuda Transformasi (SUGT)' : 'Sekolah Unggul Garuda Baru (SUGB)'}
-                      </div>
-                      <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:12px; color:#1e293b; margin-bottom:4px;">
-                        <span>Alokasi Wilayah:</span>
-                        <strong style="font-size:15px; font-weight:900; color:${isSugt ? '#991b1b' : '#0f3b73'};">${sugLoc.count} Unit</strong>
-                      </div>
-                      <div style="font-size: 10px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px;">
-                        Target Nasional: <strong>${currentInd.target2026}</strong> · Realisasi: <strong>${currentInd.nationalValue}</strong>
-                      </div>
+                const count = sugtLoc ? sugtLoc.count : 0;
+                tooltipHtml = `
+                  <div style="font-family: inherit; padding: 6px 10px; text-align: left; line-height: 1.35;">
+                    <div style="font-size: 13px; font-weight: 800; color: #0f172a;">${targetWilayah.name}</div>
+                    <div style="font-size: 13px; font-weight: 700; color: ${count > 0 ? '#1e3a8a' : '#64748b'}; margin-top: 2px;">
+                      ${count} Unit
                     </div>
-                  `;
-                } else {
-                  tooltipHtml = `
-                    <div style="font-family: inherit; padding: 7px 10px; text-align: left; min-width: 175px; line-height: 1.35;">
-                      <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 2px;">${targetWilayah.name}</div>
-                      <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">Belum Ada Alokasi SUGT / SUGB</div>
-                      <div style="font-size: 10px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px;">
-                        <span style="display:inline-block; padding:2px 6px; border-radius:4px; font-size:9.5px; font-weight:700; background-color:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">Area Putih (Capaian Nasional)</span>
-                      </div>
+                  </div>
+                `;
+              } else if (currentInd.customRegionType === 'sugb') {
+                const sugbLoc = SUG_LOCATIONS.find(
+                  (l) => l.type === 'SUGB' && (l.provinceId === targetWilayah.id || l.kodeBps === targetWilayah.kodeBps)
+                );
+                const count = sugbLoc ? sugbLoc.count : 0;
+                tooltipHtml = `
+                  <div style="font-family: inherit; padding: 6px 10px; text-align: left; line-height: 1.35;">
+                    <div style="font-size: 13px; font-weight: 800; color: #0f172a;">${targetWilayah.name}</div>
+                    <div style="font-size: 13px; font-weight: 700; color: ${count > 0 ? '#1e3a8a' : '#64748b'}; margin-top: 2px;">
+                      ${count} Unit
                     </div>
-                  `;
-                }
+                  </div>
+                `;
               } else if (currentInd.customRegionType === 'sumatera_rehab') {
                 const isSumatera =
                   SUMATERA_REHAB_PROVINCES.includes(targetWilayah.id) ||
@@ -526,71 +512,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
           markersLayerRef.current = null;
         }
 
-        if (
-          currentInd &&
-          (currentInd.customRegionType === 'sug_all' ||
-            currentInd.customRegionType === 'sugt' ||
-            currentInd.customRegionType === 'sugb') &&
-          mapInstanceRef.current
-        ) {
-          const markerGroup = L.layerGroup();
-          const filteredLocs =
-            currentInd.customRegionType === 'sugt'
-              ? SUG_LOCATIONS.filter((l) => l.type === 'SUGT')
-              : currentInd.customRegionType === 'sugb'
-              ? SUG_LOCATIONS.filter((l) => l.type === 'SUGB')
-              : SUG_LOCATIONS;
 
-          filteredLocs.forEach((loc) => {
-            const isSugt = loc.type === 'SUGT';
-            const pinHtml = isSugt
-              ? `<div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" title="${loc.provinceName}: ${loc.count} Unit SUGT">
-                   <div style="background:#facc15; color:#0f172a; font-weight:900; font-size:12px; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2.5px solid #991b1b; box-shadow:0 3px 8px rgba(0,0,0,0.35); font-family:system-ui, -apple-system, sans-serif;">
-                     ${loc.count}
-                   </div>
-                   <div style="width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid #991b1b; margin-top:-1px;"></div>
-                 </div>`
-              : `<div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" title="${loc.provinceName}: ${loc.count} Unit SUGB">
-                   <div style="background:#38bdf8; color:#ffffff; font-weight:900; font-size:12px; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2.5px solid #0f3b73; box-shadow:0 3px 8px rgba(0,0,0,0.35); font-family:system-ui, -apple-system, sans-serif;">
-                     ${loc.count}
-                   </div>
-                   <div style="width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid #0f3b73; margin-top:-1px;"></div>
-                 </div>`;
-
-            const icon = L.divIcon({
-              html: pinHtml,
-              className: 'sug-pin-badge',
-              iconSize: [26, 32],
-              iconAnchor: [13, 30],
-            });
-
-            const marker = L.marker([loc.lat, loc.lng], { icon });
-            marker.bindTooltip(
-              `
-              <div style="font-family: inherit; padding: 6px 9px; text-align: left; min-width: 165px; line-height: 1.35;">
-                <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 2px;">${loc.provinceName}</div>
-                <div style="font-size: 11px; font-weight: 700; color: ${isSugt ? '#991b1b' : '#0f3b73'};">
-                  ${isSugt ? 'SUGT (Transformasi)' : 'SUGB (Baru)'}: <strong>${loc.count} Unit</strong>
-                </div>
-                <div style="font-size: 10px; color: #64748b; margin-top: 3px;">
-                  Peta Sebaran Lokasi SUG tahun 2025–2026
-                </div>
-              </div>
-              `,
-              { direction: 'top', className: 'shadow-lg rounded-xl bg-white/95' }
-            );
-
-            marker.on('click', () => {
-              const prov = PROVINSI_DATA.find((p) => p.id === loc.provinceId || p.kodeBps === loc.kodeBps);
-              if (prov) onSelectWilayah(prov);
-            });
-
-            marker.addTo(markerGroup);
-          });
-
-          markerGroup.addTo(mapInstanceRef.current);
-          markersLayerRef.current = markerGroup;
-        }
 
         // Camera positioning: smoothly focus on active selection or root Indonesia
         if (selectedWilayah.level === 'nasional') {
@@ -701,62 +623,79 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
       {/* 1. Map Canvas */}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-      {/* 2. Top-Right: Reset Tampilan Peta Pill Button */}
-      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onResetNasional}
-          aria-label="Kembali ke tampilan seluruh Indonesia"
-          title="Reset Tampilan Peta"
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/95 hover:bg-white text-slate-800 hover:text-slate-950 border border-slate-200/90 rounded-full shadow-xs text-xs font-semibold cursor-pointer transition-colors backdrop-blur-xs select-none"
-        >
-          <RotateCcw className="h-3.5 w-3.5 text-slate-600" />
-          <span>Reset Tampilan Peta</span>
-        </button>
-      </div>
+      {/* 2. Top-Right: Reset Tampilan Peta Pill Button (only when not in fullscreen overlay) */}
+      {!isFullscreen && (
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onResetNasional}
+            aria-label="Kembali ke tampilan seluruh Indonesia"
+            title="Reset Tampilan Peta"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/95 hover:bg-white text-slate-800 hover:text-slate-950 border border-slate-200/90 rounded-full shadow-xs text-xs font-semibold cursor-pointer transition-colors backdrop-blur-xs select-none"
+          >
+            <RotateCcw className="h-3.5 w-3.5 text-slate-600" />
+            <span>Reset Tampilan Peta</span>
+          </button>
+        </div>
+      )}
 
       {/* 3. Bottom-Left: Dynamic Thematic Choropleth Pill Legend or Initial Guide */}
       {isPillarActive && indicatorDef && legendStops && activeWilayahIndVal ? (
-        <div className="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-2xl px-4 py-3 shadow-md text-xs select-none min-w-[270px] sm:min-w-[320px] max-w-[390px]">
+        <div className="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-2xl px-4 py-3 shadow-md text-xs select-none min-w-[260px] sm:min-w-[300px] max-w-[360px]">
           <div className="flex items-center justify-between text-xs font-bold text-slate-900 mb-1.5 tracking-tight gap-2">
-            <span className="truncate">{indicatorDef.name}</span>
-            <span className="text-[11px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 shrink-0 tabular-nums">
+            <span className="truncate">{indicatorDef.shortName || indicatorDef.name}</span>
+            <span className="text-[11px] font-bold text-blue-900 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 shrink-0 tabular-nums">
               {selectedWilayah.level === 'nasional'
-                ? `Nasional: ${indicatorDef.nationalValue}`
+                ? indicatorDef.nationalValue
                 : `${selectedWilayah.name}: ${activeWilayahIndVal.display}`}
             </span>
           </div>
 
           {/* Contextual Legend Rendering */}
-          {indicatorDef.customRegionType === 'sug_all' ||
-          indicatorDef.customRegionType === 'sugt' ||
-          indicatorDef.customRegionType === 'sugb' ? (
-            /* SUG Indicator Legend (Image 2 Match) */
-            <div className="space-y-1.5 py-1 mb-2">
-              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700">
-                <span className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 rounded-full bg-[#991b1b] border border-white shadow-xs" />
-                  <span>SUGT (Transformasi)</span>
+          {indicatorDef.customRegionType === 'sugt' ? (
+            /* SUGT Transformasi Legend with Blue Gradient (1 to 7 Unit) */
+            <div className="space-y-1.5 py-1 mb-1.5">
+              {/* Gradient bar: 1 unit light blue -> 7 unit deepest blue */}
+              <div
+                className="w-full h-2.5 rounded-full border border-blue-900/20 shadow-inner"
+                style={{
+                  background: 'linear-gradient(to right, #bfdbfe, #93c5fd, #60a5fa, #3b82f6, #2563eb, #1d4ed8, #1e3a8a)',
+                }}
+              />
+              <div className="flex items-center justify-between text-[10.5px] font-bold text-slate-700">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full border border-blue-300 bg-[#bfdbfe]" />
+                  <span>Min: 1 Unit</span>
                 </span>
-                <span className="font-bold text-[#991b1b] bg-red-50 px-2 py-0.5 rounded border border-red-200">
-                  15 Prov · 42 Unit
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700">
-                <span className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 rounded-full bg-[#0f3b73] border border-white shadow-xs" />
-                  <span>SUGB (Baru)</span>
-                </span>
-                <span className="font-bold text-[#0f3b73] bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                  4 Prov · 4 Unit
+                <span className="flex items-center gap-1.5">
+                  <span>Max: 7 Unit (Jabar)</span>
+                  <span className="w-2.5 h-2.5 rounded-full border border-blue-900 bg-[#1e3a8a]" />
                 </span>
               </div>
-              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
                 <span className="flex items-center gap-2">
                   <span className="w-3.5 h-3.5 rounded-md bg-white border border-slate-300 shadow-2xs" />
-                  <span>Area Putih: Belum Ada Alokasi</span>
+                  <span>Area Putih: 0 Unit</span>
                 </span>
-                <span className="text-[10px] text-slate-400">19 Prov</span>
+                <span className="text-[10px] text-slate-400">23 Prov</span>
+              </div>
+            </div>
+          ) : indicatorDef.customRegionType === 'sugb' ? (
+            /* SUGB Baru Legend */
+            <div className="space-y-1.5 py-1 mb-1.5">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700">
+                <span className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-md bg-[#1e3a8a] border border-white shadow-xs" />
+                  <span>1 Unit (Babel, Kaltara, Sultra, NTT)</span>
+                </span>
+                <span className="font-bold text-[#1e3a8a]">Terpekat</span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
+                <span className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-md bg-white border border-slate-300 shadow-2xs" />
+                  <span>Area Putih: 0 Unit</span>
+                </span>
+                <span className="text-[10px] text-slate-400">34 Prov</span>
               </div>
             </div>
           ) : indicatorDef.customRegionType === 'sumatera_rehab' ? (

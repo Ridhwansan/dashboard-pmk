@@ -28,6 +28,7 @@ interface LeafletMapWrapperProps {
   onResetNasional: () => void;
   selectedPillar?: MapPillarId | null;
   selectedIndicator?: string | null;
+  isFullscreen?: boolean;
 }
 
 export const LeafletMapWrapper: React.FC<LeafletMapWrapperProps> = (props) => {

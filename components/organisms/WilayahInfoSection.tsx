@@ -74,16 +74,14 @@ export const WilayahInfoSection: React.FC<WilayahInfoSectionProps> = ({
     return getProgramDetailData(selectedKendalaIndId, foundInd?.name, targetPillar);
   }, [selectedKendalaIndId, activePillar, pillarIndicators]);
 
-  // Dynamic kendala list resolver
+  // Dynamic kendala list resolver (strictly for the selected indicator)
   const resolvedKendalaList: KendalaDetailItem[] = useMemo(() => {
     if (kendalaProgram.kendalaList && kendalaProgram.kendalaList.length > 0) {
       return kendalaProgram.kendalaList;
     }
-    if (kendalaProgram.kendala || kendalaProgram.tindakLanjut) {
-      const rawK = kendalaProgram.kendala || 'Tidak terdapat kendala operasional yang kritis saat ini.';
-      const rawT =
-        kendalaProgram.tindakLanjut ||
-        'Koordinasi teknis rutin antar kementerian/lembaga terkait pengawasan realisasi target.';
+    if (kendalaProgram.kendala && kendalaProgram.kendala.trim().length > 0) {
+      const rawK = kendalaProgram.kendala.trim();
+      const rawT = (kendalaProgram.tindakLanjut || '').trim();
 
       if (rawK.includes(';') && !rawK.includes('\n')) {
         const kParts = rawK.split(';').map((s) => s.trim()).filter(Boolean);
@@ -105,9 +103,9 @@ export const WilayahInfoSection: React.FC<WilayahInfoSectionProps> = ({
       return [
         {
           id: 1,
-          title: `Isu Prioritas: ${kendalaProgram.title}`,
+          title: kendalaProgram.title,
           kendala: rawK,
-          tindakLanjut: rawT,
+          tindakLanjut: rawT || 'Koordinasi teknis lintas K/L terkait percepatan pelaksanaan program.',
           klTerkait: kendalaProgram.picKementerian,
         },
       ];
@@ -259,179 +257,147 @@ export const WilayahInfoSection: React.FC<WilayahInfoSectionProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5 items-stretch">
             {/* Pilar 1: Pendidikan */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 hover:border-blue-300 p-5 flex flex-col justify-between transition-all hover:shadow-2xs">
+            <div className="bg-white rounded-2xl border border-slate-200/90 hover:border-blue-400 p-5 flex flex-col justify-between h-full transition-all hover:shadow-2xs">
               <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
-                      <GraduationCap className="h-4.5 w-4.5" />
-                    </div>
-                    <h4 className="text-sm font-bold text-slate-900">Pendidikan</h4>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
+                    <GraduationCap className="h-4.5 w-4.5" />
                   </div>
-                  <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200/80">
+                  <h4 className="text-sm font-bold text-slate-900">Pendidikan</h4>
+                </div>
+
+                <div>
+                  <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tabular-nums tracking-tight">
+                    {wilayah.pillarDetails.pendidikan.heroValue}
+                  </div>
+                  <div className="text-xs font-semibold text-slate-500 mt-0.5 line-clamp-1" title={wilayah.pillarDetails.pendidikan.heroLabel}>
                     {wilayah.pillarDetails.pendidikan.heroLabel}
-                  </span>
-                </div>
-
-                <div className="text-2xl font-extrabold text-slate-900 tabular-nums">
-                  {wilayah.pillarDetails.pendidikan.heroValue}
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-slate-500 block truncate">
-                      {wilayah.pillarDetails.pendidikan.metric1.label}
-                    </span>
-                    <strong className="text-slate-900 font-bold tabular-nums">
-                      {wilayah.pillarDetails.pendidikan.metric1.value}
-                    </strong>
                   </div>
-                  <div>
-                    <span className="text-slate-500 block truncate">
-                      {wilayah.pillarDetails.pendidikan.metric2.label}
-                    </span>
-                    <strong className="text-slate-900 font-bold tabular-nums">
-                      {wilayah.pillarDetails.pendidikan.metric2.value}
-                    </strong>
+                </div>
+
+                <div className="py-2.5 my-1 border-y border-slate-100 space-y-2 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500 font-medium truncate">{wilayah.pillarDetails.pendidikan.metric1.label}</span>
+                    <strong className="text-slate-900 font-bold tabular-nums shrink-0">{wilayah.pillarDetails.pendidikan.metric1.value}</strong>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500 font-medium truncate">{wilayah.pillarDetails.pendidikan.metric2.label}</span>
+                    <strong className="text-slate-900 font-bold tabular-nums shrink-0">{wilayah.pillarDetails.pendidikan.metric2.value}</strong>
                   </div>
                 </div>
               </div>
 
-              <p className="mt-3 pt-2.5 border-t border-slate-100 text-xs text-slate-600 font-medium leading-relaxed">
+              <p className="mt-3 pt-2 text-xs text-slate-600 font-normal leading-relaxed line-clamp-3" title={wilayah.pillarDetails.pendidikan.keterangan}>
                 {wilayah.pillarDetails.pendidikan.keterangan}
               </p>
             </div>
 
             {/* Pilar 2: Kesehatan */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 hover:border-emerald-300 p-5 flex flex-col justify-between transition-all hover:shadow-2xs">
+            <div className="bg-white rounded-2xl border border-slate-200/90 hover:border-emerald-400 p-5 flex flex-col justify-between h-full transition-all hover:shadow-2xs">
               <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
-                      <HeartPulse className="h-4.5 w-4.5" />
-                    </div>
-                    <h4 className="text-sm font-bold text-slate-900">Kesehatan</h4>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
+                    <HeartPulse className="h-4.5 w-4.5" />
                   </div>
-                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200/80">
+                  <h4 className="text-sm font-bold text-slate-900">Kesehatan</h4>
+                </div>
+
+                <div>
+                  <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tabular-nums tracking-tight">
+                    {wilayah.pillarDetails.kesehatan.heroValue}
+                  </div>
+                  <div className="text-xs font-semibold text-slate-500 mt-0.5 line-clamp-1" title={wilayah.pillarDetails.kesehatan.heroLabel}>
                     {wilayah.pillarDetails.kesehatan.heroLabel}
-                  </span>
-                </div>
-
-                <div className="text-2xl font-extrabold text-slate-900 tabular-nums">
-                  {wilayah.pillarDetails.kesehatan.heroValue}
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-slate-500 block truncate">
-                      {wilayah.pillarDetails.kesehatan.metric1.label}
-                    </span>
-                    <strong className="text-slate-900 font-bold tabular-nums">
-                      {wilayah.pillarDetails.kesehatan.metric1.value}
-                    </strong>
                   </div>
-                  <div>
-                    <span className="text-slate-500 block truncate">
-                      {wilayah.pillarDetails.kesehatan.metric2.label}
-                    </span>
-                    <strong className="text-slate-900 font-bold tabular-nums">
-                      {wilayah.pillarDetails.kesehatan.metric2.value}
-                    </strong>
+                </div>
+
+                <div className="py-2.5 my-1 border-y border-slate-100 space-y-2 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500 font-medium truncate">{wilayah.pillarDetails.kesehatan.metric1.label}</span>
+                    <strong className="text-slate-900 font-bold tabular-nums shrink-0">{wilayah.pillarDetails.kesehatan.metric1.value}</strong>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500 font-medium truncate">{wilayah.pillarDetails.kesehatan.metric2.label}</span>
+                    <strong className="text-slate-900 font-bold tabular-nums shrink-0">{wilayah.pillarDetails.kesehatan.metric2.value}</strong>
                   </div>
                 </div>
               </div>
 
-              <p className="mt-3 pt-2.5 border-t border-slate-100 text-xs text-slate-600 font-medium leading-relaxed">
+              <p className="mt-3 pt-2 text-xs text-slate-600 font-normal leading-relaxed line-clamp-3" title={wilayah.pillarDetails.kesehatan.keterangan}>
                 {wilayah.pillarDetails.kesehatan.keterangan}
               </p>
             </div>
 
             {/* Pilar 3: Ketahanan Bencana */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 hover:border-[#a8754b] p-5 flex flex-col justify-between transition-all hover:shadow-2xs">
+            <div className="bg-white rounded-2xl border border-slate-200/90 hover:border-[#a8754b] p-5 flex flex-col justify-between h-full transition-all hover:shadow-2xs">
               <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#fcf8f4] border border-[#a8754b]/30 flex items-center justify-center text-[#7a4b27] shrink-0">
-                      <ShieldAlert className="h-4.5 w-4.5" />
-                    </div>
-                    <h4 className="text-sm font-bold text-slate-900">Ketahanan Bencana</h4>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#fcf8f4] border border-[#a8754b]/30 flex items-center justify-center text-[#7a4b27] shrink-0">
+                    <ShieldAlert className="h-4.5 w-4.5" />
                   </div>
-                  <span className="text-xs font-bold text-[#7a4b27] bg-[#fcf8f4] px-2 py-0.5 rounded-lg border border-[#a8754b]/40">
+                  <h4 className="text-sm font-bold text-slate-900">Ketahanan Bencana</h4>
+                </div>
+
+                <div>
+                  <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tabular-nums tracking-tight">
+                    {wilayah.pillarDetails.bencana.heroValue}
+                  </div>
+                  <div className="text-xs font-semibold text-slate-500 mt-0.5 line-clamp-1" title={wilayah.pillarDetails.bencana.heroLabel}>
                     {wilayah.pillarDetails.bencana.heroLabel}
-                  </span>
-                </div>
-
-                <div className="text-2xl font-extrabold text-slate-900 tabular-nums">
-                  {wilayah.pillarDetails.bencana.heroValue}
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-slate-500 block truncate">
-                      {wilayah.pillarDetails.bencana.metric1.label}
-                    </span>
-                    <strong className="text-slate-900 font-bold tabular-nums">
-                      {wilayah.pillarDetails.bencana.metric1.value}
-                    </strong>
                   </div>
-                  <div>
-                    <span className="text-slate-500 block truncate">
-                      {wilayah.pillarDetails.bencana.metric2.label}
-                    </span>
-                    <strong className="text-slate-900 font-bold tabular-nums">
-                      {wilayah.pillarDetails.bencana.metric2.value}
-                    </strong>
+                </div>
+
+                <div className="py-2.5 my-1 border-y border-slate-100 space-y-2 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500 font-medium truncate">{wilayah.pillarDetails.bencana.metric1.label}</span>
+                    <strong className="text-slate-900 font-bold tabular-nums shrink-0">{wilayah.pillarDetails.bencana.metric1.value}</strong>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500 font-medium truncate">{wilayah.pillarDetails.bencana.metric2.label}</span>
+                    <strong className="text-slate-900 font-bold tabular-nums shrink-0">{wilayah.pillarDetails.bencana.metric2.value}</strong>
                   </div>
                 </div>
               </div>
 
-              <p className="mt-3 pt-2.5 border-t border-slate-100 text-xs text-slate-600 font-medium leading-relaxed">
+              <p className="mt-3 pt-2 text-xs text-slate-600 font-normal leading-relaxed line-clamp-3" title={wilayah.pillarDetails.bencana.keterangan}>
                 {wilayah.pillarDetails.bencana.keterangan}
               </p>
             </div>
 
             {/* Pilar 4: Penurunan Kemiskinan */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 hover:border-rose-300 p-5 flex flex-col justify-between transition-all hover:shadow-2xs">
+            <div className="bg-white rounded-2xl border border-slate-200/90 hover:border-rose-400 p-5 flex flex-col justify-between h-full transition-all hover:shadow-2xs">
               <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
-                      <TrendingDown className="h-4.5 w-4.5" />
-                    </div>
-                    <h4 className="text-sm font-bold text-slate-900">Kemiskinan</h4>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                    <TrendingDown className="h-4.5 w-4.5" />
                   </div>
-                  <span className="text-xs font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200/80">
+                  <h4 className="text-sm font-bold text-slate-900">Kemiskinan</h4>
+                </div>
+
+                <div>
+                  <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tabular-nums tracking-tight">
+                    {wilayah.pillarDetails.kemiskinan.heroValue}
+                  </div>
+                  <div className="text-xs font-semibold text-slate-500 mt-0.5 line-clamp-1" title={wilayah.pillarDetails.kemiskinan.heroLabel}>
                     {wilayah.pillarDetails.kemiskinan.heroLabel}
-                  </span>
-                </div>
-
-                <div className="text-2xl font-extrabold text-slate-900 tabular-nums">
-                  {wilayah.pillarDetails.kemiskinan.heroValue}
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-slate-500 block truncate">
-                      {wilayah.pillarDetails.kemiskinan.metric1.label}
-                    </span>
-                    <strong className="text-slate-900 font-bold tabular-nums">
-                      {wilayah.pillarDetails.kemiskinan.metric1.value}
-                    </strong>
                   </div>
-                  <div>
-                    <span className="text-slate-500 block truncate">
-                      {wilayah.pillarDetails.kemiskinan.metric2.label}
-                    </span>
-                    <strong className="text-slate-900 font-bold tabular-nums">
-                      {wilayah.pillarDetails.kemiskinan.metric2.value}
-                    </strong>
+                </div>
+
+                <div className="py-2.5 my-1 border-y border-slate-100 space-y-2 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500 font-medium truncate">{wilayah.pillarDetails.kemiskinan.metric1.label}</span>
+                    <strong className="text-slate-900 font-bold tabular-nums shrink-0">{wilayah.pillarDetails.kemiskinan.metric1.value}</strong>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500 font-medium truncate">{wilayah.pillarDetails.kemiskinan.metric2.label}</span>
+                    <strong className="text-slate-900 font-bold tabular-nums shrink-0">{wilayah.pillarDetails.kemiskinan.metric2.value}</strong>
                   </div>
                 </div>
               </div>
 
-              <p className="mt-3 pt-2.5 border-t border-slate-100 text-xs text-slate-600 font-medium leading-relaxed">
+              <p className="mt-3 pt-2 text-xs text-slate-600 font-normal leading-relaxed line-clamp-3" title={wilayah.pillarDetails.kemiskinan.keterangan}>
                 {wilayah.pillarDetails.kemiskinan.keterangan}
               </p>
             </div>
@@ -457,31 +423,37 @@ export const WilayahInfoSection: React.FC<WilayahInfoSectionProps> = ({
         {/* 5. KENDALA & TINDAK LANJUT TIAP INDIKATOR (NEW SECTION)  */}
         {/* ======================================================== */}
         <div className="pt-6 border-t border-slate-200/80 space-y-5">
-          {/* Section Header */}
+          {/* Section Header: Dynamic based on presence of kendala */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
-                <AlertCircle className="w-5 h-5" />
+              <div
+                className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
+                  resolvedKendalaList.length > 0
+                    ? 'bg-amber-50 border-amber-200 text-amber-700'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                }`}
+              >
+                {resolvedKendalaList.length > 0 ? (
+                  <AlertCircle className="w-4.5 h-4.5" />
+                ) : (
+                  <CheckCircle2 className="w-4.5 h-4.5" />
+                )}
               </div>
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                  Kendala Pelaksanaan &amp; Tindak Lanjut Orkestrasi Tiap Indikator
+                  Kendala Pelaksanaan &amp; Tindak Lanjut
                 </h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Hambatan operasional lapangan dan rumusan tindak lanjut lintas K/L untuk pengawalan target
+                <p className="text-xs text-slate-500 font-medium">
+                  Indikator Terpilih: <strong className="text-slate-700">{kendalaProgram.title}</strong>
                 </p>
               </div>
             </div>
-
-            <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3.5 py-1.5 rounded-xl border border-slate-200/90 shrink-0 self-start sm:self-auto">
-              {resolvedKendalaList.length} Isu Teridentifikasi
-            </span>
           </div>
 
-          {/* Quick Indicator Selector Chips in Active Pillar */}
-          <div className="space-y-2">
-            <span className="text-xs font-bold text-slate-500 block">
-              Pilih Indikator untuk Melihat Kendala:
+          {/* Indicator Selector Chips */}
+          <div className="space-y-1.5">
+            <span className="text-xs font-semibold text-slate-500 block">
+              Pilih Indikator:
             </span>
             <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar flex-wrap sm:flex-nowrap">
               {pillarIndicators.map((ind) => {
@@ -499,7 +471,7 @@ export const WilayahInfoSection: React.FC<WilayahInfoSectionProps> = ({
                   >
                     <span>{ind.name}</span>
                     {isSelected && (
-                      <span className="w-2 h-2 rounded-full bg-white shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
                     )}
                   </button>
                 );
@@ -507,85 +479,68 @@ export const WilayahInfoSection: React.FC<WilayahInfoSectionProps> = ({
             </div>
           </div>
 
-          {/* Selected Indicator Overview Banner */}
-          <div className="bg-slate-50/80 rounded-2xl p-4 sm:p-5 border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="text-sm sm:text-base font-extrabold text-slate-900">
-                  {kendalaProgram.title}
-                </h4>
-                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200/80">
-                  Pilar {kendalaProgram.pillarTitle}
-                </span>
-              </div>
-              <p className="text-xs font-medium text-slate-600">
-                Pelaksana: <strong className="text-slate-800">{kendalaProgram.picKementerian}</strong>
-              </p>
-            </div>
-
-            <div className="text-xs text-slate-600 font-medium shrink-0 self-start sm:self-auto">
-              <span>Target: <strong className="text-slate-900">{kendalaProgram.target2026}</strong></span>
-              <span className="mx-2 text-slate-300">·</span>
-              <span>Realisasi: <strong className="text-slate-900">{kendalaProgram.currentValue} {kendalaProgram.unit}</strong></span>
-            </div>
-          </div>
-
-          {/* Dynamic Issues List */}
+          {/* Issues List or Reassuring Empty State When No Critical Obstacles Exist */}
           {resolvedKendalaList.length === 0 ? (
-            <div className="p-6 rounded-2xl bg-emerald-50/70 border border-emerald-200/90 flex items-center gap-3 text-emerald-900">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-              <p className="text-xs sm:text-sm font-semibold">
-                Tidak teridentifikasi kendala kritis pada indikator ini. Pelaksanaan program berjalan sesuai target kerja lintas K/L.
-              </p>
+            <div className="p-8 sm:p-10 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100/80 border border-emerald-200 flex items-center justify-center text-emerald-700 mx-auto shadow-2xs">
+                <CheckCircle2 className="w-7 h-7" />
+              </div>
+              <div className="space-y-1.5 max-w-lg mx-auto">
+                <h5 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  Tidak Teridentifikasi Kendala Kritis
+                </h5>
+                <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
+                  Pelaksanaan program dan capaian indikator <strong className="text-slate-900 font-semibold">{kendalaProgram.title}</strong> berjalan lancar sesuai target rencana kerja tanpa kendala operasional yang memerlukan intervensi khusus.
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200/80">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Pelaksanaan Berjalan Lancar Sesuai Target</span>
+              </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 pt-1">
               {resolvedKendalaList.map((item, idx) => (
                 <div
                   key={item.id || idx}
-                  className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 space-y-4 shadow-2xs"
+                  className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-4"
                 >
-                  {/* Issue Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-200/80">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-7 h-7 rounded-lg bg-amber-100 text-amber-950 text-xs font-extrabold flex items-center justify-center shrink-0">
-                        #{idx + 1}
-                      </span>
-                      <h5 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-                        {item.title}
-                      </h5>
-                    </div>
+                  {/* Issue Header: Title and Pelaksana */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                    <h5 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+                      {item.title}
+                    </h5>
                     {item.klTerkait && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-lg bg-slate-50 border border-slate-200/90 text-xs font-bold text-slate-700 shadow-2xs shrink-0 self-start sm:self-auto">
-                        K/L: {item.klTerkait}
+                      <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200/80 shrink-0 self-start sm:self-auto">
+                        Pelaksana: {item.klTerkait}
                       </span>
                     )}
                   </div>
 
-                  {/* Side-by-Side Detail Columns */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* Box 1: Hambatan / Kendala */}
-                    <div className="p-4 sm:p-5 rounded-xl bg-amber-50/70 border border-amber-200/90 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                        <span className="text-[11px] font-extrabold text-amber-950 uppercase tracking-wider block">
-                          Hambatan / Kendala di Lapangan
+                  {/* 2 Clear, High-Contrast Dedicated Cards: Kendala vs Tindak Lanjut */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+                    {/* KENDALA PELAKSANAAN (Amber Card) */}
+                    <div className="rounded-xl bg-amber-50/70 border border-amber-200/90 p-4 sm:p-5 flex flex-col justify-start space-y-2.5">
+                      <div className="flex items-center gap-2 text-amber-800">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span className="text-xs font-extrabold uppercase tracking-wider">
+                          Kendala Pelaksanaan
                         </span>
                       </div>
-                      <div className="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed whitespace-pre-line space-y-2">
+                      <div className="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed whitespace-pre-line">
                         {item.kendala}
                       </div>
                     </div>
 
-                    {/* Box 2: Tindak Lanjut Orkestrasi */}
-                    <div className="p-4 sm:p-5 rounded-xl bg-blue-50/70 border border-blue-200/90 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
-                        <span className="text-[11px] font-extrabold text-blue-950 uppercase tracking-wider block">
-                          Tindak Lanjut &amp; Koordinasi Lintas K/L
+                    {/* TINDAK LANJUT (Blue Card) */}
+                    <div className="rounded-xl bg-blue-50/70 border border-blue-200/90 p-4 sm:p-5 flex flex-col justify-start space-y-2.5">
+                      <div className="flex items-center gap-2 text-blue-800">
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        <span className="text-xs font-extrabold uppercase tracking-wider">
+                          Tindak Lanjut
                         </span>
                       </div>
-                      <div className="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed whitespace-pre-line space-y-2">
+                      <div className="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed whitespace-pre-line">
                         {item.tindakLanjut}
                       </div>
                     </div>

@@ -128,7 +128,7 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = () => {
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
-      {/* 1. Header Card: Factual Title without segmented control */}
+      {/* 1. Header Card: Factual Title */}
       <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shadow-2xs shrink-0">
@@ -139,15 +139,9 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = () => {
               Penurunan Kemiskinan
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              9 Program Prioritas Nasional • RPJMN 2025–2029
+              Target dan Realisasi Program Prioritas (RPJMN 2025–2029)
             </p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2 self-start sm:self-auto text-xs font-semibold text-slate-600 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200/80">
-          <span>Tahun Berjalan 2026</span>
-          <span className="text-slate-300">•</span>
-          <span className="text-rose-700 font-bold">9 Indikator Kunci</span>
         </div>
       </div>
 

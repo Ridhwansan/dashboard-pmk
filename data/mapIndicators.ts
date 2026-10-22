@@ -240,44 +240,6 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     },
   },
   {
-    id: 'sug_semua',
-    pillarId: 'pendidikan',
-    name: 'Sekolah Unggul Garuda (SUGT & SUGB)',
-    shortName: 'Sekolah Unggul Garuda',
-    unit: 'unit',
-    nationalValue: '46 unit (19 Provinsi)',
-    target2026: '34 unit',
-    description:
-      'Program pengembangan sekolah menengah atas unggulan melalui pembangunan Sekolah Garuda Baru dan transformasi SMA yang sudah ada, dengan penguatan pendidikan sains dan teknologi untuk menyiapkan talenta berprestasi dan berdaya saing global.',
-    minVal: 0,
-    maxVal: 7,
-    colorScheme: 'blue',
-    customRegionType: 'sug_all',
-    getValue: (w) => {
-      const sugLoc = SUG_LOCATIONS.find(
-        (l) => l.provinceId === w.id || l.kodeBps === w.kodeBps
-      );
-      if (sugLoc) {
-        return {
-          num: sugLoc.count,
-          display: `${sugLoc.count} unit (${sugLoc.type})`,
-          label: `Alokasi ${sugLoc.type}`,
-          subtext: `${sugLoc.type === 'SUGT' ? 'Transformasi' : 'Baru'}: ${sugLoc.count} unit sekolah unggulan`,
-          statusLabel: sugLoc.type === 'SUGT' ? 'SUGT Transformasi' : 'SUGB Baru',
-          statusType: 'success',
-        };
-      }
-      return {
-        num: 0,
-        display: 'Capaian Nasional (Belum ada lokasi)',
-        label: 'Sekolah Unggul Garuda',
-        subtext: 'Total Nasional: 42 SUGT (15 Prov) & 4 SUGB (4 Prov)',
-        statusLabel: 'Area Putih (Capaian Nasional)',
-        statusType: 'normal',
-      };
-    },
-  },
-  {
     id: 'sug_transformasi',
     pillarId: 'pendidikan',
     name: 'Sekolah Unggul Garuda Transformasi (SUGT)',
@@ -287,9 +249,9 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     target2026: '30 unit',
     description:
       'Transformasi dan peningkatan mutu SMA unggulan eksisting menjadi Sekolah Unggul Garuda Transformasi di 15 provinsi (42 unit total).',
-    minVal: 0,
+    minVal: 1,
     maxVal: 7,
-    colorScheme: 'red',
+    colorScheme: 'blue',
     customRegionType: 'sugt',
     getValue: (w) => {
       const sugtLoc = SUG_LOCATIONS.find(
@@ -298,19 +260,19 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       if (sugtLoc) {
         return {
           num: sugtLoc.count,
-          display: `${sugtLoc.count} unit SUGT`,
-          label: 'Lokasi SUGT',
+          display: `${sugtLoc.count} Unit`,
+          label: 'Alokasi SUGT',
           subtext: `Target Nasional: 30 unit · Capaian: 42 unit (15 Provinsi)`,
-          statusLabel: 'SUGT Teridentifikasi',
+          statusLabel: `${sugtLoc.count} Unit`,
           statusType: 'success',
         };
       }
       return {
         num: 0,
-        display: 'Belum Ada Lokasi SUGT',
+        display: '0 Unit',
         label: 'SUGT Transformasi',
-        subtext: 'Capaian Nasional: 42 unit di 15 provinsi',
-        statusLabel: 'Area Putih (Capaian Nasional)',
+        subtext: '0 Unit (Area Putih)',
+        statusLabel: '0 Unit',
         statusType: 'normal',
       };
     },
@@ -325,8 +287,8 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     target2026: '4 unit',
     description:
       'Pembangunan unit baru Sekolah Unggul Garuda berasrama dengan kurikulum sains & teknologi global di 4 provinsi (Bangka Belitung, Kaltara, Sultra, NTT).',
-    minVal: 0,
-    maxVal: 4,
+    minVal: 1,
+    maxVal: 1,
     colorScheme: 'blue',
     customRegionType: 'sugb',
     getValue: (w) => {
@@ -336,19 +298,19 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       if (sugbLoc) {
         return {
           num: sugbLoc.count,
-          display: `${sugbLoc.count} unit SUGB`,
-          label: 'Lokasi SUGB Baru',
+          display: `${sugbLoc.count} Unit`,
+          label: 'Alokasi SUGB Baru',
           subtext: `Target: 4 unit · Lokasi: Babel, Kaltara, Sultra, NTT`,
-          statusLabel: 'SUGB Baru',
+          statusLabel: `${sugbLoc.count} Unit`,
           statusType: 'success',
         };
       }
       return {
         num: 0,
-        display: 'Belum Ada Lokasi SUGB',
+        display: '0 Unit',
         label: 'SUGB Baru',
-        subtext: 'Capaian Nasional: 4 unit di 4 provinsi',
-        statusLabel: 'Area Putih (Capaian Nasional)',
+        subtext: '0 Unit (Area Putih)',
+        statusLabel: '0 Unit',
         statusType: 'normal',
       };
     },
@@ -836,9 +798,9 @@ const ID_ALIASES: Record<string, string> = {
   revitalisasi_sarpras: 'revitalisasi_satdik',
   digitalisasi_pembelajaran: 'ifp_digitalisasi',
   digitalisasi_pendidikan: 'ifp_digitalisasi',
-  ifp_disalurkan: 'ifp_digitalisasi',
-  sekolah_unggul_garuda: 'sug_semua',
-  sug: 'sug_semua',
+  sekolah_unggul_garuda: 'sug_transformasi',
+  sug: 'sug_transformasi',
+  sug_semua: 'sug_transformasi',
 };
 
 export function getDefaultIndicatorForPillar(pillarId: MapPillarId): MapIndicatorDef {

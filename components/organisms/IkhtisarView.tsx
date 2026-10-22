@@ -25,34 +25,39 @@ interface IkhtisarViewProps {
 interface PillarTabItem {
   id: PillarId;
   label: string;
-  icon: React.ReactNode;
-  activeColor: string;
+  icon: React.ComponentType<{ className?: string }>;
+  activeBg: string;
+  inactiveIconColor: string;
 }
 
 const PILLAR_TABS: PillarTabItem[] = [
   {
     id: 'pendidikan',
     label: 'Pendidikan',
-    icon: <GraduationCap className="h-4 w-4 text-blue-600" />,
-    activeColor: 'bg-blue-600 text-white shadow-2xs',
+    icon: GraduationCap,
+    activeBg: 'bg-blue-600 text-white shadow-sm',
+    inactiveIconColor: 'text-blue-600',
   },
   {
     id: 'kesehatan',
     label: 'Kesehatan',
-    icon: <HeartPulse className="h-4 w-4 text-emerald-600" />,
-    activeColor: 'bg-emerald-600 text-white shadow-2xs',
+    icon: HeartPulse,
+    activeBg: 'bg-emerald-600 text-white shadow-sm',
+    inactiveIconColor: 'text-emerald-600',
   },
   {
     id: 'bencana',
     label: 'Kebencanaan',
-    icon: <ShieldAlert className="h-4 w-4 text-[#7a4b27]" />,
-    activeColor: 'bg-[#7a4b27] text-white shadow-2xs',
+    icon: ShieldAlert,
+    activeBg: 'bg-[#7a4b27] text-white shadow-sm',
+    inactiveIconColor: 'text-[#7a4b27]',
   },
   {
     id: 'kemiskinan',
     label: 'Penurunan Kemiskinan',
-    icon: <TrendingDown className="h-4 w-4 text-rose-600" />,
-    activeColor: 'bg-rose-600 text-white shadow-2xs',
+    icon: TrendingDown,
+    activeBg: 'bg-red-600 text-white shadow-sm',
+    inactiveIconColor: 'text-red-600',
   },
 ];
 
@@ -74,7 +79,7 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
     <div className="w-full space-y-6 animate-in fade-in duration-150">
       {/* 1. TOP HEADER: Clean Context Indicator & 4 Pillar Tabs with Consistent Sizing */}
       <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Left: Section Context (Redundant duplicate 'Pilihan Menu' button removed) */}
+        {/* Left: Section Context */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200/90 flex items-center justify-center text-blue-700 shrink-0">
             <BarChart3 className="w-5 h-5" />
@@ -89,13 +94,14 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
           </div>
         </div>
 
-        {/* Right: Clean, Well-Spaced 4 Pillar Tabs with consistent h-[40px] height */}
+        {/* Right: Clean, Well-Spaced 4 Pillar Tabs (No ugly scrollbar, pure theme colors) */}
         <nav
           aria-label="Pilih Tab Pilar"
-          className="h-[48px] flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 overflow-x-auto self-start md:self-auto max-w-full shadow-2xs"
+          className="h-[48px] flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden self-start md:self-auto max-w-full shadow-2xs"
         >
           {PILLAR_TABS.map((tab) => {
             const isActive = activePillar === tab.id;
+            const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
@@ -103,14 +109,18 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
                 onClick={() => handleTabChange(tab.id)}
                 className={`h-[40px] inline-flex items-center gap-2 px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
                   isActive
-                    ? `${tab.activeColor} font-extrabold shadow-2xs`
+                    ? `${tab.activeBg} font-extrabold`
                     : 'text-slate-700 hover:text-slate-900 hover:bg-white/70'
                 }`}
               >
-                <span className={isActive ? 'brightness-200 contrast-200' : ''}>
-                  {tab.icon}
+                <Icon
+                  className={`h-4 w-4 shrink-0 transition-colors ${
+                    isActive ? 'text-white' : tab.inactiveIconColor
+                  }`}
+                />
+                <span className={isActive ? 'text-white' : 'text-slate-800'}>
+                  {tab.label}
                 </span>
-                <span>{tab.label}</span>
               </button>
             );
           })}

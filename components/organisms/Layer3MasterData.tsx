@@ -170,7 +170,6 @@ export const Layer3MasterData: React.FC<Layer3MasterDataProps> = ({ onBackToHome
                 <th className="py-3 px-3">Kategori Sasaran</th>
                 <th className="py-3 px-3 text-center">Desil</th>
                 <th className="py-3 px-3 text-right">Jumlah Sasaran</th>
-                <th className="py-3 px-3 text-center">Status MBG</th>
                 <th className="py-3 px-4 min-w-[300px]">Uraian Tindak Lanjut Orkestrasi</th>
               </tr>
             </thead>
@@ -204,14 +203,6 @@ export const Layer3MasterData: React.FC<Layer3MasterDataProps> = ({ onBackToHome
                   </td>
                   <td className="py-3 px-3 text-right numeric tabular-nums font-bold text-slate-900">
                     {item.jumlahSasaran.toLocaleString('id-ID')} jiwa
-                  </td>
-                  <td className="py-3 px-3 text-center">
-                    <Badge
-                      variant={item.statusMBG === 'Terhenti' ? 'critical' : item.statusMBG === 'Perlu Intervensi' ? 'warning' : 'neutral'}
-                      size="sm"
-                    >
-                      {item.statusMBG}
-                    </Badge>
                   </td>
                   <td className="py-3 px-4 text-xs text-slate-800 leading-relaxed font-medium">
                     {item.keterangan}
