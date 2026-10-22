@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { LayerType, Layer1ViewMode, PillarId } from '@/types/dashboard';
 import { DASHBOARD_META } from '@/data/dashboardData';
 import { Calendar } from 'lucide-react';
@@ -19,62 +19,55 @@ export const SubHeader: React.FC<SubHeaderProps> = ({
   selectedPillar: propSelectedPillar,
 }) => {
   const pathname = usePathname() || '';
+  const searchParams = useSearchParams();
+  const currentView = searchParams.get('view');
+  const pillarParam = (searchParams.get('pillar') as PillarId) || null;
 
-  // Determine current layer and selected pillar from pathname if available
-  let currentLayer: LayerType = propCurrentLayer || 'layer1';
-  let selectedPillar: PillarId = propSelectedPillar || 'pendidikan';
-
-  if (pathname.startsWith('/dashboard/pilar')) {
-    currentLayer = 'layer2';
-    const segment = pathname.split('/')[3] as PillarId;
-    if (segment) selectedPillar = segment;
-  } else if (pathname.startsWith('/dashboard/master-data')) {
-    currentLayer = 'layer3';
-  } else if (pathname.startsWith('/dashboard/eksekutif')) {
-    currentLayer = 'layer1';
-  }
+  const isIkhtisarActive =
+    currentView === 'ikhtisar' || pathname.startsWith('/dashboard/pilar');
+  const isProfilWilayahActive = currentView === 'profil-wilayah';
 
   const getPillarTitle = (id: PillarId) => {
     switch (id) {
       case 'pendidikan':
-        return 'Pilar Pendidikan';
+        return 'Pendidikan';
       case 'kesehatan':
-        return 'Pilar Kesehatan';
+        return 'Kesehatan';
       case 'bencana':
-        return 'Pilar Ketahanan Bencana';
+        return 'Ketahanan Bencana';
       case 'kemiskinan':
-        return 'Pilar Penurunan Kemiskinan';
+        return 'Penurunan Kemiskinan';
       default:
-        return 'Detail Pilar';
+        return 'Pilar';
     }
   };
 
   const getPageTitle = () => {
-    if (currentLayer === 'layer1') {
-      return 'Monitoring Program Kerja Prioritas Nasional';
+    if (pathname.startsWith('/dashboard/master-data')) {
+      return 'Master Data DTSEN';
     }
-    if (currentLayer === 'layer2') {
-      return getPillarTitle(selectedPillar);
+    if (isIkhtisarActive) {
+      const activePillarName = getPillarTitle(pillarParam || propSelectedPillar || 'pendidikan');
+      return `Ikhtisar Indikator Program Prioritas — ${activePillarName}`;
     }
-    return 'Master Data DTSEN';
+    if (isProfilWilayahActive) {
+      return 'Profil Wilayah & Pemetaan Geospasial';
+    }
+    return 'Pusat Pemantauan Program Prioritas Nasional';
   };
 
   return (
-    <div className="w-full bg-white text-slate-900 px-4 lg:px-8 pt-5 sm:pt-6 pb-2.5 border-b border-slate-200/80">
-      <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
-        {/* Left Side: Clean Title (No Breadcrumbs) */}
-        <div className="flex items-center gap-3">
-          <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-snug">
-            {getPageTitle()}
-          </h1>
-        </div>
+    <div className="w-full bg-white text-slate-900 px-4 lg:px-8 py-3 border-b border-slate-200/80">
+      <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
+        {/* Left Side: Clean Title */}
+        <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-snug">
+          {getPageTitle()}
+        </h1>
 
-        {/* Right Side: Clean Cutoff Date */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 font-medium select-none">
-            <Calendar className="h-3.5 w-3.5 text-slate-400" />
-            <span className="tabular-nums">Pembaruan: {DASHBOARD_META.cutoffDate}</span>
-          </div>
+        {/* Right Side: Clean Cutoff Date without redundant buttons */}
+        <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium select-none shrink-0">
+          <Calendar className="h-3.5 w-3.5 text-slate-400" />
+          <span className="tabular-nums">Pembaruan: {DASHBOARD_META.cutoffDate}</span>
         </div>
       </div>
     </div>

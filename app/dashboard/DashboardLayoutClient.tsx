@@ -1,8 +1,63 @@
 'use client';
 
 import React, { Suspense } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/organisms/Navbar';
-import { SubHeader } from '@/components/organisms/SubHeader';
+
+function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname() || '';
+  const searchParams = useSearchParams();
+  const view = searchParams.get('view');
+
+  // Front / Landing page is active when on /dashboard/eksekutif without ?view parameter (or ?view=landing)
+  const isFrontPage =
+    (pathname === '/dashboard/eksekutif' || pathname === '/dashboard') &&
+    (!view || view === 'landing');
+
+  return (
+    <div
+      className={`min-h-screen flex flex-col font-sans transition-colors ${
+        isFrontPage ? 'relative bg-slate-950 text-white' : 'bg-slate-50/60 text-slate-900'
+      }`}
+    >
+      {/* Background Image for Front Page (Building Photo with Adjusted Brightness Overlay) */}
+      {isFrontPage && (
+        <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none select-none">
+          <div
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-105"
+            style={{ backgroundImage: `url('/kemenko-pmk-building.jpg')` }}
+          />
+          {/* Adjusted Brightness & Elegance Overlay */}
+          <div className="absolute inset-0 bg-slate-950/65 backdrop-blur-[1.5px]" />
+          {/* Subtle gradient depth */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-slate-950/70" />
+        </div>
+      )}
+
+      {/* 1. Top Navbar (Hidden on Front Page) */}
+      {!isFrontPage && (
+        <header className="sticky top-0 z-50">
+          <Navbar />
+        </header>
+      )}
+
+      {/* 2. Main Dashboard Content Area */}
+      <div
+        className={`w-full flex-1 flex flex-col ${
+          isFrontPage ? 'relative z-10 px-4' : 'px-4 lg:px-8'
+        }`}
+      >
+        <main
+          className={`flex-1 w-full max-w-[1600px] mx-auto ${
+            isFrontPage ? 'flex flex-col justify-center py-10 sm:py-16' : 'pt-5 sm:pt-6 pb-10'
+          }`}
+        >
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
 
 export function DashboardLayoutClient({
   children,
@@ -10,25 +65,14 @@ export function DashboardLayoutClient({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-slate-50/60 text-slate-900 flex flex-col font-sans">
-      {/* 1. Top Navbar */}
-      <Suspense fallback={<div className="w-full h-14 bg-white border-b border-slate-200/80" />}>
-        <Navbar />
-      </Suspense>
-
-      {/* 2. Sub-Header Area */}
-      <Suspense fallback={<div className="w-full h-12 bg-white border-b border-slate-200/80" />}>
-        <SubHeader />
-      </Suspense>
-
-      {/* 3. Main Dashboard Content Area */}
-      <div className="w-full px-4 lg:px-8 flex-1 flex flex-col">
-        <main className="flex-1 w-full max-w-[1600px] mx-auto pt-3 sm:pt-3.5 pb-8">
-          <Suspense fallback={<div className="py-12 text-center text-slate-400 text-sm">Memuat konten...</div>}>
-            {children}
-          </Suspense>
-        </main>
-      </div>
-    </div>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400 text-sm">
+          Memuat Dashboard PMK...
+        </div>
+      }
+    >
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </Suspense>
   );
 }

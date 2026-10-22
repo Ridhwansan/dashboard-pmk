@@ -24,8 +24,53 @@ export interface MapIndicatorDef {
   maxVal: number;
   isLowerBetter?: boolean;
   colorScheme: 'blue' | 'green' | 'brown' | 'red' | 'burgundy' | 'emerald' | 'amber' | 'rose';
+  isNationalOnly?: boolean;
+  customRegionType?: 'sugt' | 'sugb' | 'sug_all' | 'sumatera_rehab';
   getValue: (w: WilayahData) => MapIndicatorValue;
 }
+
+export interface SugLocation {
+  provinceId: string;
+  kodeBps: string;
+  provinceName: string;
+  type: 'SUGT' | 'SUGB';
+  count: number;
+  lat: number;
+  lng: number;
+}
+
+/**
+ * Data sebaran lokasi SUGT dan SUGB tahun 2025–2026 (Sesuai Peta Resmi Diktisaintek)
+ * - SUGT: 15 Provinsi, 42 Unit (Warna Merah Marun)
+ * - SUGB: 4 Provinsi, 4 Unit (Warna Biru Tua)
+ */
+export const SUG_LOCATIONS: SugLocation[] = [
+  // SUGT (15 Provinsi)
+  { provinceId: 'aceh', kodeBps: '11', provinceName: 'Aceh', type: 'SUGT', count: 3, lat: 4.6951, lng: 96.7494 },
+  { provinceId: 'sumatera-utara', kodeBps: '12', provinceName: 'Sumatera Utara', type: 'SUGT', count: 1, lat: 2.1154, lng: 99.5451 },
+  { provinceId: 'sumatera-selatan', kodeBps: '16', provinceName: 'Sumatera Selatan', type: 'SUGT', count: 2, lat: -3.3194, lng: 104.9147 },
+  { provinceId: 'dki-jakarta', kodeBps: '31', provinceName: 'DKI Jakarta', type: 'SUGT', count: 6, lat: -6.2088, lng: 106.8456 },
+  { provinceId: 'banten', kodeBps: '36', provinceName: 'Banten', type: 'SUGT', count: 4, lat: -6.4058, lng: 106.064 },
+  { provinceId: 'jawa-barat', kodeBps: '32', provinceName: 'Jawa Barat', type: 'SUGT', count: 7, lat: -6.9175, lng: 107.6191 },
+  { provinceId: 'jawa-tengah', kodeBps: '33', provinceName: 'Jawa Tengah', type: 'SUGT', count: 6, lat: -7.1509, lng: 110.1402 },
+  { provinceId: 'di-yogyakarta', kodeBps: '34', provinceName: 'DI Yogyakarta', type: 'SUGT', count: 3, lat: -7.8753, lng: 110.4262 },
+  { provinceId: 'jawa-timur', kodeBps: '35', provinceName: 'Jawa Timur', type: 'SUGT', count: 2, lat: -7.536, lng: 112.2384 },
+  { provinceId: 'kalimantan-selatan', kodeBps: '63', provinceName: 'Kalimantan Selatan', type: 'SUGT', count: 1, lat: -2.9935, lng: 115.34 },
+  { provinceId: 'kalimantan-timur', kodeBps: '64', provinceName: 'Kalimantan Timur', type: 'SUGT', count: 2, lat: 0.5387, lng: 116.4194 },
+  { provinceId: 'gorontalo', kodeBps: '75', provinceName: 'Gorontalo', type: 'SUGT', count: 1, lat: 0.6999, lng: 122.4467 },
+  { provinceId: 'sulawesi-selatan', kodeBps: '73', provinceName: 'Sulawesi Selatan', type: 'SUGT', count: 2, lat: -4.1449, lng: 120.1242 },
+  { provinceId: 'maluku', kodeBps: '81', provinceName: 'Maluku', type: 'SUGT', count: 1, lat: -3.2385, lng: 130.1453 },
+  { provinceId: 'papua-barat', kodeBps: '92', provinceName: 'Papua Barat Daya', type: 'SUGT', count: 1, lat: -1.3361, lng: 133.1747 },
+
+  // SUGB (4 Provinsi)
+  { provinceId: 'kepulauan-bangka-belitung', kodeBps: '19', provinceName: 'Kepulauan Bangka Belitung', type: 'SUGB', count: 1, lat: -2.741, lng: 106.4406 },
+  { provinceId: 'kalimantan-utara', kodeBps: '65', provinceName: 'Kalimantan Utara', type: 'SUGB', count: 1, lat: 3.0731, lng: 116.0414 },
+  { provinceId: 'sulawesi-tenggara', kodeBps: '74', provinceName: 'Sulawesi Tenggara', type: 'SUGB', count: 1, lat: -4.1, lng: 122.2 },
+  { provinceId: 'nusa-tenggara-timur', kodeBps: '53', provinceName: 'Nusa Tenggara Timur', type: 'SUGB', count: 1, lat: -8.6573, lng: 121.0793 },
+];
+
+export const SUMATERA_REHAB_PROVINCES = ['aceh', 'sumatera-utara', 'sumatera-barat'];
+export const SUMATERA_REHAB_KODE_BPS = ['11', '12', '13'];
 
 export interface PillarOption {
   id: MapPillarId;
@@ -170,12 +215,13 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
   {
     id: 'revitalisasi_satdik',
     pillarId: 'pendidikan',
-    name: 'Revitalisasi (satdik)',
-    shortName: 'Revitalisasi (satdik)',
+    name: 'Revitalisasi Sarana dan Prasarana Sekolah/Madrasah',
+    shortName: 'Revitalisasi Sarpras',
     unit: 'satdik',
     nationalValue: '36.669 satdik (45,7%)',
     target2026: '80.282 satdik',
-    description: 'Realisasi fisik renovasi sekolah rusak sedang-berat dan ruang belajar baru.',
+    description:
+      'Program peningkatan kualitas dan kelayakan sarana-prasarana sekolah melalui rehabilitasi dan pembangunan fasilitas pendidikan untuk mendukung pemerataan akses dan mutu pembelajaran.',
     minVal: 30.0,
     maxVal: 85.0,
     colorScheme: 'blue',
@@ -194,121 +240,128 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     },
   },
   {
-    id: 'imm_pendidikan',
+    id: 'sug_transformasi',
     pillarId: 'pendidikan',
-    name: 'Indeks Modal Manusia',
-    shortName: 'Indeks Modal Manusia',
-    unit: 'poin',
-    nationalValue: '0,56',
-    target2026: '0.57',
-    description: 'Pencapaian Indeks Modal Manusia (IMM) tahunan yang mengukur kualitas SDM.',
-    minVal: 0.46,
-    maxVal: 0.68,
+    name: 'Sekolah Unggul Garuda Transformasi (SUGT)',
+    shortName: 'SUGT (Transformasi)',
+    unit: 'unit',
+    nationalValue: '42 unit (15 Provinsi)',
+    target2026: '30 unit',
+    description:
+      'Transformasi dan peningkatan mutu SMA unggulan eksisting menjadi Sekolah Unggul Garuda Transformasi di 15 provinsi (42 unit total).',
+    minVal: 1,
+    maxVal: 7,
     colorScheme: 'blue',
+    customRegionType: 'sugt',
     getValue: (w) => {
-      const num = parseFloat(w.imm.replace(',', '.')) || 0.56;
+      const sugtLoc = SUG_LOCATIONS.find(
+        (l) => l.type === 'SUGT' && (l.provinceId === w.id || l.kodeBps === w.kodeBps)
+      );
+      if (sugtLoc) {
+        return {
+          num: sugtLoc.count,
+          display: `${sugtLoc.count} Unit`,
+          label: 'Alokasi SUGT',
+          subtext: `Target Nasional: 30 unit · Capaian: 42 unit (15 Provinsi)`,
+          statusLabel: `${sugtLoc.count} Unit`,
+          statusType: 'success',
+        };
+      }
       return {
-        num,
-        display: `${w.imm} poin`,
-        label: 'Nilai IMM',
-        subtext: 'Target 2026: 0.57 · Target 2029: 0.59',
-        statusLabel: num >= 0.57 ? 'Mencapai Target' : 'Kesenjangan Wilayah',
-        statusType: num >= 0.57 ? 'success' : 'warning',
-      };
-    },
-  },
-  {
-    id: 'snt_operasional',
-    pillarId: 'pendidikan',
-    name: 'SNT operasional (unit - kumulatif)',
-    shortName: 'SNT operasional',
-    unit: 'unit - kumulatif',
-    nationalValue: '17 unit (45,9%)',
-    target2026: '35 unit',
-    description: 'Sekolah Nasional Terintegrasi operasional kumulatif di wilayah afirmasi 3T.',
-    minVal: 35.0,
-    maxVal: 85.0,
-    colorScheme: 'blue',
-    getValue: (w) => {
-      const baseNum = parsePercent(w.pillarDetails?.pendidikan?.heroValue, 45.9);
-      return {
-        num: baseNum,
-        display: w.isPrioritas ? '1–2 unit (kumulatif)' : '1 unit (kumulatif)',
-        label: 'Kesiapan SNT Wilayah',
-        subtext: 'Target 2026: 35 unit (Capaian Nasional: 17 unit / 45,9%)',
-        statusLabel: baseNum >= 50 ? 'Fasilitas Siap' : 'Tahap Verifikasi',
-        statusType: baseNum >= 50 ? 'success' : 'normal',
+        num: 0,
+        display: '0 Unit',
+        label: 'SUGT Transformasi',
+        subtext: '0 Unit (Area Putih)',
+        statusLabel: '0 Unit',
+        statusType: 'normal',
       };
     },
   },
   {
     id: 'sug_baru',
     pillarId: 'pendidikan',
-    name: 'SUG baru (unit)',
-    shortName: 'SUG baru',
+    name: 'Sekolah Unggul Garuda Baru (SUGB)',
+    shortName: 'SUGB (Baru)',
     unit: 'unit',
-    nationalValue: '3 unit (75%)',
+    nationalValue: '4 unit (4 Provinsi)',
     target2026: '4 unit',
-    description: 'Sekolah Unggul Garuda unit pembangunan baru berstandar global.',
-    minVal: 45.0,
-    maxVal: 100.0,
+    description:
+      'Pembangunan unit baru Sekolah Unggul Garuda berasrama dengan kurikulum sains & teknologi global di 4 provinsi (Bangka Belitung, Kaltara, Sultra, NTT).',
+    minVal: 1,
+    maxVal: 1,
     colorScheme: 'blue',
+    customRegionType: 'sugb',
     getValue: (w) => {
+      const sugbLoc = SUG_LOCATIONS.find(
+        (l) => l.type === 'SUGB' && (l.provinceId === w.id || l.kodeBps === w.kodeBps)
+      );
+      if (sugbLoc) {
+        return {
+          num: sugbLoc.count,
+          display: `${sugbLoc.count} Unit`,
+          label: 'Alokasi SUGB Baru',
+          subtext: `Target: 4 unit · Lokasi: Babel, Kaltara, Sultra, NTT`,
+          statusLabel: `${sugbLoc.count} Unit`,
+          statusType: 'success',
+        };
+      }
       return {
-        num: w.isPrioritas ? 75.0 : 85.0,
-        display: w.isPrioritas ? '1 unit (75%)' : '0 unit',
-        label: 'Penyelenggaraan SUG Baru',
-        subtext: 'Target 2026: 4 unit (Capaian: 3 unit / 75%)',
-        statusLabel: w.isPrioritas ? 'Tahap Pembangunan' : 'Kawasan Siap',
-        statusType: w.isPrioritas ? 'success' : 'normal',
+        num: 0,
+        display: '0 Unit',
+        label: 'SUGB Baru',
+        subtext: '0 Unit (Area Putih)',
+        statusLabel: '0 Unit',
+        statusType: 'normal',
       };
     },
   },
   {
-    id: 'sug_transformasi',
+    id: 'snt_operasional',
     pillarId: 'pendidikan',
-    name: 'SUG Transformasi (unit)',
-    shortName: 'SUG Transformasi',
-    unit: 'unit',
-    nationalValue: '30 unit (100%)',
-    target2026: '30 unit',
-    description: 'Sekolah Unggul Garuda hasil transformasi sekolah unggulan eksisting.',
-    minVal: 50.0,
-    maxVal: 100.0,
+    name: 'Sekolah Nasional Terintegrasi (SNT)',
+    shortName: 'SNT Terintegrasi',
+    unit: 'unit - kumulatif',
+    nationalValue: '17 unit (48,6%)',
+    target2026: '35 unit',
+    description:
+      'Program yang mengintegrasikan sekolah jenjang SMP dan SMA dalam satu ekosistem berkelanjutan, mulai dari pembelajaran, pengembangan guru, pembinaan karakter, hingga penjaminan mutu.',
+    minVal: 35.0,
+    maxVal: 85.0,
     colorScheme: 'blue',
-    getValue: (w) => {
+    isNationalOnly: true,
+    getValue: () => {
       return {
-        num: 100,
-        display: w.isPrioritas ? '1–2 unit (100%)' : '1 unit (100%)',
-        label: 'Transformasi SUG',
-        subtext: 'Target 2026: 30 unit (Capaian: 30 unit / 100%)',
-        statusLabel: '100% Terealisasi',
-        statusType: 'success',
+        num: 48.6,
+        display: '17 unit (Capaian Nasional)',
+        label: 'Capaian Nasional SNT',
+        subtext: 'Target 2026: 35 unit · Capaian Nasional: 17 unit (48,6%)',
+        statusLabel: 'Area Putih (Capaian Nasional)',
+        statusType: 'normal',
       };
     },
   },
   {
     id: 'ifp_digitalisasi',
     pillarId: 'pendidikan',
-    name: 'IFP diproduksi dan disalurkan (perangkat & satdik)',
-    shortName: 'Penyaluran IFP',
-    unit: 'perangkat & satdik',
-    nationalValue: '727.436 (100% Berproses)',
-    target2026: '727.436 perangkat & satdik',
-    description: 'Papan tulis interaktif digital (IFP) dan Chromebook untuk sekolah sasaran.',
+    name: 'Digitalisasi Pembelajaran',
+    shortName: 'Digitalisasi Pembelajaran',
+    unit: 'unit perangkat',
+    nationalValue: '727.436 unit (100% Berproses)',
+    target2026: '727.436 unit',
+    description:
+      'Program transformasi pembelajaran melalui penyediaan interactive flat panel, konten pembelajaran digital, dan infrastruktur teknologi informasi untuk mewujudkan pembelajaran yang interaktif dan merata.',
     minVal: 55.0,
     maxVal: 100.0,
     colorScheme: 'blue',
-    getValue: (w) => {
-      const num = w.isPrioritas ? 82.5 : 98.0;
-      const count = w.isPrioritas ? '19.450' : '28.120';
+    isNationalOnly: true,
+    getValue: () => {
       return {
-        num,
-        display: `${count} perangkat & satdik (100% Berproses)`,
-        label: 'Penyaluran IFP',
-        subtext: 'Target 2026: 727.436 perangkat & satdik',
-        statusLabel: num >= 95 ? 'Tersalurkan 100%' : 'Berproses Disalurkan',
-        statusType: 'success',
+        num: 100,
+        display: '727.436 unit (100% Berproses)',
+        label: 'Capaian Nasional Digitalisasi',
+        subtext: 'Target 2026: 727.436 perangkat & satdik di seluruh Indonesia',
+        statusLabel: 'Area Putih (Capaian Nasional)',
+        statusType: 'normal',
       };
     },
   },
@@ -318,19 +371,21 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     name: 'Studio Guru',
     shortName: 'Studio Guru',
     unit: 'tahap',
-    nationalValue: 'Penyiapan',
+    nationalValue: 'Tahap Penyiapan',
     target2026: 'Peluncuran Nov 2027',
-    description: 'Studio pengembangan dan penyiapan kompetensi guru berkualitas.',
+    description:
+      'Program penyediaan pusat produksi dan penyebarluasan konten pembelajaran digital berkualitas dari guru untuk meningkatkan pemerataan mutu pembelajaran di Indonesia.',
     minVal: 40.0,
     maxVal: 100.0,
     colorScheme: 'blue',
-    getValue: (w) => {
+    isNationalOnly: true,
+    getValue: () => {
       return {
         num: 50,
         display: 'Tahap Penyiapan',
         label: 'Studio Guru',
         subtext: 'Target: Peluncuran Nov 2027 · Operasional 2028',
-        statusLabel: 'Persiapan Kurikulum',
+        statusLabel: 'Area Putih (Capaian Nasional)',
         statusType: 'normal',
       };
     },
@@ -342,12 +397,13 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
   {
     id: 'ckg_kesehatan',
     pillarId: 'kesehatan',
-    name: 'Cakupan Cek Kesehatan Gratis (CKG)',
-    shortName: 'Cek Kesehatan (CKG)',
-    unit: '%',
-    nationalValue: '81,5% (105,98 Juta Jiwa)',
+    name: 'Cek Kesehatan Gratis',
+    shortName: 'Cek Kesehatan Gratis',
+    unit: 'juta jiwa',
+    nationalValue: '105,98 Juta Jiwa (81,5%)',
     target2026: '130 Juta Jiwa',
-    description: 'Pemeriksaan kesehatan preventif berkala terintegrasi di seluruh Puskesmas dan faskes primer.',
+    description:
+      'Program pemeriksaan kesehatan gratis bagi seluruh masyarakat berdasarkan siklus hidup untuk mendeteksi dini penyakit dan faktor risiko kesehatan, serta mendorong pencegahan dan penanganan penyakit secara tepat waktu.',
     minVal: 45.0,
     maxVal: 95.0,
     colorScheme: 'green',
@@ -368,12 +424,13 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
   {
     id: 'tb_penemuan',
     pillarId: 'kesehatan',
-    name: 'Penemuan & Notifikasi Kasus TB',
-    shortName: 'Penemuan Kasus TB',
-    unit: '%',
-    nationalValue: '63,5% (617.244 kasus)',
+    name: 'Penuntasan Tuberkulosis',
+    shortName: 'Penuntasan TB',
+    unit: 'kasus',
+    nationalValue: '656.517 kasus (67,5%)',
     target2026: '972.000 kasus',
-    description: 'Skrining aktif dan pelacakan kontak erat tuberkulosis untuk memutus rantai penularan nasional.',
+    description:
+      'Program percepatan eliminasi tuberkulosis melalui peningkatan deteksi dini, penemuan kasus secara aktif, pemeriksaan, pengobatan hingga tuntas, serta pencegahan penularan untuk menurunkan kasus tuberkulosis.',
     minVal: 38.0,
     maxVal: 88.0,
     colorScheme: 'green',
@@ -391,14 +448,40 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     },
   },
   {
+    id: 'rsud_spesialis',
+    pillarId: 'kesehatan',
+    name: 'Revitalisasi Rumah Sakit Umum Daerah (RSUD)',
+    shortName: 'Revitalisasi RSUD',
+    unit: 'RSUD',
+    nationalValue: '18 Konstruksi (90%)',
+    target2026: '20 RSUD (Kelas D ke C)',
+    description:
+      'Program peningkatan kapasitas dan kualitas RSUD, terutama dari kelas D menjadi kelas C, melalui pembangunan dan peningkatan fasilitas, penyediaan alat kesehatan, serta penguatan tenaga medis untuk memperluas akses layanan kesehatan rujukan yang berkualitas.',
+    minVal: 50.0,
+    maxVal: 100.0,
+    colorScheme: 'green',
+    getValue: (w) => {
+      const num = w.isPrioritas ? 68.0 : 92.0;
+      return {
+        num,
+        display: `${num.toString().replace('.', ',')}%`,
+        label: 'Kesiapan RS Rujukan',
+        subtext: 'Peningkatan Kelas D ke C & 7 Dokter Spesialis',
+        statusLabel: num >= 85 ? 'Spesialis Lengkap' : 'Kendala Tenaga Dokter',
+        statusType: num >= 85 ? 'success' : 'warning',
+      };
+    },
+  },
+  {
     id: 'mbg_3b',
     pillarId: 'kesehatan',
-    name: 'MBG Ibu Hamil, Menyusui & Balita (3B)',
-    shortName: 'MBG 3B & Stunting',
-    unit: '%',
+    name: 'MBG Ibu Hamil, Ibu Menyusui, dan Balita (3B)',
+    shortName: 'MBG 3B',
+    unit: '% sasaran',
     nationalValue: '44,28%–86,87%',
     target2026: '50% sasaran 3B',
-    description: 'Intervensi nutrisi spesifik penanganan stunting pada 1.000 Hari Pertama Kehidupan (HPK).',
+    description:
+      'Program pemberian makanan bergizi gratis kepada ibu hamil, ibu menyusui, dan balita untuk memenuhi kebutuhan gizi kelompok rentan, mendukung kesehatan ibu dan tumbuh kembang anak, serta mencegah stunting sejak dini.',
     minVal: 35.0,
     maxVal: 92.0,
     colorScheme: 'green',
@@ -414,81 +497,45 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       };
     },
   },
-  {
-    id: 'rsud_spesialis',
-    pillarId: 'kesehatan',
-    name: 'Peningkatan RSUD & Dokter Spesialis',
-    shortName: 'Peningkatan RSUD',
-    unit: '%',
-    nationalValue: '90% (18 Konstruksi Selesai)',
-    target2026: '20 RSUD (Kelas D ke C)',
-    description: 'Penyediaan 7 dokter spesialis dasar dan alat kesehatan canggih di RSUD rujukan kabupaten.',
-    minVal: 50.0,
-    maxVal: 100.0,
-    colorScheme: 'green',
-    getValue: (w) => {
-      const num = w.isPrioritas ? 68.0 : 92.0;
-      return {
-        num,
-        display: `${num.toString().replace('.', ',')}%`,
-        label: 'Kesiapan RS Rujukan',
-        subtext: '7 Dokter Spesialis Dasar & Alkes',
-        statusLabel: num >= 85 ? 'Spesialis Lengkap' : 'Kendala Tenaga Dokter',
-        statusType: num >= 85 ? 'success' : 'warning',
-      };
-    },
-  },
-  {
-    id: 'stunting_prev',
-    pillarId: 'kesehatan',
-    name: 'Penurunan Prevalensi Stunting',
-    shortName: 'Prevalensi Stunting',
-    unit: '%',
-    nationalValue: '16,2%',
-    target2026: '14,0%',
-    description: 'Prevalensi balita stunting hasil survei kesehatan dengan target penurunan menuju RPJMN 2029 (<10%).',
-    minVal: 10.0,
-    maxVal: 28.0,
-    isLowerBetter: true,
-    colorScheme: 'green',
-    getValue: (w) => {
-      const num = w.isPrioritas ? 21.4 : 14.8;
-      return {
-        num,
-        display: `${num.toString().replace('.', ',')}%`,
-        label: 'Prevalensi Stunting',
-        subtext: 'Target 2026: 14,0% (Target 2029: < 10%)',
-        statusLabel: num <= 14.0 ? 'Mencapai Target' : num <= 20.0 ? 'Intervensi Lanjut' : 'Prioritas Khusus',
-        statusType: num <= 14.0 ? 'success' : num <= 20.0 ? 'normal' : 'warning',
-      };
-    },
-  },
 
   // ==========================================================
   // 3. PILAR KETAHANAN BENCANA
   // ==========================================================
   {
-    id: 'huntara_bencana',
+    id: 'rehabilitasi_sumatera',
     pillarId: 'bencana',
-    name: 'Kesiapan Hunian Antara (Huntara)',
-    shortName: 'Huntara Terbangun',
-    unit: '%',
-    nationalValue: '99% (20.267 unit)',
-    target2026: '20.544 unit',
-    description: 'Penyediaan tempat tinggal darurat layak huni bagi warga penyintas bencana alam.',
-    minVal: 65.0,
-    maxVal: 100.0,
+    name: 'Rehabilitasi dan Rekonstruksi Sumatera',
+    shortName: 'Rehab & Rekon Sumatera',
+    unit: 'unit / %',
+    nationalValue: 'Huntap 1.707 (4,3%) · Huntara 20.267 (99%)',
+    target2026: '39.501 Huntap · 20.544 Huntara',
+    description:
+      'Program percepatan pemulihan pascabencana di Provinsi Aceh, Sumatera Utara, dan Sumatera Barat melalui pembangunan kembali wilayah terdampak dengan pendekatan Build Back Better untuk mewujudkan hunian, infrastruktur, layanan dasar, dan kehidupan sosial ekonomi masyarakat yang lebih baik, aman, tangguh, dan berkelanjutan serta mengurangi risiko bencana di masa depan.',
+    minVal: 0,
+    maxVal: 100,
     colorScheme: 'brown',
+    customRegionType: 'sumatera_rehab',
     getValue: (w) => {
-      const heroVal = w.pillarDetails?.bencana?.heroValue || '94,0%';
-      const num = parsePercent(heroVal, 94.0);
+      const isSumatera =
+        SUMATERA_REHAB_PROVINCES.includes(w.id) ||
+        SUMATERA_REHAB_KODE_BPS.includes(w.kodeBps);
+      if (isSumatera) {
+        return {
+          num: 85.0,
+          display: 'Wilayah Intervensi Program',
+          label: 'Rehabilitasi & Rekonstruksi',
+          subtext: 'Fokus: Aceh, Sumatera Utara, dan Sumatera Barat',
+          statusLabel: 'Lokasi Prioritas Bencana',
+          statusType: 'alert',
+        };
+      }
       return {
-        num,
-        display: heroVal.includes('%') ? heroVal : `${num}%`,
-        label: 'Kesiapan Hunian',
-        subtext: w.pillarDetails?.bencana?.metric1?.value || '20.267 unit terbangun',
-        statusLabel: num >= 90 ? 'Tersedia Lengkap' : 'Pembangunan Bertahap',
-        statusType: num >= 90 ? 'success' : 'normal',
+        num: 0,
+        display: 'Bukan Wilayah Intervensi Program',
+        label: 'Rehabilitasi & Rekonstruksi Sumatera',
+        subtext: 'Program khusus wilayah terdampak bencana Sumatera',
+        statusLabel: 'Area Putih (Di Luar Sasaran)',
+        statusType: 'normal',
       };
     },
   },
@@ -504,15 +551,65 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     minVal: 2.0,
     maxVal: 35.0,
     colorScheme: 'brown',
+    customRegionType: 'sumatera_rehab',
     getValue: (w) => {
-      const num = w.id === 'sumatera-barat' || w.id === 'sumatera-utara' || w.id === 'aceh' ? 8.5 : 4.3;
+      const isSumatera =
+        SUMATERA_REHAB_PROVINCES.includes(w.id) ||
+        SUMATERA_REHAB_KODE_BPS.includes(w.kodeBps);
+      if (isSumatera) {
+        return {
+          num: 8.5,
+          display: '8,5%',
+          label: 'Realisasi Huntap',
+          subtext: 'Pembangunan Huntap di Kawasan Aman Relokasi',
+          statusLabel: 'Perlu Akselerasi Satgas',
+          statusType: 'alert',
+        };
+      }
       return {
-        num,
-        display: `${num.toString().replace('.', ',')}%`,
-        label: 'Realisasi Huntap',
-        subtext: 'Kendala Kepastian Lahan Relokasi & Inpres',
-        statusLabel: 'Perlu Akselerasi Satgas',
-        statusType: 'alert',
+        num: 0,
+        display: 'Bukan Lokasi Huntap',
+        label: 'Huntap Pascabencana',
+        subtext: 'Program fokus di Aceh, Sumut, Sumbar',
+        statusLabel: 'Area Putih',
+        statusType: 'normal',
+      };
+    },
+  },
+  {
+    id: 'huntara_bencana',
+    pillarId: 'bencana',
+    name: 'Kesiapan Hunian Antara (Huntara)',
+    shortName: 'Huntara Terbangun',
+    unit: '%',
+    nationalValue: '99% (20.267 unit)',
+    target2026: '20.544 unit',
+    description: 'Penyediaan tempat tinggal darurat layak huni bagi warga penyintas bencana alam.',
+    minVal: 65.0,
+    maxVal: 100.0,
+    colorScheme: 'brown',
+    customRegionType: 'sumatera_rehab',
+    getValue: (w) => {
+      const isSumatera =
+        SUMATERA_REHAB_PROVINCES.includes(w.id) ||
+        SUMATERA_REHAB_KODE_BPS.includes(w.kodeBps);
+      if (isSumatera) {
+        return {
+          num: 99.0,
+          display: '99,0% (20.267 unit)',
+          label: 'Kesiapan Huntara',
+          subtext: 'Target 2026: 20.544 unit terbangun',
+          statusLabel: 'Tersedia Lengkap',
+          statusType: 'success',
+        };
+      }
+      return {
+        num: 0,
+        display: 'Bukan Lokasi Huntara',
+        label: 'Huntara Pascabencana',
+        subtext: 'Program fokus di Aceh, Sumut, Sumbar',
+        statusLabel: 'Area Putih',
+        statusType: 'normal',
       };
     },
   },
@@ -674,19 +771,36 @@ export function getIndicatorsByPillar(pillarId: MapPillarId): MapIndicatorDef[] 
 
 const ID_ALIASES: Record<string, string> = {
   // Kesehatan aliases
+  tb: 'tb_penemuan',
   tb_penuntasan: 'tb_penemuan',
-  mbg_kesehatan: 'mbg_3b',
+  ckg: 'ckg_kesehatan',
+  rsud: 'rsud_spesialis',
   rsud_kesiapan: 'rsud_spesialis',
+  mbg_kesehatan: 'mbg_3b',
+  mbg_balita: 'mbg_3b',
+  mbg_ibu_hamil: 'mbg_3b',
+  mbg_ibu_menyusui: 'mbg_3b',
   stunting: 'stunting_prev',
   // Bencana aliases
+  rehabilitasi_rekonstruksi_sumatera: 'rehabilitasi_sumatera',
+  huntap: 'huntap_bencana',
+  huntara: 'huntara_bencana',
+  infrastruktur: 'infrastruktur_bencana',
   destana_mandiri: 'infrastruktur_bencana',
   ews_bencana: 'mitigasi_bencana',
   // Kemiskinan aliases
+  kemiskinan: 'tingkat_kemiskinan_pilar',
+  kemiskinan_ekstrem: 'kemiskinan_ekstrem_pilar',
   dtsen_kemiskinan: 'dtsen_desil_pilar',
   bansos_kemiskinan: 'graduasi_bansos_pilar',
   pemberdayaan_rentan: 'tingkat_kemiskinan_pilar',
   // Pendidikan aliases
-  ifp_disalurkan: 'ifp_digitalisasi',
+  revitalisasi_sarpras: 'revitalisasi_satdik',
+  digitalisasi_pembelajaran: 'ifp_digitalisasi',
+  digitalisasi_pendidikan: 'ifp_digitalisasi',
+  sekolah_unggul_garuda: 'sug_transformasi',
+  sug: 'sug_transformasi',
+  sug_semua: 'sug_transformasi',
 };
 
 export function getDefaultIndicatorForPillar(pillarId: MapPillarId): MapIndicatorDef {
