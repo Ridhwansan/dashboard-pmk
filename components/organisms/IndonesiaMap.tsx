@@ -414,43 +414,18 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
 
           {/* Floating Filter Menu on Right Side extending vertically downwards */}
           <aside
-            aria-label="Filter Kontrol Peta Layar Penuh"
-            className="absolute top-4 right-4 z-[1000] w-72 sm:w-80 max-h-[calc(100vh-2rem)] overflow-y-auto [scrollbar-width:thin] bg-white/95 backdrop-blur-md rounded-2xl p-4 border border-slate-200/90 shadow-2xl flex flex-col gap-3.5 select-none"
+            aria-label="Panel Profil Wilayah Layar Penuh"
+            className="absolute top-4 right-4 z-[1000] w-80 sm:w-96 max-h-[calc(100vh-2rem)] flex flex-col gap-2.5 pointer-events-auto"
           >
-            {/* Header: Wilayah Badge & Exit Fullscreen Button */}
-            <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
-                <span className="text-xs sm:text-sm font-extrabold text-slate-900 truncate">
-                  {currentWilayah.name}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsFullscreen(false)}
-                className="h-8 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
-                title="Keluar Layar Penuh (ESC)"
-              >
-                <Minimize2 className="w-3.5 h-3.5 text-white" />
-                <span className="hidden sm:inline">Keluar</span>
-                <kbd className="text-[10px] bg-slate-800 px-1 py-0.5 rounded text-slate-300">
-                  ESC
-                </kbd>
-              </button>
-            </div>
-
-            {/* Quick Territory Dropdown Selector */}
-            <div>
-              <div className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">
-                Pilih Lokus Wilayah
-              </div>
-              <div className="relative w-full">
+            {/* Header: Lokus Dropdown Selector & Exit Fullscreen Button */}
+            <div className="bg-white/95 backdrop-blur-md rounded-2xl p-2.5 sm:p-3 border border-slate-200/90 shadow-xl flex items-center justify-between gap-2 shrink-0">
+              <div className="relative flex-1 min-w-0">
                 <select
                   id="fullscreen-wilayah-filter"
                   aria-label="Pilih Wilayah Peta"
                   value={selectedProvinsiId}
                   onChange={(e) => handleProvinsiChange(e.target.value)}
-                  className="w-full h-[38px] appearance-none pl-3 pr-8 text-xs font-bold bg-white text-slate-900 border border-slate-300 hover:border-slate-400 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none transition-all cursor-pointer truncate shadow-2xs"
+                  className="w-full h-[36px] appearance-none pl-3 pr-8 text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-900 border border-slate-200 hover:border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none transition-all cursor-pointer truncate shadow-2xs"
                 >
                   <option value="nasional">Seluruh Indonesia (38 Prov)</option>
                   {PROVINSI_DATA.map((prov) => (
@@ -461,42 +436,30 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               </div>
-            </div>
 
-            {/* 4 Pillar Quick Summary Box */}
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex flex-col gap-2 text-xs">
-              <div className="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-600 pb-1 border-b border-slate-200/60">
-                Ringkasan 4 Pilar ({currentWilayah.name})
-              </div>
-              <div className="flex items-center justify-between text-slate-700">
-                <span className="text-[11px] font-medium">Pendidikan:</span>
-                <span className="font-bold text-slate-900">{currentWilayah.pillarDetails?.pendidikan?.heroValue || '—'}</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-700">
-                <span className="text-[11px] font-medium">Kesehatan:</span>
-                <span className="font-bold text-slate-900">{currentWilayah.pillarDetails?.kesehatan?.heroValue || '—'}</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-700">
-                <span className="text-[11px] font-medium">Bencana:</span>
-                <span className="font-bold text-slate-900">{currentWilayah.pillarDetails?.bencana?.heroValue || '—'}</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-700">
-                <span className="text-[11px] font-medium">Kemiskinan:</span>
-                <span className="font-bold text-slate-900">{currentWilayah.pillarDetails?.kemiskinan?.heroValue || '—'}</span>
-              </div>
-            </div>
-
-            {/* Reset Tampilan Peta */}
-            {selectedProvinsiId !== 'nasional' && (
               <button
                 type="button"
-                onClick={handleResetNasional}
-                className="w-full h-[36px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 mt-0.5"
+                onClick={() => setIsFullscreen(false)}
+                className="h-[36px] px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+                title="Keluar Layar Penuh (ESC)"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-                <span>Kembali ke Nasional</span>
+                <Minimize2 className="w-3.5 h-3.5 text-white" />
+                <span className="hidden sm:inline">Keluar</span>
+                <kbd className="text-[10px] bg-slate-800 px-1 py-0.5 rounded text-slate-300">
+                  ESC
+                </kbd>
               </button>
-            )}
+            </div>
+
+            {/* Same 4-Pillar Card Section (WilayahSidePanel) */}
+            <div className="flex-1 min-h-0 overflow-hidden shadow-2xl rounded-2xl">
+              <WilayahSidePanel
+                wilayah={currentWilayah}
+                selectedYear={selectedYear}
+                onResetNasional={handleResetNasional}
+                className="h-full max-h-[calc(100vh-5.5rem)] shadow-none"
+              />
+            </div>
           </aside>
         </div>
       )}

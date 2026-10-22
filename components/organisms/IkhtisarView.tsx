@@ -61,12 +61,19 @@ const PILLAR_TABS: PillarTabItem[] = [
   },
 ];
 
+const CATEGORY_OPTIONS: Array<'PKPN' | 'Isu Strategis' | 'RPJMN'> = [
+  'PKPN',
+  'Isu Strategis',
+  'RPJMN',
+];
+
 export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
   initialPillar = 'pendidikan',
   onBackToLanding,
   onPillarChange,
 }) => {
   const [activePillar, setActivePillar] = useState<PillarId>(initialPillar);
+  const [activeCategory, setActiveCategory] = useState<'PKPN' | 'Isu Strategis' | 'RPJMN'>('PKPN');
 
   const handleTabChange = (pillarId: PillarId) => {
     setActivePillar(pillarId);
@@ -172,24 +179,28 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
           <PendidikanDetailView
             onBackToHome={onBackToLanding}
             pillar={currentPillarData}
+            category={activeCategory}
           />
         )}
         {activePillar === 'kesehatan' && (
           <KesehatanDetailView
             onBackToHome={onBackToLanding}
             pillar={currentPillarData}
+            category={activeCategory}
           />
         )}
         {activePillar === 'bencana' && (
           <BencanaDetailView
             onBackToHome={onBackToLanding}
             pillar={currentPillarData}
+            category={activeCategory}
           />
         )}
         {activePillar === 'kemiskinan' && (
           <KemiskinanDetailView
             onBackToHome={onBackToLanding}
             pillar={currentPillarData}
+            category={activeCategory}
           />
         )}
       </div>

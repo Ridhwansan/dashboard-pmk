@@ -36,7 +36,7 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
       {
         id: 'revitalisasi_satdik',
         mapIndicatorId: 'revitalisasi_satdik',
-        name: 'Revitalisasi Sarana dan Prasarana Sekolah/Madrasah',
+        name: 'Revitalisasi satuan pendidikan',
         unit: 'satdik',
         years: {
           2025: { target: '12.825', capaian: '17.508', percent: '136,5%', statusType: 'success' },
@@ -49,11 +49,11 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
       {
         id: 'snt_operasional',
         mapIndicatorId: 'snt_operasional',
-        name: 'Sekolah Nasional Terintegrasi (SNT)',
-        unit: 'unit · kumulatif',
+        name: 'SNT operasional',
+        unit: 'unit sekolah kumulatif',
         years: {
           2025: { target: '—', capaian: '—' },
-          2026: { target: '35', capaian: '17', percent: '48,6%', statusType: 'warning' },
+          2026: { target: '35', capaian: '17', percent: '45,9%', statusType: 'warning' },
           2027: { target: '135', capaian: '—' },
           2028: { target: '335', capaian: '—' },
           2029: { target: '500', capaian: '—' },
@@ -62,25 +62,24 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
       {
         id: 'digitalisasi_pembelajaran',
         mapIndicatorId: 'ifp_digitalisasi',
-        name: 'Digitalisasi Pembelajaran',
-        unit: 'unit perangkat',
+        name: 'IFP diproduksi dan disalurkan',
+        unit: 'perangkat & satdik',
         years: {
           2025: { target: '288.865', capaian: '288.865 (100%)', percent: '100%', statusType: 'success' },
-          2026: { target: '727.436', capaian: '727.436 (100%) (Berproses disalurkan)', percent: '100%', statusType: 'info' },
-          2027: { target: '850.000', capaian: '—' },
+          2026: { target: '727.436', capaian: '727.436 (100%) (Berproses disalurkan)', percent: '100%', statusType: 'success' },
+          2027: { target: '—', capaian: '—' },
           2028: { target: '—', capaian: '—' },
           2029: { target: '—', capaian: '—' },
         },
       },
-
       {
         id: 'sug_transformasi',
         mapIndicatorId: 'sug_transformasi',
-        name: 'Sekolah Unggul Garuda Transformasi (SUGT)',
+        name: 'SUG Transformasi',
         unit: 'unit',
         years: {
           2025: { target: '12', capaian: '12', percent: '100%', statusType: 'success' },
-          2026: { target: '30', capaian: '42', percent: '140%', statusType: 'success' },
+          2026: { target: '30', capaian: '30', percent: '100%', statusType: 'success' },
           2027: { target: '50', capaian: '—' },
           2028: { target: '—', capaian: '—' },
           2029: { target: '—', capaian: '—' },
@@ -89,11 +88,11 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
       {
         id: 'sug_baru',
         mapIndicatorId: 'sug_baru',
-        name: 'Sekolah Unggul Garuda Baru (SUGB)',
+        name: 'SUG baru',
         unit: 'unit',
         years: {
-          2025: { target: '4', capaian: '2', percent: '50%', statusType: 'warning' },
-          2026: { target: '4', capaian: '4', percent: '100%', statusType: 'success' },
+          2025: { target: '4', capaian: '—' },
+          2026: { target: '4', capaian: '3 (75%)', percent: '75%', statusType: 'warning' },
           2027: { target: '5', capaian: '—' },
           2028: { target: '4', capaian: '—' },
           2029: { target: '3', capaian: '—' },
@@ -103,13 +102,13 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
         id: 'studio_guru',
         mapIndicatorId: 'studio_guru',
         name: 'Studio Guru',
-        unit: 'tahap',
+        unit: '',
         years: {
-          2025: { target: 'Penyiapan', capaian: 'Selesai Pedoman', percent: '100%', statusType: 'success' },
-          2026: { target: 'Uji Coba Studio', capaian: 'Tahap Penyiapan', percent: '70%', statusType: 'warning' },
-          2027: { target: 'Peluncuran Nov 2027', capaian: '—' },
-          2028: { target: 'Operasional Penuh', capaian: '—' },
-          2029: { target: 'Ekspansi Nasional', capaian: '—' },
+          2025: { target: '—', capaian: '—' },
+          2026: { target: 'Peluncuran Nov 2027', capaian: '—' },
+          2027: { target: 'Operasional', capaian: '—' },
+          2028: { target: '—', capaian: '—' },
+          2029: { target: '—', capaian: '—' },
         },
       },
       {

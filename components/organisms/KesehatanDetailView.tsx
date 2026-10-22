@@ -9,6 +9,7 @@ import { getProgramDetailData } from '@/data/programDetailData';
 interface KesehatanDetailViewProps {
   onBackToHome: () => void;
   pillar: PillarData;
+  category?: string;
 }
 
 interface WidgetCardItem {
@@ -23,7 +24,9 @@ interface WidgetCardItem {
   subtext?: string;
 }
 
-export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = () => {
+export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
+  category = 'PKPN',
+}) => {
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
 
   // If a program detail is selected, render it as its own full page
@@ -33,6 +36,7 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = () => {
       <ProgramDetailPageView
         program={programDetail}
         onBack={() => setSelectedProgramId(null)}
+        category={category}
       />
     );
   }
@@ -138,10 +142,10 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = () => {
           </div>
           <div>
             <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
-              Kesehatan
+              {category === 'PKPN' ? 'PKPN Kesehatan' : 'Kesehatan'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              Target dan Realisasi Program Prioritas (RPJMN 2025–2029)
+              Target dan Capaian
             </p>
           </div>
         </div>
@@ -168,7 +172,7 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = () => {
                 {/* PKPN Chip Label */}
                 <div className="mb-2.5">
                   <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200/90 shadow-2xs">
-                    {card.chipLabel || 'PKPN'}
+                    {category || card.chipLabel || 'PKPN'}
                   </span>
                 </div>
 

@@ -19,14 +19,14 @@ export const Layer2PillarDetail: React.FC<Layer2PillarDetailProps> = ({
 
   switch (pillarId) {
     case 'pendidikan':
-      return <PendidikanDetailView onBackToHome={onBackToHome} pillar={pillar} />;
+      return <PendidikanDetailView onBackToHome={onBackToHome} pillar={pillar} category="PKPN" />;
     case 'kesehatan':
-      return <KesehatanDetailView onBackToHome={onBackToHome} pillar={pillar} />;
+      return <KesehatanDetailView onBackToHome={onBackToHome} pillar={pillar} category="PKPN" />;
     case 'bencana':
-      return <BencanaDetailView onBackToHome={onBackToHome} pillar={pillar} />;
+      return <BencanaDetailView onBackToHome={onBackToHome} pillar={pillar} category="PKPN" />;
     case 'kemiskinan':
-      return <KemiskinanDetailView onBackToHome={onBackToHome} pillar={pillar} />;
+      return <KemiskinanDetailView onBackToHome={onBackToHome} pillar={pillar} category="PKPN" />;
     default:
-      return <PendidikanDetailView onBackToHome={onBackToHome} pillar={pillar} />;
+      return <PendidikanDetailView onBackToHome={onBackToHome} pillar={pillar} category="PKPN" />;
   }
 };

@@ -24,6 +24,7 @@ import {
 interface ProgramDetailPageViewProps {
   program: ProgramDetailData;
   onBack: () => void;
+  category?: string;
 }
 
 const MONTH_SHORT = [
@@ -46,9 +47,15 @@ const MONTH_SHORT = [
  * Handles: "12.825" -> 12825, "70,3" -> 70.3, "867.480 (88,4%)" -> 867480, "80%" -> 80
  */
 function parseMetricValue(val: string | null | undefined): number | null {
-  if (!val || val === '—' || val.trim() === '') return null;
+  if (!val || val === '—' || val === '-' || val.trim() === '') return null;
   // Strip notes in parentheses e.g. "(100%)" or "(Berproses)"
   const withoutParens = val.replace(/\(.*?\)/g, '').trim();
+
+  // If the string contains qualitative words (e.g. "Peluncuran", "Operasional", "Penyiapan", "Uji Coba")
+  if (/[a-zA-Z]{3,}/.test(withoutParens.replace(/^(unit|satdik|orang|jiwa|persen|poin)/i, '').trim())) {
+    return null;
+  }
+
   const clean = withoutParens.replace(/[^0-9,.-]/g, '').trim();
   if (!clean) return null;
 
@@ -74,24 +81,55 @@ function parseMetricValue(val: string | null | undefined): number | null {
 function formatMetricWithUnit(val: string | undefined | null, unit: string): string {
   if (!val || val === '—' || val === '-') return '—';
   const trimmed = val.trim();
+  if (!unit || unit.trim() === '') return trimmed;
   if (
     trimmed.includes('%') ||
     trimmed.toLowerCase().includes(unit.toLowerCase()) ||
-    isNaN(Number(trimmed.replace(/[^0-9]/g, '')))
+    /[a-zA-Z]{3,}/.test(trimmed.replace(/^(unit|satdik|orang|jiwa|persen|poin)/i, '').trim())
   ) {
     return trimmed;
   }
   return `${trimmed} ${unit}`;
 }
 
+/**
+ * Builds a smooth cubic bezier SVG path string from an array of coordinates
+ */
+function buildSmoothPath(points: { x: number; y: number }[]): string {
+  if (points.length === 0) return '';
+  if (points.length === 1) return `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+  if (points.length === 2) {
+    return `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)} L ${points[1].x.toFixed(1)} ${points[1].y.toFixed(1)}`;
+  }
+
+  let d = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i === 0 ? 0 : i - 1];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2 < points.length ? i + 2 : i + 1];
+
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
+
 export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   program,
   onBack,
+  category = 'PKPN',
 }) => {
   // Default view is 'tahunan' (2025–2029) as requested
   const [tableType, setTableType] = useState<'tahunan' | 'bulanan'>('tahunan');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedMonth, setSelectedMonth] = useState<number>(0); // 0 = Semua Bulan
+  const [hoveredAnnualIdx, setHoveredAnnualIdx] = useState<number | null>(null);
+  const [hoveredMonthlyIdx, setHoveredMonthlyIdx] = useState<number | null>(null);
 
   // Resolve annual row for this specific program (only this indicator appears in the annual table)
   const annualRowForProgram = useMemo(() => {
@@ -128,13 +166,26 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   // Aggregate metrics
   const summaryMetrics = useMemo(() => {
     if (rawMonths.length === 0) return { totalTarget: 0, totalCapaian: 0, avgPct: 0 };
-    const latestActiveMonth = rawMonths
-      .filter((m) => m.capaian !== null)
-      .slice(-1)[0] || rawMonths[0];
+    const latestActiveMonth =
+      rawMonths
+        .filter((m) => m.capaian !== null && (m.capaianFormatted !== '' && m.capaianFormatted !== '—'))
+        .slice(-1)[0] ||
+      rawMonths.filter((m) => m.capaian !== null).slice(-1)[0] ||
+      rawMonths[0];
 
     const targetVal = latestActiveMonth?.target || 0;
     const capaianVal = latestActiveMonth?.capaian || 0;
-    const pct = targetVal > 0 ? Math.round((capaianVal / targetVal) * 100) : 0;
+    let pct = 0;
+    if (latestActiveMonth?.percentage) {
+      pct = latestActiveMonth.percentage;
+    } else if (latestActiveMonth?.percentageFormatted) {
+      const parsed = parseFloat(
+        latestActiveMonth.percentageFormatted.replace(/[^0-9,.-]/g, '').replace(',', '.')
+      );
+      if (!isNaN(parsed)) pct = parsed;
+    } else if (targetVal > 0) {
+      pct = Math.round((capaianVal / targetVal) * 100);
+    }
 
     return {
       totalTarget: targetVal,
@@ -145,7 +196,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
 
   // Dynamic resolution of kendala list
   const resolvedKendalaList: KendalaDetailItem[] = useMemo(() => {
-    if (program.kendalaList && program.kendalaList.length > 0) {
+    if (program.kendalaList !== undefined) {
       return program.kendalaList;
     }
     if (program.kendala || program.tindakLanjut) {
@@ -235,12 +286,10 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   };
 
   const targetAnnualPath = useMemo(() => {
-    return annualPoints.reduce((acc, curr, i) => {
-      if (curr.targetNum === null) return acc;
-      const x = getXAnnual(i);
-      const y = getYAnnual(curr.targetNum);
-      return acc === '' ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
-    }, '');
+    const pts = annualPoints
+      .map((p, idx) => ({ x: getXAnnual(idx), y: p.targetNum !== null ? getYAnnual(p.targetNum) : null }))
+      .filter((p): p is { x: number; y: number } => p.y !== null);
+    return buildSmoothPath(pts);
   }, [annualPoints, yMaxAnnual]);
 
   const capaianAnnualPoints = useMemo(
@@ -249,12 +298,11 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   );
 
   const capaianAnnualPath = useMemo(() => {
-    return capaianAnnualPoints.reduce((acc, curr) => {
-      const i = annualPoints.findIndex((p) => p.year === curr.year);
-      const x = getXAnnual(i);
-      const y = getYAnnual(curr.capaianNum);
-      return acc === '' ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
-    }, '');
+    const pts = capaianAnnualPoints.map((p) => {
+      const idx = annualPoints.findIndex((ap) => ap.year === p.year);
+      return { x: getXAnnual(idx), y: getYAnnual(p.capaianNum) };
+    });
+    return buildSmoothPath(pts);
   }, [capaianAnnualPoints, annualPoints, yMaxAnnual]);
 
   const capaianAnnualArea = useMemo(() => {
@@ -285,26 +333,30 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
     return padT + plotH - ratio * plotH;
   };
 
-  const targetMonthlyPath = rawMonths.reduce((acc, curr, i) => {
-    const x = getXMonthly(i);
-    const y = getYMonthly(curr.target);
-    return i === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
-  }, '');
+  const targetMonthlyPath = useMemo(() => {
+    const pts = rawMonths.map((m, i) => ({ x: getXMonthly(i), y: getYMonthly(m.target) }));
+    return buildSmoothPath(pts);
+  }, [rawMonths, yMaxMonthly]);
 
   const capaianMonthlyList = rawMonths.filter((m) => m.capaian !== null);
-  const capaianMonthlyPath = capaianMonthlyList.reduce((acc, curr) => {
-    const origIndex = rawMonths.findIndex((m) => m.month === curr.month);
-    const x = getXMonthly(origIndex);
-    const y = getYMonthly(curr.capaian);
-    return acc === '' ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
-  }, '');
+  const capaianMonthlyPath = useMemo(() => {
+    const pts = capaianMonthlyList.map((m) => {
+      const idx = rawMonths.findIndex((rm) => rm.month === m.month);
+      return { x: getXMonthly(idx), y: getYMonthly(m.capaian) };
+    });
+    return buildSmoothPath(pts);
+  }, [capaianMonthlyList, rawMonths, yMaxMonthly]);
 
-  const capaianMonthlyArea =
-    capaianMonthlyList.length > 0
-      ? `${capaianMonthlyPath} L ${getXMonthly(
-          rawMonths.findIndex((m) => m.month === capaianMonthlyList[capaianMonthlyList.length - 1].month)
-        )} ${padT + plotH} L ${getXMonthly(0)} ${padT + plotH} Z`
-      : '';
+  const capaianMonthlyArea = useMemo(() => {
+    if (capaianMonthlyList.length === 0) return '';
+    const firstIdx = rawMonths.findIndex((m) => m.month === capaianMonthlyList[0].month);
+    const lastIdx = rawMonths.findIndex(
+      (m) => m.month === capaianMonthlyList[capaianMonthlyList.length - 1].month
+    );
+    const xStart = getXMonthly(firstIdx);
+    const xEnd = getXMonthly(lastIdx);
+    return `${capaianMonthlyPath} L ${xEnd} ${padT + plotH} L ${xStart} ${padT + plotH} Z`;
+  }, [capaianMonthlyList, capaianMonthlyPath, rawMonths]);
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
@@ -323,7 +375,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500 bg-white px-4 py-2.5 rounded-2xl border border-slate-200/80 shadow-2xs">
           <span>Ikhtisar</span>
           <span className="text-slate-300">/</span>
-          <span>Pilar {program.pillarTitle}</span>
+          <span>Pilar {category === 'PKPN' ? `PKPN ${program.pillarTitle}` : program.pillarTitle}</span>
           <span className="text-slate-300">/</span>
           <span className="text-slate-900 font-bold truncate max-w-[280px]">{program.title}</span>
         </div>
@@ -334,7 +386,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200/90 shadow-2xs">
-              PKPN
+              {category || 'PKPN'}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
@@ -368,13 +420,13 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           <div className="space-y-1">
             <span className="text-xs font-semibold text-slate-500 block">Realisasi Berjalan</span>
             <span className="text-xl sm:text-2xl font-extrabold text-blue-900 block tracking-tight">
-              {program.currentValue} {program.unit}
+              {program.currentValue === '—' || !program.currentValue ? '—' : `${program.currentValue} ${program.unit}`}
             </span>
           </div>
           <div className="space-y-1">
             <span className="text-xs font-semibold text-slate-500 block">Persentase Capaian</span>
             <span className="text-xl sm:text-2xl font-extrabold text-emerald-700 block tracking-tight">
-              {summaryMetrics.avgPct}%
+              {summaryMetrics.avgPct > 0 ? `${summaryMetrics.avgPct}%` : program.status.includes('%') ? program.status : '—'}
             </span>
           </div>
         </div>
@@ -382,22 +434,17 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
 
       {/* 3. SECTION TABEL: DEFAULT TAHUNAN (2025–2029) DENGAN SEGMENTED CONTROL KE BULANAN */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
-        {/* Controls Toolbar: Filter on Left, Segmented Control on Right */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-          {/* Left: Dynamic Context based on active table mode */}
-          <div className="flex items-center gap-3 flex-wrap">
-            {tableType === 'tahunan' ? (
+        {/* Controls Toolbar: Title on Left, Segmented Control on Right */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          {/* Left: Dynamic Title based on active table mode */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+              {tableType === 'tahunan' ? 'Tabel Tahunan' : 'Tabel Bulanan'}
+            </h3>
+
+            {/* When bulanan, show year & month filters */}
+            {tableType === 'bulanan' && (
               <div className="flex items-center gap-2.5 flex-wrap">
-                <span className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-50/90 text-blue-900 border border-blue-200/80 text-xs sm:text-sm font-bold shadow-2xs">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
-                  Periode RPJMN 2025–2029
-                </span>
-                <span className="text-xs sm:text-sm font-semibold text-slate-700 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/80">
-                  Indikator: <strong className="text-slate-900">{activeAnnualRow.name}</strong> ({activeAnnualRow.unit})
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 flex-wrap">
                 {/* Filter Tahun */}
                 <div className="relative">
                   <select
@@ -405,13 +452,13 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     aria-label="Pilih Tahun"
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="h-[44px] appearance-none pl-4 pr-10 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                    className="h-[38px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
                   >
                     <option value={2026}>Tahun 2026 (Berjalan)</option>
                     <option value={2025}>Tahun 2025 (Historis)</option>
                     <option value={2027}>Tahun 2027 (Rencana)</option>
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 </div>
 
                 {/* Filter Bulan */}
@@ -421,7 +468,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     aria-label="Pilih Bulan"
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                    className="h-[44px] appearance-none pl-4 pr-10 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                    className="h-[38px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
                   >
                     <option value={0}>Semua Bulan (12 Bulan)</option>
                     <option value={1}>Januari</option>
@@ -437,7 +484,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     <option value={11}>November</option>
                     <option value={12}>Desember</option>
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 </div>
               </div>
             )}
@@ -525,12 +572,28 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     return (
                       <tr
                         key={yr}
-                        className={`hover:bg-slate-50/80 transition-colors ${
+                        className={`group relative hover:bg-blue-50/50 transition-colors ${
                           isCutoff ? 'bg-amber-50/40 font-semibold' : ''
                         }`}
                       >
-                        <td className="py-3.5 px-4 text-slate-900 font-bold">
-                          Tahun {yr}
+                        <td className="py-3.5 px-4 text-slate-900 font-bold relative">
+                          <div className="flex items-center gap-2">
+                            <span>Tahun {yr}</span>
+                            {/* Hover Micro Tooltip on Row */}
+                            <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-150 absolute left-36 top-1/2 -translate-y-1/2 z-30 whitespace-nowrap">
+                              <div className="bg-slate-900/95 backdrop-blur-md text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg shadow-xl flex items-center gap-2 border border-slate-700/80">
+                                <span>Target: <strong className="text-blue-300 font-bold">{formatMetricWithUnit(metric.target, activeAnnualRow.unit)}</strong></span>
+                                <span className="text-slate-500">·</span>
+                                <span>Capaian: <strong className="text-emerald-300 font-bold">{formatMetricWithUnit(metric.capaian, activeAnnualRow.unit)}</strong></span>
+                                {pctVal !== null && (
+                                  <>
+                                    <span className="text-slate-500">·</span>
+                                    <span className="text-amber-300 font-extrabold">({pctVal}%)</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                           {isCutoff && (
                             <span className="block text-[11px] text-amber-700 font-normal">
                               (Posisi Berjalan Saat Ini)
@@ -608,12 +671,41 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     return (
                       <tr
                         key={m.month}
-                        className={`hover:bg-slate-50/80 transition-colors ${
+                        className={`group relative hover:bg-blue-50/50 transition-colors ${
                           isCutoff ? 'bg-amber-50/40 font-semibold' : ''
                         }`}
                       >
-                        <td className="py-3.5 px-4 text-slate-900 font-bold">
-                          {m.monthName} {selectedYear}
+                        <td className="py-3.5 px-4 text-slate-900 font-bold relative">
+                          <div className="flex items-center gap-2">
+                            <span>{m.monthName} {selectedYear}</span>
+                            {/* Hover Micro Tooltip on Monthly Row */}
+                            {(m.targetFormatted !== '' || (m.capaianFormatted !== '' && m.capaianFormatted !== '—')) && (
+                              <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-150 absolute left-40 top-1/2 -translate-y-1/2 z-30 whitespace-nowrap">
+                                <div className="bg-slate-900/95 backdrop-blur-md text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg shadow-xl flex items-center gap-2 border border-slate-700/80">
+                                  {m.targetFormatted && (
+                                    <span>Target: <strong className="text-blue-300 font-bold">{m.targetFormatted}</strong></span>
+                                  )}
+                                  {m.targetFormatted && m.capaianFormatted && m.capaianFormatted !== '—' && (
+                                    <span className="text-slate-500">·</span>
+                                  )}
+                                  {m.capaianFormatted && m.capaianFormatted !== '—' && (
+                                    <span>Capaian: <strong className="text-emerald-300 font-bold">{m.capaianFormatted}</strong></span>
+                                  )}
+                                  {m.percentageFormatted && m.percentageFormatted !== '—' && m.percentageFormatted !== '' ? (
+                                    <>
+                                      <span className="text-slate-500">·</span>
+                                      <span className="text-amber-300 font-extrabold">({m.percentageFormatted})</span>
+                                    </>
+                                  ) : m.percentage !== undefined && m.capaian !== null ? (
+                                    <>
+                                      <span className="text-slate-500">·</span>
+                                      <span className="text-amber-300 font-extrabold">({m.percentage}%)</span>
+                                    </>
+                                  ) : null}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                           {isCutoff && (
                             <span className="block text-[11px] text-amber-700 font-normal">
                               (Posisi Berjalan Saat Ini)
@@ -624,10 +716,22 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                           {m.targetFormatted}
                         </td>
                         <td className="py-3.5 px-4 text-right tabular-nums font-bold text-slate-950 bg-blue-50/30 border-x border-blue-100/70">
-                          {m.capaianFormatted}
+                          {m.capaianFormatted === '—' ? (
+                            <span className="text-slate-300 font-normal">—</span>
+                          ) : (
+                            m.capaianFormatted
+                          )}
                         </td>
                         <td className="py-3.5 px-4 text-center tabular-nums">
-                          {m.percentage !== undefined && m.capaian !== null ? (
+                          {m.percentageFormatted !== undefined ? (
+                            m.percentageFormatted === '—' ? (
+                              <span className="text-slate-300">—</span>
+                            ) : m.percentageFormatted === '' ? (
+                              ''
+                            ) : (
+                              <span className="font-bold text-amber-700">{m.percentageFormatted}</span>
+                            )
+                          ) : m.percentage !== undefined && m.capaian !== null ? (
                             <span
                               className={`font-bold ${
                                 m.percentage >= 95
@@ -644,7 +748,11 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                           )}
                         </td>
                         <td className="py-3.5 px-4 text-slate-600 text-xs">
-                          {m.note || (m.capaian !== null ? 'Laporan diverifikasi' : 'Menunggu periode berjalan')}
+                          {m.note !== undefined
+                            ? m.note
+                            : m.capaian !== null
+                            ? 'Laporan diverifikasi'
+                            : 'Menunggu periode berjalan'}
                         </td>
                       </tr>
                     );
@@ -666,9 +774,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
             </div>
             <div>
               <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
-                {tableType === 'tahunan'
-                  ? 'Visualisasi Trajektori Tahunan (2025–2029)'
-                  : `Visualisasi Trajektori Bulanan (Tahun ${selectedYear})`}
+                Visualisasi
               </h3>
               <p className="text-xs sm:text-sm text-slate-500 font-medium">
                 {tableType === 'tahunan'
@@ -695,7 +801,56 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         {tableType === 'tahunan' && (
           <div className="space-y-6">
             {isNumericAnnual ? (
-              <div className="w-full overflow-x-auto custom-scrollbar border border-slate-200 rounded-2xl p-4 sm:p-5 bg-white shadow-2xs">
+              <>
+                <div className="relative w-full overflow-x-auto custom-scrollbar border border-slate-200/90 rounded-2xl p-4 sm:p-5 bg-gradient-to-b from-white to-slate-50/50 shadow-2xs">
+                {/* Floating Interactive Tooltip */}
+                {hoveredAnnualIdx !== null && annualPoints[hoveredAnnualIdx] && (() => {
+                  const pt = annualPoints[hoveredAnnualIdx];
+                  const colX = getXAnnual(hoveredAnnualIdx);
+                  const leftPct = (colX / chartW) * 100;
+                  return (
+                    <div
+                      className="pointer-events-none absolute z-20 top-3 -translate-x-1/2 transition-all duration-150 ease-out"
+                      style={{ left: `${Math.max(16, Math.min(84, leftPct))}%` }}
+                    >
+                      <div className="bg-slate-900/95 backdrop-blur-md text-white rounded-xl px-3.5 py-2.5 shadow-xl border border-slate-700/80 min-w-[210px] space-y-1.5">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-700/70 pb-1.5">
+                          <span className="font-bold text-white text-xs">
+                            Tahun {pt.year}
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              pt.year === 2026
+                                ? 'bg-blue-600 text-white'
+                                : pt.year === 2025
+                                ? 'bg-slate-700 text-slate-200'
+                                : 'bg-slate-800 text-slate-400'
+                            }`}
+                          >
+                            {pt.year === 2026 ? 'Berjalan' : pt.year === 2025 ? 'Historis' : 'Rencana'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-[10px] font-semibold text-blue-300 block">Target (T)</span>
+                            <span className="font-bold text-white">{pt.targetFormatted}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-semibold text-emerald-300 block">Capaian (C)</span>
+                            <span className="font-bold text-emerald-400">{pt.capaianFormatted}</span>
+                          </div>
+                        </div>
+                        {pt.percent && (
+                          <div className="pt-1 border-t border-slate-800 flex items-center justify-between text-[11px]">
+                            <span className="text-slate-400">Persentase Capaian:</span>
+                            <span className="font-extrabold text-amber-300">{pt.percent}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <svg
                   viewBox={`0 0 ${chartW} ${chartH}`}
                   className="w-full h-64 min-w-[680px] overflow-visible"
@@ -705,6 +860,9 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                       <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
                       <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
                     </linearGradient>
+                    <filter id="capaianGlow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#10b981" floodOpacity="0.3" />
+                    </filter>
                   </defs>
 
                   {/* Horizontal Grid lines */}
@@ -733,6 +891,20 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     );
                   })}
 
+                  {/* Vertical Guideline on Hover */}
+                  {hoveredAnnualIdx !== null && (
+                    <line
+                      x1={getXAnnual(hoveredAnnualIdx)}
+                      y1={padT}
+                      x2={getXAnnual(hoveredAnnualIdx)}
+                      y2={chartH - padB}
+                      stroke="#3b82f6"
+                      strokeWidth="1.5"
+                      strokeDasharray="4 4"
+                      opacity="0.8"
+                    />
+                  )}
+
                   {/* Capaian Area (Recorded Years 2025 - 2026) */}
                   {capaianAnnualArea && <path d={capaianAnnualArea} fill="url(#capaianAnnualGrad)" />}
 
@@ -754,6 +926,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                       fill="none"
                       stroke="#059669"
                       strokeWidth="3.5"
+                      filter="url(#capaianGlow)"
                     />
                   )}
 
@@ -762,13 +935,17 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     const x = getXAnnual(idx);
                     const yT = pt.targetNum !== null ? getYAnnual(pt.targetNum) : null;
                     const yC = pt.capaianNum !== null ? getYAnnual(pt.capaianNum) : null;
+                    const isHovered = hoveredAnnualIdx === idx;
 
                     return (
                       <g key={pt.year}>
                         {/* Target Point */}
                         {yT !== null && (
                           <g>
-                            <circle cx={x} cy={yT} r="4.5" fill="#2563eb" stroke="#ffffff" strokeWidth="2" />
+                            {isHovered && (
+                              <circle cx={x} cy={yT} r="10" fill="rgba(37, 99, 235, 0.25)" />
+                            )}
+                            <circle cx={x} cy={yT} r={isHovered ? "5.5" : "4.5"} fill="#2563eb" stroke="#ffffff" strokeWidth="2" />
                             {/* Target label value */}
                             <text
                               x={x}
@@ -784,10 +961,13 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                         {/* Capaian Point */}
                         {yC !== null && (
                           <g>
+                            {isHovered && (
+                              <circle cx={x} cy={yC} r="12" fill="rgba(16, 185, 129, 0.3)" />
+                            )}
                             <circle
                               cx={x}
                               cy={yC}
-                              r="5.5"
+                              r={isHovered ? "6.5" : "5.5"}
                               fill="#059669"
                               stroke="#ffffff"
                               strokeWidth="2.5"
@@ -810,7 +990,11 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                           y={chartH - 12}
                           textAnchor="middle"
                           className={`text-xs font-bold ${
-                            pt.isCutoff ? 'fill-blue-900 font-extrabold' : 'fill-slate-600'
+                            isHovered
+                              ? 'fill-blue-600 font-black'
+                              : pt.isCutoff
+                              ? 'fill-blue-900 font-extrabold'
+                              : 'fill-slate-600'
                           }`}
                         >
                           {pt.yearLabel}
@@ -818,110 +1002,205 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                       </g>
                     );
                   })}
+
+                  {/* Invisible Hitbox Triggers for Hover */}
+                  {annualPoints.map((pt, idx) => {
+                    const x = getXAnnual(idx);
+                    const colW = plotW / (annualPoints.length - 1);
+                    return (
+                      <rect
+                        key={`hitbox-annual-${idx}`}
+                        x={x - colW / 2}
+                        y={padT - 10}
+                        width={colW}
+                        height={plotH + 20}
+                        fill="transparent"
+                        className="cursor-pointer"
+                        onMouseEnter={() => setHoveredAnnualIdx(idx)}
+                        onMouseLeave={() => setHoveredAnnualIdx(null)}
+                      />
+                    );
+                  })}
                 </svg>
               </div>
-            ) : (
-              // Milestone / Tahapan View for Qualitative Programs (e.g. Studio Guru)
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3.5">
+
+              {/* 5 Annual Metric Stat Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
                 {annualPoints.map((pt) => (
                   <div
                     key={pt.year}
-                    className="p-4 rounded-2xl border border-slate-200/90 bg-slate-50/80 space-y-2 shadow-2xs"
+                    className={`p-3.5 rounded-2xl border transition-all ${
+                      pt.year === 2026
+                        ? 'bg-blue-50/80 border-blue-200 ring-2 ring-blue-500/20'
+                        : 'bg-slate-50/80 border-slate-200/80'
+                    }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-1 mb-2">
                       <span className="text-xs font-extrabold text-slate-900">
                         Tahun {pt.year}
                       </span>
-                      {pt.year === 2026 && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-600 text-white">
+                      {pt.year === 2026 ? (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-600 text-white">
                           Berjalan
+                        </span>
+                      ) : pt.year === 2025 ? (
+                        <span className="text-[9px] font-semibold text-slate-500">
+                          Historis
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-semibold text-slate-400">
+                          Rencana
                         </span>
                       )}
                     </div>
-                    <div className="space-y-1">
-                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                        Target
-                      </span>
-                      <div className="text-xs font-bold text-slate-800">{pt.targetFormatted}</div>
-                    </div>
-                    <div className="space-y-1 pt-1 border-t border-slate-200/70">
-                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                        Capaian
-                      </span>
-                      <div
-                        className={`text-xs font-extrabold ${
-                          pt.capaianFormatted !== '—' ? 'text-emerald-700' : 'text-slate-400'
-                        }`}
-                      >
-                        {pt.capaianFormatted}
+                    <div className="space-y-1 text-xs">
+                      <div className="text-slate-600 flex justify-between gap-1">
+                        <span className="font-semibold text-slate-500">Target (T):</span>
+                        <span className="font-bold text-slate-800 truncate">{pt.targetFormatted}</span>
                       </div>
+                      <div className="text-slate-600 flex justify-between gap-1">
+                        <span className="font-semibold text-slate-500">Capaian (C):</span>
+                        <span
+                          className={`font-extrabold truncate ${
+                            pt.capaianFormatted !== '—' ? 'text-emerald-700' : 'text-slate-400'
+                          }`}
+                        >
+                          {pt.capaianFormatted}
+                        </span>
+                      </div>
+                      {pt.percent && (
+                        <div className="pt-1 mt-1 border-t border-slate-200/60 flex justify-between text-[11px]">
+                          <span className="text-slate-500 font-medium">Persentase:</span>
+                          <span className="font-extrabold text-blue-900">{pt.percent}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-
-            {/* 5 Annual Metric Stat Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
+            </>
+          ) : (
+            // Milestone / Tahapan View for Qualitative Programs (e.g. Studio Guru)
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3.5">
               {annualPoints.map((pt) => (
                 <div
                   key={pt.year}
-                  className={`p-3.5 rounded-2xl border transition-all ${
-                    pt.year === 2026
-                      ? 'bg-blue-50/80 border-blue-200 ring-2 ring-blue-500/20'
-                      : 'bg-slate-50/80 border-slate-200/80'
-                  }`}
+                  className="p-4 rounded-2xl border border-slate-200/90 bg-slate-50/80 space-y-2 shadow-2xs"
                 >
-                  <div className="flex items-center justify-between gap-1 mb-2">
+                  <div className="flex items-center justify-between">
                     <span className="text-xs font-extrabold text-slate-900">
                       Tahun {pt.year}
                     </span>
-                    {pt.year === 2026 ? (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-600 text-white">
+                    {pt.year === 2026 && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-600 text-white">
                         Berjalan
-                      </span>
-                    ) : pt.year === 2025 ? (
-                      <span className="text-[9px] font-semibold text-slate-500">
-                        Historis
-                      </span>
-                    ) : (
-                      <span className="text-[9px] font-semibold text-slate-400">
-                        Rencana
                       </span>
                     )}
                   </div>
-                  <div className="space-y-1 text-xs">
-                    <div className="text-slate-600 flex justify-between gap-1">
-                      <span className="font-semibold text-slate-500">Target (T):</span>
-                      <span className="font-bold text-slate-800 truncate">{pt.targetFormatted}</span>
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Target
+                    </span>
+                    <div className="text-xs font-bold text-slate-800">{pt.targetFormatted}</div>
+                  </div>
+                  <div className="space-y-1 pt-1 border-t border-slate-200/70">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Capaian
+                    </span>
+                    <div
+                      className={`text-xs font-extrabold ${
+                        pt.capaianFormatted !== '—' ? 'text-emerald-700' : 'text-slate-400'
+                      }`}
+                    >
+                      {pt.capaianFormatted}
                     </div>
-                    <div className="text-slate-600 flex justify-between gap-1">
-                      <span className="font-semibold text-slate-500">Capaian (C):</span>
-                      <span
-                        className={`font-extrabold truncate ${
-                          pt.capaianFormatted !== '—' ? 'text-emerald-700' : 'text-slate-400'
-                        }`}
-                      >
-                        {pt.capaianFormatted}
-                      </span>
-                    </div>
-                    {pt.percent && (
-                      <div className="pt-1 mt-1 border-t border-slate-200/60 flex justify-between text-[11px]">
-                        <span className="text-slate-500 font-medium">Persentase:</span>
-                        <span className="font-extrabold text-blue-900">{pt.percent}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
         {/* GRAPH VIEW 2: MONTHLY TRAJECTORY (Jan - Des) */}
         {tableType === 'bulanan' && (
           <div className="space-y-4">
-            <div className="w-full overflow-x-auto custom-scrollbar border border-slate-200 rounded-2xl p-4 bg-white shadow-2xs">
+            {validMonthlyCapaian.length > 0 || rawMonths.some((m) => m.target > 1) ? (
+              <div className="relative w-full overflow-x-auto custom-scrollbar border border-slate-200/90 rounded-2xl p-4 sm:p-5 bg-gradient-to-b from-white to-slate-50/50 shadow-2xs">
+              {/* Floating Interactive Tooltip */}
+              {hoveredMonthlyIdx !== null && rawMonths[hoveredMonthlyIdx] && (() => {
+                const m = rawMonths[hoveredMonthlyIdx];
+                const colX = getXMonthly(hoveredMonthlyIdx);
+                const leftPct = (colX / chartW) * 100;
+                const capaianVal = m.capaian;
+                const hasCapaian = capaianVal !== null;
+                const pct =
+                  m.percentageFormatted && m.percentageFormatted !== '—' && m.percentageFormatted !== ''
+                    ? m.percentageFormatted
+                    : hasCapaian && m.target > 0
+                    ? `${Math.round((capaianVal / m.target) * 100)}%`
+                    : null;
+                const targetText =
+                  m.targetFormatted !== ''
+                    ? m.targetFormatted
+                    : m.target > 0
+                    ? `${m.target.toLocaleString('id-ID')} ${program.unit}`
+                    : '—';
+                const capaianText =
+                  m.capaianFormatted !== ''
+                    ? m.capaianFormatted
+                    : hasCapaian
+                    ? `${capaianVal.toLocaleString('id-ID')} ${program.unit}`
+                    : '—';
+
+                return (
+                  <div
+                    className="pointer-events-none absolute z-20 top-3 -translate-x-1/2 transition-all duration-150 ease-out"
+                    style={{ left: `${Math.max(16, Math.min(84, leftPct))}%` }}
+                  >
+                    <div className="bg-slate-900/95 backdrop-blur-md text-white rounded-xl px-3.5 py-2.5 shadow-xl border border-slate-700/80 min-w-[210px] space-y-1.5">
+                      <div className="flex items-center justify-between gap-3 border-b border-slate-700/70 pb-1.5">
+                        <span className="font-bold text-white text-xs">
+                          {MONTH_SHORT[hoveredMonthlyIdx]} {selectedYear}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            hasCapaian && m.capaianFormatted !== '—'
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-slate-800 text-slate-400'
+                          }`}
+                        >
+                          {hasCapaian && m.capaianFormatted !== '—' ? 'Terealisasi' : 'Rencana'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-[10px] font-semibold text-blue-300 block">Target (T)</span>
+                          <span className="font-bold text-white">{targetText}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-semibold text-emerald-300 block">Capaian (C)</span>
+                          <span className="font-bold text-emerald-400">{capaianText}</span>
+                        </div>
+                      </div>
+                      {pct !== null && (
+                        <div className="pt-1 border-t border-slate-800 flex items-center justify-between text-[11px]">
+                          <span className="text-slate-400">Persentase Capaian:</span>
+                          <span className="font-extrabold text-amber-300">
+                            {pct.endsWith('%') ? pct : `${pct}%`}
+                          </span>
+                        </div>
+                      )}
+                      {m.note && (
+                        <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
+                          {m.note}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
               <svg
                 viewBox={`0 0 ${chartW} ${chartH}`}
                 className="w-full h-64 min-w-[650px] overflow-visible"
@@ -931,6 +1210,9 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
                     <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
                   </linearGradient>
+                  <filter id="capaianGlowMonthly" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#10b981" floodOpacity="0.3" />
+                  </filter>
                 </defs>
 
                 {/* Horizontal Grid lines */}
@@ -959,6 +1241,20 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   );
                 })}
 
+                {/* Vertical Guideline on Hover */}
+                {hoveredMonthlyIdx !== null && (
+                  <line
+                    x1={getXMonthly(hoveredMonthlyIdx)}
+                    y1={padT}
+                    x2={getXMonthly(hoveredMonthlyIdx)}
+                    y2={chartH - padB}
+                    stroke="#3b82f6"
+                    strokeWidth="1.5"
+                    strokeDasharray="4 4"
+                    opacity="0.8"
+                  />
+                )}
+
                 {/* Capaian Area */}
                 {capaianMonthlyArea && <path d={capaianMonthlyArea} fill="url(#capaianGradPageMonthly)" />}
 
@@ -977,7 +1273,8 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     d={capaianMonthlyPath}
                     fill="none"
                     stroke="#059669"
-                    strokeWidth="3"
+                    strokeWidth="3.5"
+                    filter="url(#capaianGlowMonthly)"
                   />
                 )}
 
@@ -986,33 +1283,107 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   const x = getXMonthly(idx);
                   const yT = getYMonthly(m.target);
                   const yC = m.capaian !== null ? getYMonthly(m.capaian) : null;
+                  const isHovered = hoveredMonthlyIdx === idx;
+                  const hasExplicitTarget = m.targetFormatted !== '';
+                  const hasExplicitCapaian = m.capaianFormatted !== '' && m.capaianFormatted !== '—';
 
                   return (
                     <g key={m.month}>
-                      <circle cx={x} cy={yT} r="3" fill="#3b82f6" />
-                      {yC !== null && (
-                        <circle
-                          cx={x}
-                          cy={yC}
-                          r="4.5"
-                          fill="#059669"
-                          stroke="#ffffff"
-                          strokeWidth="2"
-                        />
+                      {(hasExplicitTarget || isHovered || idx === 11) && (
+                        <>
+                          {isHovered && (
+                            <circle cx={x} cy={yT} r="9" fill="rgba(59, 130, 246, 0.25)" />
+                          )}
+                          <circle
+                            cx={x}
+                            cy={yT}
+                            r={isHovered ? "4.5" : "3.5"}
+                            fill="#3b82f6"
+                            stroke="#ffffff"
+                            strokeWidth="1.5"
+                          />
+                        </>
+                      )}
+                      {yC !== null && (hasExplicitCapaian || isHovered) && (
+                        <>
+                          {isHovered && (
+                            <circle cx={x} cy={yC} r="11" fill="rgba(16, 185, 129, 0.3)" />
+                          )}
+                          <circle
+                            cx={x}
+                            cy={yC}
+                            r={isHovered ? "6" : "4.5"}
+                            fill="#059669"
+                            stroke="#ffffff"
+                            strokeWidth="2"
+                          />
+                        </>
                       )}
                       <text
                         x={x}
                         y={chartH - 12}
                         textAnchor="middle"
-                        className="text-[10px] fill-slate-500 font-medium"
+                        className={`text-[10px] font-bold ${
+                          isHovered ? 'fill-blue-600 font-black' : 'fill-slate-500 font-medium'
+                        }`}
                       >
                         {MONTH_SHORT[idx]}
                       </text>
                     </g>
                   );
                 })}
+
+                {/* Invisible Hitbox Triggers for Monthly Hover */}
+                {rawMonths.map((m, idx) => {
+                  const x = getXMonthly(idx);
+                  const colW = plotW / (rawMonths.length - 1);
+                  return (
+                    <rect
+                      key={`hitbox-monthly-${idx}`}
+                      x={x - colW / 2}
+                      y={padT - 10}
+                      width={colW}
+                      height={plotH + 20}
+                      fill="transparent"
+                      className="cursor-pointer"
+                      onMouseEnter={() => setHoveredMonthlyIdx(idx)}
+                      onMouseLeave={() => setHoveredMonthlyIdx(null)}
+                    />
+                  );
+                })}
               </svg>
             </div>
+            ) : (
+              <div className="p-6 sm:p-7 rounded-2xl border border-blue-200/80 bg-gradient-to-r from-blue-50/80 via-slate-50/70 to-indigo-50/60 shadow-2xs space-y-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                    Nov
+                  </div>
+                  <div>
+                    <h4 className="text-sm sm:text-base font-bold text-slate-900">
+                      Target Peluncuran: November 2026
+                    </h4>
+                    <p className="text-xs sm:text-sm text-slate-600 font-medium">
+                      Peluncuran 1 Studio pusat dengan minimal 100 Konten Pembelajaran
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                  <div className="p-3.5 bg-white rounded-xl border border-slate-200/80 text-xs space-y-1 shadow-2xs">
+                    <span className="text-slate-500 block font-semibold text-[11px] uppercase tracking-wider">Jadwal Peluncuran</span>
+                    <span className="font-bold text-slate-900 text-sm">November 2026</span>
+                  </div>
+                  <div className="p-3.5 bg-white rounded-xl border border-slate-200/80 text-xs space-y-1 shadow-2xs">
+                    <span className="text-slate-500 block font-semibold text-[11px] uppercase tracking-wider">Status Periode Berjalan</span>
+                    <span className="font-bold text-blue-700 text-sm">Tahap Penyiapan Studio</span>
+                  </div>
+                  <div className="p-3.5 bg-white rounded-xl border border-slate-200/80 text-xs space-y-1 shadow-2xs">
+                    <span className="text-slate-500 block font-semibold text-[11px] uppercase tracking-wider">Target Operasional Penuh</span>
+                    <span className="font-bold text-slate-900 text-sm">Tahun 2027</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1029,9 +1400,17 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         </div>
 
         {resolvedKendalaList.length === 0 ? (
-          <p className="text-xs sm:text-sm text-slate-600 font-medium py-2">
-            Tidak teridentifikasi kendala kritis pada periode berjalan.
-          </p>
+          <div className="py-8 px-6 text-center rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
+            <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto mb-2">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <p className="text-sm sm:text-base font-bold text-slate-900">
+              Tidak Ada Kendala dan Tindak Lanjut Pelaksanaan
+            </p>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-md mx-auto">
+              Tidak terdapat isu kritis atau kendala operasional yang dilaporkan untuk program ini pada periode berjalan.
+            </p>
+          </div>
         ) : (
           <div className="divide-y divide-slate-100">
             {resolvedKendalaList.map((item, idx) => (
@@ -1040,11 +1419,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   <h4 className="text-sm sm:text-base font-bold text-slate-900">
                     {item.title}
                   </h4>
-                  {item.klTerkait && (
-                    <span className="text-xs text-slate-500 font-medium">
-                      Pelaksana: {item.klTerkait}
-                    </span>
-                  )}
                 </div>
 
                 {/* 2 Clean Columns with Left Accent Borders */}

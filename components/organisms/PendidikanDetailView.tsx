@@ -9,6 +9,7 @@ import { getProgramDetailData } from '@/data/programDetailData';
 interface PendidikanDetailViewProps {
   onBackToHome: () => void;
   pillar: PillarData;
+  category?: string;
 }
 
 interface WidgetCardItem {
@@ -23,7 +24,9 @@ interface WidgetCardItem {
   subtext?: string;
 }
 
-export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = () => {
+export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
+  category = 'PKPN',
+}) => {
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
 
   // If a program detail is selected, render it as its own full page
@@ -33,6 +36,7 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = () => {
       <ProgramDetailPageView
         program={programDetail}
         onBack={() => setSelectedProgramId(null)}
+        category={category}
       />
     );
   }
@@ -57,26 +61,26 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = () => {
       unit: 'satuan pendidikan',
       status: 'Capaian 2026',
       target: 'Target 2026: 35 satuan pendidikan',
-      percent: 48.6,
+      percent: 45.9,
     },
     {
       id: 'sug_baru',
       chipLabel: 'PKPN',
-      title: 'Sekolah Unggul Garuda Baru',
+      title: 'Sekolah Unggul Garuda Baru (SUG)',
       value: '3',
-      unit: 'Sekolah Unggul Garuda Baru',
-      status: 'Capaian 2026',
-      target: 'Target 2026: 4 satuan pendidikan',
+      unit: 'unit',
+      status: 'Capaian 2026 (75%)',
+      target: 'Target 2026: 4 unit',
       percent: 75,
     },
     {
       id: 'sug_transformasi',
       chipLabel: 'PKPN',
-      title: 'Sekolah Unggul Garuda Transformasi',
-      value: '42',
-      unit: 'satuan pendidikan',
-      status: 'Capaian 2025 :12 satuan pendidikan; Capaian 2026: 30 satuan pendidikan',
-      target: 'Target 2026: 30 satuan pendidikan',
+      title: 'Sekolah Unggul Garuda Transformasi (SUG)',
+      value: '30',
+      unit: 'unit',
+      status: 'Capaian 2026: 30 unit (100%) · 2025: 12 unit',
+      target: 'Target 2026: 30 unit',
       percent: 100,
     },
     {
@@ -85,7 +89,7 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = () => {
       title: 'Digitalisasi Pendidikan',
       value: '727.436',
       unit: 'unit',
-      status: 'Capaian 2026 (Berproses disalurkan ke 316.535 sekolah)',
+      status: 'Capaian 2026: 727.436 (100% Berproses)',
       target: 'Target 2026: 727.436 unit',
       percent: 100,
     },
@@ -93,10 +97,10 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = () => {
       id: 'studio_guru',
       chipLabel: 'PKPN',
       title: 'Studio Guru',
-      value: '1',
-      unit: 'studio pusat + 110 konten pembelajaran',
-      status: 'Launching 25 November 2026',
-      target: 'Target 2026: Studio Guru beroperasi penuh',
+      value: 'Penyiapan',
+      unit: 'Studio',
+      status: 'Target Peluncuran November 2026',
+      target: '1 Studio pusat & min. 100 Konten',
     },
   ];
 
@@ -110,10 +114,10 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = () => {
           </div>
           <div>
             <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
-              Pendidikan
+              {category === 'PKPN' ? 'PKPN Pendidikan' : 'Pendidikan'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              Target dan Realisasi Program Prioritas (RPJMN 2025–2029)
+              Target dan Capaian
             </p>
           </div>
         </div>
@@ -140,7 +144,7 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = () => {
                 {/* PKPN Chip Label */}
                 <div className="mb-2.5">
                   <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200/90 shadow-2xs">
-                    {card.chipLabel || 'PKPN'}
+                    {category || card.chipLabel || 'PKPN'}
                   </span>
                 </div>
 

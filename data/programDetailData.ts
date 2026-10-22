@@ -6,6 +6,7 @@ export interface MonthlyDataPoint {
   targetFormatted: string;
   capaianFormatted: string;
   percentage?: number;
+  percentageFormatted?: string;
   status: 'Tercapai' | 'Sesuai Target' | 'Perlu Percepatan' | 'Terjadwal' | 'Terhenti';
   note?: string;
 }
@@ -198,58 +199,182 @@ function generateMonthlyData(options: {
   };
 }
 
+/**
+ * Specialized helper for official PKPN slides (Revitalisasi Satdik & SNT)
+ * where monthly progress is tracked specifically at cut-off (Oktober) and year-end target (Desember),
+ * with Jan-Sep empty and Nov-Des showing official dashes.
+ */
+function generateOfficialMonthlyData(options: {
+  target2026Formatted: string;
+  capaian2026OktFormatted: string;
+  percentage2026OktFormatted: string;
+  target2026Numeric: number;
+  capaian2026OktNumeric: number;
+  unit: string;
+}): Record<number, MonthlyDataPoint[]> {
+  const data2026: MonthlyDataPoint[] = MONTH_NAMES.map((name, i) => {
+    const monthNum = i + 1;
+    const progress = monthNum / 12;
+    const numT = Math.round(options.target2026Numeric * progress);
+    const numC = monthNum <= 10 ? Math.round(options.capaian2026OktNumeric * (monthNum / 10)) : null;
+
+    if (monthNum <= 9) {
+      // Jan - Sep: Empty in official report table
+      return {
+        month: monthNum,
+        monthName: name,
+        target: numT,
+        capaian: numC,
+        targetFormatted: '',
+        capaianFormatted: '',
+        percentageFormatted: '',
+        status: 'Terjadwal',
+        note: '',
+      };
+    } else if (monthNum === 10) {
+      // Oktober (Posisi Berjalan Saat Ini)
+      return {
+        month: monthNum,
+        monthName: name,
+        target: numT,
+        capaian: options.capaian2026OktNumeric,
+        targetFormatted: '',
+        capaianFormatted: options.capaian2026OktFormatted,
+        percentageFormatted: options.percentage2026OktFormatted,
+        percentage: parseFloat(options.percentage2026OktFormatted.replace(/[^0-9,.-]/g, '').replace(',', '.')),
+        status: 'Sesuai Target',
+        note: 'Posisi per 18 Oktober 2026',
+      };
+    } else if (monthNum === 11) {
+      // November
+      return {
+        month: monthNum,
+        monthName: name,
+        target: numT,
+        capaian: null,
+        targetFormatted: '',
+        capaianFormatted: '—',
+        percentageFormatted: '—',
+        status: 'Terjadwal',
+        note: '',
+      };
+    } else {
+      // Desember (Target Akhir Tahun)
+      return {
+        month: monthNum,
+        monthName: name,
+        target: options.target2026Numeric,
+        capaian: null,
+        targetFormatted: options.target2026Formatted,
+        capaianFormatted: '—',
+        percentageFormatted: '—',
+        status: 'Terjadwal',
+        note: '',
+      };
+    }
+  });
+
+  return {
+    2025: data2026,
+    2026: data2026,
+    2027: data2026,
+  };
+}
+
+/**
+ * Specialized helper for Studio Guru monthly data matching official presentation slide
+ * where November 2026 has the specific target:
+ * "Peluncuran 1 Studio pusat dengan minimal 100 Konten Pembelajaran"
+ * and other months are blank without kendala.
+ */
+function generateStudioGuruMonthlyData(): Record<number, MonthlyDataPoint[]> {
+  const data2026: MonthlyDataPoint[] = MONTH_NAMES.map((name, i) => {
+    const monthNum = i + 1;
+    if (monthNum === 11) {
+      // November 2026: Target in official slide
+      return {
+        month: monthNum,
+        monthName: name,
+        target: 1,
+        capaian: null,
+        targetFormatted: 'Peluncuran 1 Studio pusat dengan minimal 100 Konten Pembelajaran',
+        capaianFormatted: '',
+        percentageFormatted: '',
+        status: 'Terjadwal',
+        note: '',
+      };
+    }
+    return {
+      month: monthNum,
+      monthName: name,
+      target: 0,
+      capaian: null,
+      targetFormatted: '',
+      capaianFormatted: '',
+      percentageFormatted: '',
+      status: 'Terjadwal',
+      note: '',
+    };
+  });
+
+  return {
+    2025: data2026,
+    2026: data2026,
+    2027: data2026,
+  };
+}
+
 export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
   // =========================================================================
   // PILAR 1: PENDIDIKAN
   // =========================================================================
   'revitalisasi_satdik': {
     id: 'revitalisasi_satdik',
-    title: 'Revitalisasi Sarana dan Prasarana Sekolah/Madrasah',
+    title: 'Revitalisasi Satuan Pendidikan',
     pillarId: 'pendidikan',
     pillarTitle: 'Pendidikan',
     category: 'Infrastruktur Sekolah',
     description:
       'Program peningkatan kualitas dan kelayakan sarana-prasarana sekolah melalui rehabilitasi dan pembangunan fasilitas pendidikan untuk mendukung pemerataan akses dan mutu pembelajaran.',
     picKementerian: 'Kemendikdasmen, Kemenag, Kementerian PUPR, Kemendagri',
-    unit: 'satuan pendidikan',
+    unit: 'satdik',
     currentValue: '36.669',
-    target2026: '80.282 satuan pendidikan',
+    target2026: '80.282 satdik',
     status: 'Capaian 2026 (45,7%)',
-    subtext: 'Realisasi 2025: 17.508 satuan pendidikan (136,5% target 2025)',
-    kendala: 'ABT 7.131 madrasah belum disetujui; 41 madrasah terdampak bencana butuh penanganan mendesak.',
-    tindakLanjut:
-      'Percepatan persetujuan Anggaran Belanja Tambahan (ABT), realokasi bantuan darurat sekolah terdampak bencana, dan penerbitan Instruksi Mendagri untuk dukungan pemda.',
+    subtext: 'Realisasi 2025: 17.508 satdik (136,5% target 2025)',
     kendalaList: [
       {
         id: 1,
         title: 'Persetujuan Anggaran Belanja Tambahan (ABT) untuk 7.131 Madrasah',
-        kendala: 'Pengusulan alokasi Anggaran Belanja Tambahan (ABT) untuk 7.131 madrasah swasta dan negeri masih menunggu persetujuan definitif dari Kementerian Keuangan. Ketiadaan kepastian DIPA tambahan berpotensi menunda target serah terima fisik pekerjaan konstruksi tahun anggaran berjalan.',
-        tindakLanjut: 'Percepatan rapat koordinasi tingkat menteri (RTM) Kemenko PMK bersama Kemenkeu dan Kemenag guna menyepakati alokasi prioritas dan mekanisme revisi anggaran belanja.',
-        klTerkait: 'Kemenkeu, Kemenag, Kemenko PMK',
+        kendala:
+          'Usulan Anggaran Belanja Tambahan (ABT) untuk 7.131 madrasah negeri dan swasta masih menunggu persetujuan Kementerian Keuangan. Belum adanya kepastian anggaran berpotensi menghambat penyelesaian dan serah terima pekerjaan konstruksi pada tahun anggaran berjalan.',
+        tindakLanjut:
+          'Percepatan Koordinasi Kemenko PMK bersama Kemenkeu dan Kemenag untuk menyepakati prioritas alokasi dan mekanisme revisi anggaran.',
       },
       {
         id: 2,
         title: 'Penanganan Darurat 41 Madrasah & Sekolah Terdampak Bencana Alam',
-        kendala: 'Sebanyak 41 madrasah di kawasan rawan bencana (Sumatera Barat dan NTT) mengalami kerusakan struktur berat dan membutuhkan relokasi tapak lahan baru yang bebas dari zona bahaya sesar aktif.',
-        tindakLanjut: 'Penerbitan instruksi bersama Mendagri dan Menteri ATR/BPN untuk penetapan status lahan relokasi aman oleh pemerintah daerah serta penyaluran dana siap pakai BNPB.',
-        klTerkait: 'BNPB, Kemendagri, Kementerian ATR/BPN',
+        kendala:
+          'Sebanyak 41 madrasah di kawasan rawan bencana (Sumatera Barat dan NTT) mengalami kerusakan struktur berat dan memerlukan relokasi ke lahan aman di luar zona sesar aktif.',
+        tindakLanjut:
+          'Koordinasi penerbitan instruksi bersama Mendagri dan Menteri ATR/BPN untuk penetapan lahan relokasi aman oleh pemda serta penyaluran Dana Siap Pakai BNPB.',
       },
       {
         id: 3,
         title: 'Kapasitas Pengadaan & Komitmen APBD Pemerintah Daerah',
-        kendala: 'Disparitas kesiapan unit kerja pengadaan barang/jasa di dinas pendidikan kabupaten/kota 3T yang mengakibatkan keterlambatan verifikasi teknis dan validasi lapangan sekolah sasaran.',
-        tindakLanjut: 'Pemberian pendampingan teknis dan probity audit oleh BPKP dan Kemendikdasmen pada 50 kabupaten prioritas percepatan.',
-        klTerkait: 'Kemendikdasmen, BPKP, Pemda',
+        kendala:
+          'Ketimpangan kesiapan unit pengadaan barang/jasa di dinas pendidikan daerah 3T menghambat verifikasi teknis dan validasi lapangan sekolah sasaran revitalisasi.',
+        tindakLanjut:
+          'Koordinasi BPKP dan Kemendikdasmen memberikan pendampingan teknis dan probity audit di 50 kabupaten prioritas percepatan.',
       },
     ],
-    monthlyData: generateMonthlyData({
-      target2025: 12825,
-      capaian2025: 17508,
-      target2026: 80282,
-      capaian2026Okt: 36669,
-      target2027: 99423,
+    monthlyData: generateOfficialMonthlyData({
+      target2026Formatted: '80.282 satdik',
+      capaian2026OktFormatted: '36.669 satdik',
+      percentage2026OktFormatted: '45,7 %',
+      target2026Numeric: 80282,
+      capaian2026OktNumeric: 36669,
       unit: 'satdik',
-      isCumulative: true,
     }),
   },
 
@@ -262,28 +387,44 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program yang mengintegrasikan sekolah jenjang SMP dan SMA dalam satu ekosistem berkelanjutan, mulai dari pembelajaran, pengembangan guru, pembinaan karakter, hingga penjaminan mutu.',
     picKementerian: 'Kemendikdasmen, KemenPANRB, Kemendagri, Bappenas',
-    unit: 'satuan pendidikan',
+    unit: 'unit',
     currentValue: '17',
-    target2026: '35 satuan pendidikan',
-    status: 'Capaian 2026 (48,6%)',
-    subtext: 'Target Kumulatif 2027: 135 satuan pendidikan · 2029: 500 unit · Capaian Nasional',
+    target2026: '35 unit',
+    status: 'Capaian 2026 (45,9%)',
+    subtext: 'Target Kumulatif 2027: 135 unit · 2028: 335 unit · 2029: 500 unit',
     kendalaList: [
       {
         id: 1,
-        title: 'Penetapan Regulasi RPerpres SNT & Kesiapan Lahan Sekolah',
-        kendala: 'Rancangan Peraturan Presiden (RPerpres) SNT belum ditetapkan; proses penataan formasi guru tetap dan kesiapan legalitas lahan percontohan di daerah masih berproses.',
-        tindakLanjut: 'Percepatan pengesahan RPerpres SNT melalui harmonisasi regulasi lintas K/L, kepastian status Proyek Strategis Nasional (PSN), dan penataan formasi guru.',
-        klTerkait: 'Kemendikdasmen, KemenPANRB, Kemendagri, Bappenas',
+        title: 'Penetapan RPerpres Sekolah Nasional Terintegrasi',
+        kendala:
+          'Rancangan Peraturan Presiden (RPerpres) belum ditetapkan sehingga menghambat kepastian pelaksanaan program.',
+        tindakLanjut:
+          'Percepat finalisasi dan penetapan RPerpres melalui koordinasi lintas K/L terkait.',
+      },
+      {
+        id: 2,
+        title: 'Kesiapan Lahan',
+        kendala:
+          'Kesiapan dan kepastian status lahan pembangunan belum terpenuhi di sejumlah lokasi sasaran.',
+        tindakLanjut:
+          'Koordinasi dengan pemda dan Kementerian ATR/BPN untuk percepatan penyediaan dan legalitas lahan.',
+      },
+      {
+        id: 3,
+        title: 'Pemenuhan Guru dan Tenaga Kependidikan',
+        kendala:
+          'Ketersediaan dan pemerataan guru belum memadai untuk mendukung operasional sekolah.',
+        tindakLanjut:
+          'Koordinasi Kemendikdasmen, KemenPANRB, dan BKN untuk pemetaan kebutuhan serta pemenuhan tenaga pendidik.',
       },
     ],
-    monthlyData: generateMonthlyData({
-      target2025: 10,
-      capaian2025: 10,
-      target2026: 35,
-      capaian2026Okt: 17,
-      target2027: 135,
+    monthlyData: generateOfficialMonthlyData({
+      target2026Formatted: '35 unit',
+      capaian2026OktFormatted: '17 unit',
+      percentage2026OktFormatted: '45,9 %',
+      target2026Numeric: 35,
+      capaian2026OktNumeric: 17,
       unit: 'unit',
-      isCumulative: true,
     }),
   },
 
@@ -296,94 +437,130 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program pengembangan sekolah menengah atas unggulan melalui pembangunan Sekolah Garuda Baru dan transformasi SMA yang sudah ada, dengan penguatan pendidikan sains dan teknologi untuk menyiapkan talenta berprestasi dan berdaya saing global.',
     picKementerian: 'Kemendikdasmen, Kemenkeu, Kementerian PUPR, Setneg',
-    unit: 'satuan pendidikan',
-    currentValue: '46',
-    target2026: '34 satuan pendidikan',
-    status: 'Capaian 2026 (46 Unit)',
-    subtext: 'Terdiri dari 42 unit SUGT (15 provinsi) dan 4 unit SUGB (4 provinsi)',
-    monthlyData: generateMonthlyData({
-      target2025: 16,
-      capaian2025: 14,
-      target2026: 34,
-      capaian2026Okt: 46,
-      target2027: 55,
-      unit: 'satdik',
-      isCumulative: true,
+    unit: 'unit',
+    currentValue: '30',
+    target2026: '30 unit',
+    status: 'Capaian 2026 (100%)',
+    subtext: 'Posisi per 18 Oktober 2026 · Terdiri dari SUG Transformasi (30 unit) dan SUG Baru (3 unit)',
+    kendalaList: [
+      {
+        id: 1,
+        title: 'Penetapan RPerpres Tunjangan Lain Guru dan Tenaga Kependidikan',
+        kendala:
+          'RPerpres Tunjangan Lain GTK SUG masih belum selesai. Pada Agustus 2026, Mensesneg telah mengajukan pemberian paraf koordinasi kepada MenPAN-RB dan Menkeu. Menpan RB telah memberikan masukan, sementara Menkeu sampai saat ini belum',
+        tindakLanjut:
+          'Koordinasi dengan Menkeu untuk percepat finalisasi dan penetapan RPerpres Tunjangan Lain Guru dan Tenaga Kependidikan di Sekolah Unggul Garuda.',
+      },
+    ],
+    monthlyData: generateOfficialMonthlyData({
+      target2026Formatted: '30 unit',
+      capaian2026OktFormatted: '30 unit',
+      percentage2026OktFormatted: '100 %',
+      target2026Numeric: 30,
+      capaian2026OktNumeric: 30,
+      unit: 'unit',
     }),
   },
 
   'sug_transformasi': {
     id: 'sug_transformasi',
-    title: 'Sekolah Unggul Garuda Transformasi (SUGT)',
+    title: 'Sekolah Unggul Garuda Transformasi (SUG)',
     pillarId: 'pendidikan',
     pillarTitle: 'Pendidikan',
     category: 'Transformasi Mutu Sekolah',
     description:
-      'Program pengembangan sekolah menengah atas unggulan melalui pembangunan Sekolah Garuda Baru dan transformasi SMA yang sudah ada, dengan penguatan pendidikan sains dan teknologi untuk menyiapkan talenta berprestasi dan berdaya saing global.',
+      'Program peningkatan mutu SMA unggulan eksisting menjadi Sekolah Unggul Garuda Transformasi dengan penguatan kurikulum sains, teknologi, dan penyiapan talenta berprestasi global.',
     picKementerian: 'Kemendikdasmen, Bappenas, Kemenkeu',
-    unit: 'satuan pendidikan',
-    currentValue: '42',
-    target2026: '30 satuan pendidikan',
-    status: 'Capaian 2026: 42 Unit (15 Provinsi)',
-    subtext: 'Sebaran: Aceh (3), Sumut (1), Sumsel (2), DKI (6), Banten (4), Jabar (7), Jateng (6), DIY (3), Jatim (2), Kalsel (1), Kaltim (2), Gorontalo (1), Sulsel (2), Maluku (1), Papua Barat Daya (1)',
-    monthlyData: generateMonthlyData({
-      target2025: 12,
-      capaian2025: 12,
-      target2026: 30,
-      capaian2026Okt: 42,
-      target2027: 50,
-      unit: 'satdik',
-      isCumulative: true,
+    unit: 'unit',
+    currentValue: '30',
+    target2026: '30 unit',
+    status: 'Capaian 2026 (100%)',
+    subtext: 'Posisi per 18 Oktober 2026 · Realisasi 2025: 12 unit · Target Kumulatif 2027: 50 unit',
+    kendalaList: [
+      {
+        id: 1,
+        title: 'Penetapan RPerpres Tunjangan Lain Guru dan Tenaga Kependidikan',
+        kendala:
+          'RPerpres Tunjangan Lain GTK SUG masih belum selesai. Pada Agustus 2026, Mensesneg telah mengajukan pemberian paraf koordinasi kepada MenPAN-RB dan Menkeu. Menpan RB telah memberikan masukan, sementara Menkeu sampai saat ini belum',
+        tindakLanjut:
+          'Koordinasi dengan Menkeu untuk percepat finalisasi dan penetapan RPerpres Tunjangan Lain Guru dan Tenaga Kependidikan di Sekolah Unggul Garuda.',
+      },
+    ],
+    monthlyData: generateOfficialMonthlyData({
+      target2026Formatted: '30 unit',
+      capaian2026OktFormatted: '30 unit',
+      percentage2026OktFormatted: '100 %',
+      target2026Numeric: 30,
+      capaian2026OktNumeric: 30,
+      unit: 'unit',
     }),
   },
 
   'sug_baru': {
     id: 'sug_baru',
-    title: 'Sekolah Unggul Garuda Baru (SUGB)',
+    title: 'Sekolah Unggul Garuda Baru (SUG)',
     pillarId: 'pendidikan',
     pillarTitle: 'Pendidikan',
     category: 'Pendidikan Keunggulan',
     description:
-      'Program pengembangan sekolah menengah atas unggulan melalui pembangunan Sekolah Garuda Baru dan transformasi SMA yang sudah ada, dengan penguatan pendidikan sains dan teknologi untuk menyiapkan talenta berprestasi dan berdaya saing global.',
+      'Program pengembangan sekolah menengah atas unggulan melalui pembangunan unit baru Sekolah Unggul Garuda berasrama dengan kurikulum sains & teknologi global di daerah prioritas.',
     picKementerian: 'Kemendikdasmen, Kemenkeu, Kementerian PUPR, Setneg',
-    unit: 'satuan pendidikan',
-    currentValue: '4',
-    target2026: '4 satuan pendidikan',
-    status: 'Capaian 2026: 4 Unit (4 Provinsi)',
-    subtext: 'Sebaran: Kepulauan Bangka Belitung (1), Kalimantan Utara (1), Sulawesi Tenggara (1), Nusa Tenggara Timur (1)',
-    monthlyData: generateMonthlyData({
-      target2025: 4,
-      capaian2025: 2,
-      target2026: 4,
-      capaian2026Okt: 4,
-      target2027: 5,
-      unit: 'satdik',
-      isCumulative: true,
+    unit: 'unit',
+    currentValue: '3',
+    target2026: '4 unit',
+    status: 'Capaian 2026 (75%)',
+    subtext: 'Posisi per 18 Oktober 2026 · Target 2026: 4 unit · Realisasi: 3 unit (75%)',
+    kendalaList: [
+      {
+        id: 1,
+        title: 'Penetapan RPerpres Tunjangan Lain Guru dan Tenaga Kependidikan',
+        kendala:
+          'RPerpres Tunjangan Lain GTK SUG masih belum selesai. Pada Agustus 2026, Mensesneg telah mengajukan pemberian paraf koordinasi kepada MenPAN-RB dan Menkeu. Menpan RB telah memberikan masukan, sementara Menkeu sampai saat ini belum',
+        tindakLanjut:
+          'Koordinasi dengan Menkeu untuk percepat finalisasi dan penetapan RPerpres Tunjangan Lain Guru dan Tenaga Kependidikan di Sekolah Unggul Garuda.',
+      },
+    ],
+    monthlyData: generateOfficialMonthlyData({
+      target2026Formatted: '4 unit',
+      capaian2026OktFormatted: '3 unit',
+      percentage2026OktFormatted: '75 %',
+      target2026Numeric: 4,
+      capaian2026OktNumeric: 3,
+      unit: 'unit',
     }),
   },
 
   'digitalisasi_pendidikan': {
     id: 'digitalisasi_pendidikan',
-    title: 'Digitalisasi Pembelajaran',
+    title: 'Digitalisasi Pendidikan',
     pillarId: 'pendidikan',
     pillarTitle: 'Pendidikan',
     category: 'Teknologi Pembelajaran',
     description:
-      'Program transformasi pembelajaran melalui penyediaan interactive flat panel, konten pembelajaran digital, dan infrastruktur teknologi informasi untuk mewujudkan pembelajaran yang interaktif dan merata.',
-    picKementerian: 'Kemendikdasmen, Kemenkomdigi, Kemenkeu',
-    unit: 'unit perangkat',
+      'Program transformasi pembelajaran melalui penyediaan Interactive Flat Panel (IFP), konten pembelajaran digital, dan infrastruktur penunjang di satuan pendidikan.',
+    picKementerian: 'Kemendikdasmen, Kemenkomdigi, Kemenkeu, Kemenag',
+    unit: 'perangkat & satdik',
     currentValue: '727.436',
     target2026: '727.436 unit',
     status: 'Capaian 2026 (100% Berproses)',
-    subtext: 'Realisasi 2025: 288.865 unit terdistribusi 100% · Capaian Nasional',
-    monthlyData: generateMonthlyData({
-      target2025: 288865,
-      capaian2025: 288865,
-      target2026: 727436,
-      capaian2026Okt: 727436,
-      target2027: 850000,
+    subtext: 'Posisi per 18 Oktober 2026 (Berproses disalurkan) · Realisasi 2025: 288.865 unit (100%)',
+    kendalaList: [
+      {
+        id: 1,
+        title: 'Pemenuhan IFP untuk Sekolah di Lingkungan Kemenag',
+        kendala:
+          'ABT pengadaan IFP Untuk Sekolah di Lingkungan Kemenag masih proses di Kementerian Keuangan',
+        tindakLanjut:
+          'Perlu percepatan Koordinasi dengan Kemenkeu dan Kemenag',
+      },
+    ],
+    monthlyData: generateOfficialMonthlyData({
+      target2026Formatted: '727.436 unit',
+      capaian2026OktFormatted: '727.436 unit',
+      percentage2026OktFormatted: '100 %',
+      target2026Numeric: 727436,
+      capaian2026OktNumeric: 727436,
       unit: 'unit',
-      isCumulative: true,
     }),
   },
 
@@ -396,20 +573,13 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program penyediaan pusat produksi dan penyebarluasan konten pembelajaran digital berkualitas dari guru untuk meningkatkan pemerataan mutu pembelajaran di Indonesia.',
     picKementerian: 'Kemendikdasmen, Kemenkomdigi, Bappenas',
-    unit: 'tahap',
-    currentValue: 'Penyiapan',
+    unit: 'studio',
+    currentValue: '—',
     target2026: 'Peluncuran Nov 2027',
     status: 'Tahap Penyiapan',
-    subtext: 'Target Peluncuran: November 2027 · Operasionalisasi Nasional: 2028 · Capaian Nasional',
-    monthlyData: generateMonthlyData({
-      target2025: 50,
-      capaian2025: 50,
-      target2026: 70,
-      capaian2026Okt: 50,
-      target2027: 100,
-      unit: 'tahap',
-      isPercentage: true,
-    }),
+    subtext: 'Target: Peluncuran 1 Studio pusat dengan minimal 100 Konten Pembelajaran (Nov 2026) · Operasional: 2027',
+    kendalaList: [],
+    monthlyData: generateStudioGuruMonthlyData(),
   },
 
   'imm': {

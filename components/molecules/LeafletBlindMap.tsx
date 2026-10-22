@@ -84,6 +84,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const geojsonLayerRef = useRef<L.GeoJSON | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const activeHoveredLayerRef = useRef<any>(null);
   const [showInfo, setShowInfo] = useState(false);
 
   // Active indicator definition (null when no pillar is chosen yet)
@@ -127,17 +128,39 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
       mapInstanceRef.current = map;
     }
 
-    // Auto-resize observer to keep Leaflet canvas synced with dynamic layout
+    // Auto-resize observer and container mouseleave handler
     let resizeObserver: ResizeObserver | null = null;
+    let onMapMouseLeave: (() => void) | null = null;
     if (mapContainerRef.current) {
       resizeObserver = new ResizeObserver(() => {
         mapInstanceRef.current?.invalidateSize();
       });
       resizeObserver.observe(mapContainerRef.current);
+
+      onMapMouseLeave = () => {
+        if (geojsonLayerRef.current) {
+          geojsonLayerRef.current.eachLayer((l: any) => {
+            try {
+              if (l.isTooltipOpen && l.isTooltipOpen()) {
+                l.closeTooltip();
+              }
+              if (l._hasCustomHover) {
+                geojsonLayerRef.current?.resetStyle(l);
+                l._hasCustomHover = false;
+              }
+            } catch {}
+          });
+        }
+        activeHoveredLayerRef.current = null;
+      };
+      mapContainerRef.current.addEventListener('mouseleave', onMapMouseLeave);
     }
 
     return () => {
       if (resizeObserver) resizeObserver.disconnect();
+      if (mapContainerRef.current && onMapMouseLeave) {
+        mapContainerRef.current.removeEventListener('mouseleave', onMapMouseLeave);
+      }
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -193,6 +216,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
           mapInstanceRef.current.removeLayer(geojsonLayerRef.current);
           geojsonLayerRef.current = null;
         }
+        activeHoveredLayerRef.current = null;
 
         // Active indicator lookup strictly within active pillar context
         const currentInd = selectedIndicator
@@ -340,23 +364,23 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
               (matched.id === selectedWilayah.id ||
                 matched.kodeBps === selectedWilayah.kodeBps);
 
-            // Territory tooltip: show ONLY Wilayah name and IMM
+            // Territory tooltip: show Wilayah name and IMM
             if (!isPillarActive || !currentInd) {
               layer.bindTooltip(
                 `
-                <div style="font-family: inherit; padding: 6px 10px; text-align: left; min-width: 120px; line-height: 1.35;">
+                <div style="font-family: inherit; padding: 6px 10px; text-align: left; min-width: 120px; line-height: 1.35; pointer-events: none;">
                   <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 3px;">
                     ${targetWilayah.name}
                   </div>
                   <div style="font-size: 11.5px; color: #475569; font-weight: 600;">
-                    IMM: <strong style="color: #0f172a; font-weight: 800;">${targetWilayah.imm || '—'}</strong>
+                    IMM: <strong style="color: #0f172a; font-weight: 800;">${getWilayahCapaianRpjmn(targetWilayah)}</strong>
                   </div>
                 </div>
                 `,
                 {
                   sticky: true,
                   direction: 'top',
-                  className: 'shadow-md border border-slate-200/90 rounded-xl bg-white/95 backdrop-blur-xs',
+                  className: 'shadow-md border border-slate-200/90 rounded-xl bg-white/95 backdrop-blur-xs pointer-events-none',
                 }
               );
             } else {
@@ -476,10 +500,40 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
               });
             }
 
-            // Hover interactions
+            // Hover interactions: strictly enforce single active tooltip and clean style resetting
             layer.on({
-              mouseover: (e) => {
+              mouseover: (e: any) => {
                 const l = e.target;
+
+                // Close previously hovered layer tooltip and reset its style
+                if (activeHoveredLayerRef.current && activeHoveredLayerRef.current !== l) {
+                  try {
+                    const prev = activeHoveredLayerRef.current;
+                    prev.closeTooltip();
+                    if (prev._hasCustomHover) {
+                      newLayer.resetStyle(prev);
+                      prev._hasCustomHover = false;
+                    }
+                  } catch {}
+                }
+
+                // Global safety cleanup: close any orphaned tooltips and clear lingering hover styles
+                newLayer.eachLayer((other: any) => {
+                  if (other !== l) {
+                    try {
+                      if (other.isTooltipOpen && other.isTooltipOpen()) {
+                        other.closeTooltip();
+                      }
+                      if (other._hasCustomHover) {
+                        newLayer.resetStyle(other);
+                        other._hasCustomHover = false;
+                      }
+                    } catch {}
+                  }
+                });
+
+                activeHoveredLayerRef.current = l;
+
                 if (!isSelected) {
                   l.setStyle({
                     weight: 2.8,
@@ -487,16 +541,31 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
                     fillColor: !isPillarActive ? '#93c5fd' : undefined,
                     fillOpacity: 0.95,
                   });
-                  l.bringToFront();
+                  l._hasCustomHover = true;
                 }
+
+                try {
+                  l.openTooltip();
+                } catch {}
               },
-              mouseout: (e) => {
-                if (!isSelected) {
-                  newLayer.resetStyle(e.target);
+              mouseout: (e: any) => {
+                const l = e.target;
+                try {
+                  l.closeTooltip();
+                } catch {}
+                if (!isSelected || l._hasCustomHover) {
+                  newLayer.resetStyle(l);
+                  l._hasCustomHover = false;
+                }
+                if (activeHoveredLayerRef.current === l) {
+                  activeHoveredLayerRef.current = null;
                 }
               },
               click: () => {
                 if (matched) {
+                  try {
+                    (layer as any).closeTooltip();
+                  } catch {}
                   onSelectWilayah(matched);
                 }
               },

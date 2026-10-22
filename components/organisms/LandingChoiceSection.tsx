@@ -17,8 +17,8 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
     <div className="w-full max-w-5xl mx-auto py-6 sm:py-12 space-y-9 animate-in fade-in duration-300">
       {/* 1. Header with Official Kemenko PMK Emblem (Navbar is removed on landing) */}
       <div className="text-center space-y-4 max-w-2xl mx-auto flex flex-col items-center">
-        <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg mb-1">
-          <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-white/20 p-0.5">
+        <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg mb-1">
+          <div className="relative h-7 w-7 sm:h-8 sm:w-8 shrink-0 overflow-hidden rounded-full bg-white/20 p-0.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/images/logo-kemenko-pmk.png"
@@ -26,14 +26,9 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
               className="h-full w-full object-contain"
             />
           </div>
-          <div className="text-left">
-            <span className="block text-xs font-extrabold text-white tracking-wider uppercase">
-              KEMENKO PMK
-            </span>
-            <span className="block text-[10px] font-medium text-slate-300">
-              Pembangunan Manusia dan Kebudayaan
-            </span>
-          </div>
+          <span className="text-xs sm:text-sm font-extrabold text-white tracking-wider uppercase">
+            Kemenko PMK
+          </span>
         </div>
 
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight drop-shadow-md">

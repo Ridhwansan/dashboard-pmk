@@ -127,14 +127,10 @@ export const WilayahSidePanel: React.FC<WilayahSidePanelProps> = ({
               {wilayah.name}
             </h2>
 
-            {/* Crisp, clean subtitle without repetitive chips */}
+            {/* Crisp, clean subtitle: RPJMN only */}
             <div className="mt-1 flex items-center gap-2 text-xs font-semibold text-slate-500 flex-wrap">
               <span>
-                IMM: <strong className="text-slate-800">{wilayah.imm || '—'}</strong>
-              </span>
-              <span className="text-slate-300">·</span>
-              <span>
-                RPJMN: <strong className="text-slate-800">{capaianRpjmn}</strong>
+                IMM: <strong className="text-slate-800">{capaianRpjmn}</strong>
               </span>
               {wilayah.isPrioritas && (
                 <>
@@ -168,7 +164,6 @@ export const WilayahSidePanel: React.FC<WilayahSidePanelProps> = ({
           const theme = PILLAR_THEMES[pillar.id] || PILLAR_THEMES.pendidikan;
           const Icon = theme.icon;
           const indicators: MapIndicatorDef[] = getIndicatorsByPillar(pillar.id);
-          const macroVal = wilayah.pillarDetails?.[pillar.id as keyof typeof wilayah.pillarDetails]?.heroValue;
 
           return (
             <div
@@ -204,11 +199,6 @@ export const WilayahSidePanel: React.FC<WilayahSidePanelProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  {macroVal && (
-                    <span className="text-xs font-bold text-slate-700 tabular-nums">
-                      {macroVal}
-                    </span>
-                  )}
                   {isOpen ? (
                     <ChevronDown className="w-4 h-4 text-slate-500 transition-transform duration-150" />
                   ) : (

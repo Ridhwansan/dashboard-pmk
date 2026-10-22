@@ -242,13 +242,13 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
   {
     id: 'sug_transformasi',
     pillarId: 'pendidikan',
-    name: 'Sekolah Unggul Garuda Transformasi (SUGT)',
-    shortName: 'SUGT (Transformasi)',
+    name: 'Sekolah Unggul Garuda Transformasi (SUG)',
+    shortName: 'SUG Transformasi',
     unit: 'unit',
-    nationalValue: '42 unit (15 Provinsi)',
+    nationalValue: '30 unit (100%)',
     target2026: '30 unit',
     description:
-      'Transformasi dan peningkatan mutu SMA unggulan eksisting menjadi Sekolah Unggul Garuda Transformasi di 15 provinsi (42 unit total).',
+      'Transformasi dan peningkatan mutu SMA unggulan eksisting menjadi Sekolah Unggul Garuda Transformasi dengan penguatan sains dan teknologi global.',
     minVal: 1,
     maxVal: 7,
     colorScheme: 'blue',
@@ -261,8 +261,8 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
         return {
           num: sugtLoc.count,
           display: `${sugtLoc.count} Unit`,
-          label: 'Alokasi SUGT',
-          subtext: `Target Nasional: 30 unit · Capaian: 42 unit (15 Provinsi)`,
+          label: 'Alokasi SUG Transformasi',
+          subtext: `Target Nasional: 30 unit · Capaian: 30 unit (100%)`,
           statusLabel: `${sugtLoc.count} Unit`,
           statusType: 'success',
         };
@@ -270,7 +270,7 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       return {
         num: 0,
         display: '0 Unit',
-        label: 'SUGT Transformasi',
+        label: 'SUG Transformasi',
         subtext: '0 Unit (Area Putih)',
         statusLabel: '0 Unit',
         statusType: 'normal',
@@ -280,13 +280,13 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
   {
     id: 'sug_baru',
     pillarId: 'pendidikan',
-    name: 'Sekolah Unggul Garuda Baru (SUGB)',
-    shortName: 'SUGB (Baru)',
+    name: 'Sekolah Unggul Garuda Baru (SUG)',
+    shortName: 'SUG Baru',
     unit: 'unit',
-    nationalValue: '4 unit (4 Provinsi)',
+    nationalValue: '3 unit (75%)',
     target2026: '4 unit',
     description:
-      'Pembangunan unit baru Sekolah Unggul Garuda berasrama dengan kurikulum sains & teknologi global di 4 provinsi (Bangka Belitung, Kaltara, Sultra, NTT).',
+      'Pembangunan unit baru Sekolah Unggul Garuda berasrama dengan kurikulum sains & teknologi global di daerah prioritas.',
     minVal: 1,
     maxVal: 1,
     colorScheme: 'blue',
@@ -299,8 +299,8 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
         return {
           num: sugbLoc.count,
           display: `${sugbLoc.count} Unit`,
-          label: 'Alokasi SUGB Baru',
-          subtext: `Target: 4 unit · Lokasi: Babel, Kaltara, Sultra, NTT`,
+          label: 'Alokasi SUG Baru',
+          subtext: `Target: 4 unit · Realisasi: 3 unit (75%)`,
           statusLabel: `${sugbLoc.count} Unit`,
           statusType: 'success',
         };
@@ -308,7 +308,7 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       return {
         num: 0,
         display: '0 Unit',
-        label: 'SUGB Baru',
+        label: 'SUG Baru',
         subtext: '0 Unit (Area Putih)',
         statusLabel: '0 Unit',
         statusType: 'normal',
@@ -321,7 +321,7 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     name: 'Sekolah Nasional Terintegrasi (SNT)',
     shortName: 'SNT Terintegrasi',
     unit: 'unit - kumulatif',
-    nationalValue: '17 unit (48,6%)',
+    nationalValue: '17 unit (45,9%)',
     target2026: '35 unit',
     description:
       'Program yang mengintegrasikan sekolah jenjang SMP dan SMA dalam satu ekosistem berkelanjutan, mulai dari pembelajaran, pengembangan guru, pembinaan karakter, hingga penjaminan mutu.',
@@ -331,10 +331,10 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     isNationalOnly: true,
     getValue: () => {
       return {
-        num: 48.6,
-        display: '17 unit (Capaian Nasional)',
+        num: 45.9,
+        display: '17 unit (45,9%)',
         label: 'Capaian Nasional SNT',
-        subtext: 'Target 2026: 35 unit · Capaian Nasional: 17 unit (48,6%)',
+        subtext: 'Target 2026: 35 unit · Capaian Nasional: 17 unit (45,9%)',
         statusLabel: 'Area Putih (Capaian Nasional)',
         statusType: 'normal',
       };
@@ -343,13 +343,13 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
   {
     id: 'ifp_digitalisasi',
     pillarId: 'pendidikan',
-    name: 'Digitalisasi Pembelajaran',
-    shortName: 'Digitalisasi Pembelajaran',
-    unit: 'unit perangkat',
+    name: 'Digitalisasi Pendidikan',
+    shortName: 'Digitalisasi Pendidikan',
+    unit: 'perangkat & satdik',
     nationalValue: '727.436 unit (100% Berproses)',
     target2026: '727.436 unit',
     description:
-      'Program transformasi pembelajaran melalui penyediaan interactive flat panel, konten pembelajaran digital, dan infrastruktur teknologi informasi untuk mewujudkan pembelajaran yang interaktif dan merata.',
+      'Program transformasi pembelajaran melalui penyediaan Interactive Flat Panel (IFP), konten pembelajaran digital, dan infrastruktur penunjang di satuan pendidikan.',
     minVal: 55.0,
     maxVal: 100.0,
     colorScheme: 'blue',
@@ -370,9 +370,9 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     pillarId: 'pendidikan',
     name: 'Studio Guru',
     shortName: 'Studio Guru',
-    unit: 'tahap',
+    unit: 'studio',
     nationalValue: 'Tahap Penyiapan',
-    target2026: 'Peluncuran Nov 2027',
+    target2026: 'Peluncuran Nov 2026',
     description:
       'Program penyediaan pusat produksi dan penyebarluasan konten pembelajaran digital berkualitas dari guru untuk meningkatkan pemerataan mutu pembelajaran di Indonesia.',
     minVal: 40.0,
@@ -410,12 +410,27 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     getValue: (w) => {
       const heroVal = w.pillarDetails?.kesehatan?.heroValue || '81,5%';
       const num = parsePercent(heroVal, 81.5);
-      const sub = w.pillarDetails?.kesehatan?.metric1?.value || 'Target: 130 Juta Jiwa';
+      
+      let jumlahJiwa = '';
+      if (w.level === 'nasional') {
+        jumlahJiwa = '105,98 Juta Jiwa';
+      } else {
+        const ckgMatch = w.pillars?.kesehatan?.match(/CKG Terealisasi:?\s*([0-9.,]+\s*(?:Juta|Ribu)?\s*Jiwa)/i);
+        if (ckgMatch) {
+          jumlahJiwa = ckgMatch[1].trim();
+        } else if (w.pillarDetails?.kesehatan?.metric1?.value) {
+          jumlahJiwa = w.pillarDetails.kesehatan.metric1.value;
+        } else {
+          const calcVal = (Math.round((num / 100) * 3.1 * 10) / 10).toString().replace('.', ',');
+          jumlahJiwa = `${calcVal} Juta Jiwa`;
+        }
+      }
+
       return {
         num,
-        display: heroVal,
+        display: `${jumlahJiwa} (${heroVal})`,
         label: 'Cakupan Peserta',
-        subtext: sub,
+        subtext: `Target: 130 Juta Jiwa · ${jumlahJiwa}`,
         statusLabel: num >= 80 ? 'Sangat Baik' : num >= 65 ? 'Cukup' : 'Perlu Akselerasi Timur',
         statusType: num >= 80 ? 'success' : num >= 65 ? 'normal' : 'warning',
       };
@@ -437,9 +452,26 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     getValue: (w) => {
       const baseNum = parsePercent(w.pillarDetails?.kesehatan?.heroValue, 63.5);
       const num = Math.min(92, Math.max(35, Math.round((baseNum * 0.8 + 8) * 10) / 10));
+      const numStr = num.toString().replace('.', ',');
+
+      let kasusStr = '';
+      if (w.level === 'nasional') {
+        kasusStr = '656.517 kasus';
+      } else {
+        const tbMatch =
+          w.pillars?.kesehatan?.match(/TB:?\s*([0-9.,]+)/i) ||
+          w.pillarDetails?.kesehatan?.metric2?.value?.match(/([0-9.,]+)\s*kasus/i);
+        if (tbMatch) {
+          kasusStr = `${tbMatch[1]} kasus`;
+        } else {
+          const kasus = Math.round((num / 100) * 972000);
+          kasusStr = `${kasus.toLocaleString('id-ID')} kasus`;
+        }
+      }
+
       return {
         num,
-        display: `${num.toString().replace('.', ',')}%`,
+        display: `${kasusStr} (${numStr}%)`,
         label: 'Notifikasi Kasus',
         subtext: 'Target Nasional: 972.000 kasus',
         statusLabel: num >= 70 ? 'Pelacakan Intensif' : 'Notifikasi Rendah',
@@ -472,9 +504,11 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
         };
       }
       const num = w.isPrioritas ? 68.0 : 92.0;
+      const count = w.isPrioritas ? 14 : 18;
+      const numStr = num.toString().replace('.', ',');
       return {
         num,
-        display: `${num.toString().replace('.', ',')}% Kesiapan`,
+        display: `${count} RSUD (${numStr}%)`,
         label: 'Kesiapan RS Rujukan',
         subtext: 'Peningkatan Kelas D ke C & 7 Dokter Spesialis',
         statusLabel: num >= 85 ? 'Spesialis Lengkap' : 'Kendala Tenaga Dokter',
@@ -497,9 +531,11 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     colorScheme: 'green',
     getValue: (w) => {
       const num = w.isPrioritas ? 52.4 : 76.8;
+      const numStr = num.toString().replace('.', ',');
+      const sasaranPct = (Math.round(num * 0.5 * 10) / 10).toString().replace('.', ',');
       return {
         num,
-        display: `${num.toString().replace('.', ',')}%`,
+        display: `${sasaranPct}% sasaran (${numStr}%)`,
         label: 'Cakupan MBG 3B',
         subtext: 'Fokus Wilayah Rawan Stunting & 3T',
         statusLabel: num >= 70 ? 'Cakupan Tinggi' : 'Refocusing BGN & Pemda',
@@ -567,9 +603,10 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
         SUMATERA_REHAB_PROVINCES.includes(w.id) ||
         SUMATERA_REHAB_KODE_BPS.includes(w.kodeBps);
       if (isSumatera) {
+        const huntapStr = w.level === 'nasional' ? '1.707 unit (4,3%)' : '3.357 unit (8,5%)';
         return {
-          num: 8.5,
-          display: '8,5%',
+          num: w.level === 'nasional' ? 4.3 : 8.5,
+          display: huntapStr,
           label: 'Realisasi Huntap',
           subtext: 'Pembangunan Huntap di Kawasan Aman Relokasi',
           statusLabel: 'Perlu Akselerasi Satgas',
@@ -592,7 +629,7 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     name: 'Kesiapan Hunian Antara (Huntara)',
     shortName: 'Huntara Terbangun',
     unit: '%',
-    nationalValue: '99% (20.267 unit)',
+    nationalValue: '20.267 unit (99%)',
     target2026: '20.544 unit',
     description: 'Penyediaan tempat tinggal darurat layak huni bagi warga penyintas bencana alam.',
     minVal: 65.0,
@@ -606,7 +643,7 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       if (isSumatera) {
         return {
           num: 99.0,
-          display: '99,0% (20.267 unit)',
+          display: '20.267 unit (99,0%)',
           label: 'Kesiapan Huntara',
           subtext: 'Target 2026: 20.544 unit terbangun',
           statusLabel: 'Tersedia Lengkap',
