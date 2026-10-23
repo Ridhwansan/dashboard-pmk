@@ -319,10 +319,18 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   // =========================================================================
   // MONTHLY CHART CALCULATIONS (Jan - Des)
   // =========================================================================
-  const validMonthlyTargets = rawMonths.map((m) => m.target);
-  const validMonthlyCapaian = rawMonths
-    .map((m) => m.capaian)
-    .filter((v): v is number => v !== null);
+  const validMonthlyTargets = useMemo(() => {
+    return rawMonths
+      .filter((m) => m.target > 0 && m.targetFormatted !== '' && m.targetFormatted !== '—')
+      .map((m) => m.target);
+  }, [rawMonths]);
+
+  const validMonthlyCapaian = useMemo(() => {
+    return rawMonths
+      .filter((m) => m.capaian !== null && m.capaianFormatted !== '' && m.capaianFormatted !== '—')
+      .map((m) => m.capaian as number);
+  }, [rawMonths]);
+
   const maxValMonthly = Math.max(...validMonthlyTargets, ...validMonthlyCapaian, 10);
   const yMaxMonthly = maxValMonthly * 1.15;
 
@@ -333,13 +341,29 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
     return padT + plotH - ratio * plotH;
   };
 
-  const targetMonthlyPath = useMemo(() => {
-    const pts = rawMonths.map((m, i) => ({ x: getXMonthly(i), y: getYMonthly(m.target) }));
-    return buildSmoothPath(pts);
-  }, [rawMonths, yMaxMonthly]);
+  const targetMonthlyList = useMemo(() => {
+    return rawMonths.filter(
+      (m) => m.target > 0 && m.targetFormatted !== '' && m.targetFormatted !== '—'
+    );
+  }, [rawMonths]);
 
-  const capaianMonthlyList = rawMonths.filter((m) => m.capaian !== null);
+  const targetMonthlyPath = useMemo(() => {
+    if (targetMonthlyList.length < 2) return '';
+    const pts = targetMonthlyList.map((m) => {
+      const idx = rawMonths.findIndex((rm) => rm.month === m.month);
+      return { x: getXMonthly(idx), y: getYMonthly(m.target) };
+    });
+    return buildSmoothPath(pts);
+  }, [targetMonthlyList, rawMonths, yMaxMonthly]);
+
+  const capaianMonthlyList = useMemo(() => {
+    return rawMonths.filter(
+      (m) => m.capaian !== null && m.capaianFormatted !== '' && m.capaianFormatted !== '—'
+    );
+  }, [rawMonths]);
+
   const capaianMonthlyPath = useMemo(() => {
+    if (capaianMonthlyList.length < 2) return '';
     const pts = capaianMonthlyList.map((m) => {
       const idx = rawMonths.findIndex((rm) => rm.month === m.month);
       return { x: getXMonthly(idx), y: getYMonthly(m.capaian) };
@@ -348,7 +372,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   }, [capaianMonthlyList, rawMonths, yMaxMonthly]);
 
   const capaianMonthlyArea = useMemo(() => {
-    if (capaianMonthlyList.length === 0) return '';
+    if (capaianMonthlyList.length < 2 || !capaianMonthlyPath) return '';
     const firstIdx = rawMonths.findIndex((m) => m.month === capaianMonthlyList[0].month);
     const lastIdx = rawMonths.findIndex(
       (m) => m.month === capaianMonthlyList[capaianMonthlyList.length - 1].month
@@ -384,7 +408,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       {/* 2. PROGRAM OVERVIEW & 3 KPI STAT CARDS */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200/90 shadow-2xs">
               {category || 'PKPN'}
             </span>
@@ -419,14 +443,22 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           </div>
           <div className="space-y-1">
             <span className="text-xs font-semibold text-slate-500 block">Realisasi Berjalan</span>
-            <span className="text-xl sm:text-2xl font-extrabold text-blue-900 block tracking-tight">
-              {program.currentValue === '—' || !program.currentValue ? '—' : `${program.currentValue} ${program.unit}`}
+            <span
+              className="text-xl sm:text-2xl font-extrabold text-blue-900 block tracking-tight"
+            >
+              {program.currentValue === '—' || !program.currentValue
+                ? '—'
+                : `${program.currentValue} ${program.unit}`}
             </span>
           </div>
           <div className="space-y-1">
             <span className="text-xs font-semibold text-slate-500 block">Persentase Capaian</span>
             <span className="text-xl sm:text-2xl font-extrabold text-emerald-700 block tracking-tight">
-              {summaryMetrics.avgPct > 0 ? `${summaryMetrics.avgPct}%` : program.status.includes('%') ? program.status : '—'}
+              {summaryMetrics.avgPct > 0
+                ? `${summaryMetrics.avgPct}%`
+                : program.status.includes('%')
+                ? program.status
+                : '—'}
             </span>
           </div>
         </div>
@@ -1125,33 +1157,32 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         {/* GRAPH VIEW 2: MONTHLY TRAJECTORY (Jan - Des) */}
         {tableType === 'bulanan' && (
           <div className="space-y-4">
-            {validMonthlyCapaian.length > 0 || rawMonths.some((m) => m.target > 1) ? (
+            {validMonthlyCapaian.length > 0 || validMonthlyTargets.length > 0 ? (
               <div className="relative w-full overflow-x-auto custom-scrollbar border border-slate-200/90 rounded-2xl p-4 sm:p-5 bg-gradient-to-b from-white to-slate-50/50 shadow-2xs">
               {/* Floating Interactive Tooltip */}
               {hoveredMonthlyIdx !== null && rawMonths[hoveredMonthlyIdx] && (() => {
                 const m = rawMonths[hoveredMonthlyIdx];
                 const colX = getXMonthly(hoveredMonthlyIdx);
                 const leftPct = (colX / chartW) * 100;
+                const hasCapaian = m.capaian !== null && m.capaianFormatted !== '' && m.capaianFormatted !== '—';
+                const hasTarget = m.target > 0 && m.targetFormatted !== '' && m.targetFormatted !== '—';
                 const capaianVal = m.capaian;
-                const hasCapaian = capaianVal !== null;
                 const pct =
                   m.percentageFormatted && m.percentageFormatted !== '—' && m.percentageFormatted !== ''
                     ? m.percentageFormatted
                     : hasCapaian && m.target > 0
-                    ? `${Math.round((capaianVal / m.target) * 100)}%`
+                    ? `${Math.round(((capaianVal as number) / m.target) * 100)}%`
                     : null;
-                const targetText =
-                  m.targetFormatted !== ''
-                    ? m.targetFormatted
-                    : m.target > 0
-                    ? `${m.target.toLocaleString('id-ID')} ${program.unit}`
-                    : '—';
-                const capaianText =
-                  m.capaianFormatted !== ''
-                    ? m.capaianFormatted
-                    : hasCapaian
-                    ? `${capaianVal.toLocaleString('id-ID')} ${program.unit}`
-                    : '—';
+                const targetText = hasTarget
+                  ? m.targetFormatted
+                  : m.targetFormatted === '—'
+                  ? '—'
+                  : '—';
+                const capaianText = hasCapaian
+                  ? m.capaianFormatted
+                  : m.capaianFormatted === '—'
+                  ? '—'
+                  : 'Belum ada data';
 
                 return (
                   <div
@@ -1165,12 +1196,14 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                         </span>
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            hasCapaian && m.capaianFormatted !== '—'
+                            hasCapaian
                               ? 'bg-emerald-600 text-white'
+                              : hasTarget
+                              ? 'bg-blue-600 text-white'
                               : 'bg-slate-800 text-slate-400'
                           }`}
                         >
-                          {hasCapaian && m.capaianFormatted !== '—' ? 'Terealisasi' : 'Rencana'}
+                          {hasCapaian ? 'Terealisasi' : hasTarget ? 'Target Akhir Tahun' : 'Belum Ada Data'}
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
@@ -1255,19 +1288,21 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   />
                 )}
 
-                {/* Capaian Area */}
+                {/* Capaian Area (only if >= 2 points) */}
                 {capaianMonthlyArea && <path d={capaianMonthlyArea} fill="url(#capaianGradPageMonthly)" />}
 
-                {/* Target Dashed Line */}
-                <path
-                  d={targetMonthlyPath}
-                  fill="none"
-                  stroke="#3b82f6"
-                  strokeWidth="2.5"
-                  strokeDasharray="5 5"
-                />
+                {/* Target Dashed Line (only if >= 2 points) */}
+                {targetMonthlyPath && (
+                  <path
+                    d={targetMonthlyPath}
+                    fill="none"
+                    stroke="#3b82f6"
+                    strokeWidth="2.5"
+                    strokeDasharray="5 5"
+                  />
+                )}
 
-                {/* Capaian Solid Line */}
+                {/* Capaian Solid Line (only if >= 2 points) */}
                 {capaianMonthlyPath && (
                   <path
                     d={capaianMonthlyPath}
@@ -1281,50 +1316,97 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                 {/* Points on Months */}
                 {rawMonths.map((m, idx) => {
                   const x = getXMonthly(idx);
-                  const yT = getYMonthly(m.target);
-                  const yC = m.capaian !== null ? getYMonthly(m.capaian) : null;
+                  const hasTarget = m.target > 0 && m.targetFormatted !== '' && m.targetFormatted !== '—';
+                  const hasCapaian = m.capaian !== null && m.capaianFormatted !== '' && m.capaianFormatted !== '—';
+                  const yT = hasTarget ? getYMonthly(m.target) : null;
+                  const yC = hasCapaian ? getYMonthly(m.capaian) : null;
                   const isHovered = hoveredMonthlyIdx === idx;
-                  const hasExplicitTarget = m.targetFormatted !== '';
-                  const hasExplicitCapaian = m.capaianFormatted !== '' && m.capaianFormatted !== '—';
+                  const isSingleCapaian = capaianMonthlyList.length === 1;
+                  const isSingleTarget = targetMonthlyList.length === 1;
 
                   return (
                     <g key={m.month}>
-                      {(hasExplicitTarget || isHovered || idx === 11) && (
-                        <>
-                          {isHovered && (
-                            <circle cx={x} cy={yT} r="9" fill="rgba(59, 130, 246, 0.25)" />
+                      {/* Target Point: rendered ONLY when target is reported for this month */}
+                      {hasTarget && yT !== null && (
+                        <g>
+                          {(isHovered || isSingleTarget) && (
+                            <circle
+                              cx={x}
+                              cy={yT}
+                              r={isHovered ? "11" : "9"}
+                              fill="rgba(59, 130, 246, 0.2)"
+                              stroke="#3b82f6"
+                              strokeWidth={isSingleTarget ? "1.5" : "0"}
+                              strokeDasharray={isSingleTarget ? "3 3" : undefined}
+                            />
                           )}
                           <circle
                             cx={x}
                             cy={yT}
-                            r={isHovered ? "4.5" : "3.5"}
+                            r={isHovered ? "5.5" : "4.5"}
                             fill="#3b82f6"
                             stroke="#ffffff"
-                            strokeWidth="1.5"
+                            strokeWidth="2"
                           />
-                        </>
+                          {(isSingleTarget || isHovered) && (
+                            <text
+                              x={x}
+                              y={yT - 12}
+                              textAnchor="middle"
+                              className="text-[10px] font-bold fill-blue-700 font-mono select-none pointer-events-none"
+                            >
+                              T: {m.targetFormatted}
+                            </text>
+                          )}
+                        </g>
                       )}
-                      {yC !== null && (hasExplicitCapaian || isHovered) && (
-                        <>
-                          {isHovered && (
-                            <circle cx={x} cy={yC} r="11" fill="rgba(16, 185, 129, 0.3)" />
+
+                      {/* Capaian Point: rendered ONLY when capaian is reported for this month */}
+                      {hasCapaian && yC !== null && (
+                        <g>
+                          {(isHovered || isSingleCapaian) && (
+                            <circle
+                              cx={x}
+                              cy={yC}
+                              r={isHovered ? "13" : "11"}
+                              fill="rgba(16, 185, 129, 0.25)"
+                              stroke="#10b981"
+                              strokeWidth={isSingleCapaian ? "1.5" : "0"}
+                              strokeDasharray={isSingleCapaian ? "3 3" : undefined}
+                            />
                           )}
                           <circle
                             cx={x}
                             cy={yC}
-                            r={isHovered ? "6" : "4.5"}
+                            r={isHovered ? "6.5" : "5.5"}
                             fill="#059669"
                             stroke="#ffffff"
-                            strokeWidth="2"
+                            strokeWidth="2.5"
                           />
-                        </>
+                          {(isSingleCapaian || isHovered) && (
+                            <text
+                              x={x}
+                              y={yC + (hasTarget && yT !== null && yC < yT ? -14 : 18)}
+                              textAnchor="middle"
+                              className="text-[10px] font-extrabold fill-emerald-800 font-mono select-none pointer-events-none"
+                            >
+                              C: {m.capaianFormatted}
+                            </text>
+                          )}
+                        </g>
                       )}
+
+                      {/* X-Axis Month Label */}
                       <text
                         x={x}
                         y={chartH - 12}
                         textAnchor="middle"
                         className={`text-[10px] font-bold ${
-                          isHovered ? 'fill-blue-600 font-black' : 'fill-slate-500 font-medium'
+                          isHovered
+                            ? 'fill-blue-600 font-black'
+                            : (hasCapaian || hasTarget)
+                            ? 'fill-slate-900 font-extrabold'
+                            : 'fill-slate-400 font-medium'
                         }`}
                       >
                         {MONTH_SHORT[idx]}

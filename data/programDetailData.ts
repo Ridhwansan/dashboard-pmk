@@ -214,17 +214,14 @@ function generateOfficialMonthlyData(options: {
 }): Record<number, MonthlyDataPoint[]> {
   const data2026: MonthlyDataPoint[] = MONTH_NAMES.map((name, i) => {
     const monthNum = i + 1;
-    const progress = monthNum / 12;
-    const numT = Math.round(options.target2026Numeric * progress);
-    const numC = monthNum <= 10 ? Math.round(options.capaian2026OktNumeric * (monthNum / 10)) : null;
 
     if (monthNum <= 9) {
-      // Jan - Sep: Empty in official report table
+      // Jan - Sep: Empty in official report table (no target, no capaian reported)
       return {
         month: monthNum,
         monthName: name,
-        target: numT,
-        capaian: numC,
+        target: 0,
+        capaian: null,
         targetFormatted: '',
         capaianFormatted: '',
         percentageFormatted: '',
@@ -232,11 +229,11 @@ function generateOfficialMonthlyData(options: {
         note: '',
       };
     } else if (monthNum === 10) {
-      // Oktober (Posisi Berjalan Saat Ini)
+      // Oktober (Posisi Berjalan Saat Ini - capaian cut-off reported)
       return {
         month: monthNum,
         monthName: name,
-        target: numT,
+        target: 0,
         capaian: options.capaian2026OktNumeric,
         targetFormatted: '',
         capaianFormatted: options.capaian2026OktFormatted,
@@ -246,11 +243,11 @@ function generateOfficialMonthlyData(options: {
         note: 'Posisi per 18 Oktober 2026',
       };
     } else if (monthNum === 11) {
-      // November
+      // November: In development / unrecorded
       return {
         month: monthNum,
         monthName: name,
-        target: numT,
+        target: 0,
         capaian: null,
         targetFormatted: '',
         capaianFormatted: '—',
@@ -259,7 +256,7 @@ function generateOfficialMonthlyData(options: {
         note: '',
       };
     } else {
-      // Desember (Target Akhir Tahun)
+      // Desember (Target Akhir Tahun reported)
       return {
         month: monthNum,
         monthName: name,

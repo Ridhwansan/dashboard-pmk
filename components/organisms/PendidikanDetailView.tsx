@@ -1,7 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GraduationCap, ChevronRight, BarChart3, ChevronDown } from 'lucide-react';
+import {
+  GraduationCap,
+  ChevronRight,
+  BarChart3,
+} from 'lucide-react';
 import { PillarData } from '@/types/dashboard';
 import { ProgramDetailPageView } from './ProgramDetailPageView';
 import { getProgramDetailData } from '@/data/programDetailData';
@@ -106,27 +110,24 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
-      {/* 1. Header Card: Factual Title aligned with 'v Pendidikan' */}
+      {/* 1. Header Card: Factual Title with PKPN Pendidikan */}
       <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-2xs shrink-0">
             <GraduationCap className="w-6 h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <ChevronDown className="w-5 h-5 text-blue-600" />
-              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
-                Pendidikan
-              </h2>
-            </div>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
+              {category === 'PKPN' ? 'PKPN Pendidikan' : 'Pendidikan'}
+            </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-              Target dan Capaian
+              Target dan Capaian Kinerja Program
             </p>
           </div>
         </div>
       </div>
 
-      {/* 2. Grid of Separated Widget Cards (Whole Card Clickable, Compact Height) */}
+      {/* 2. Grid of Separated Widget Cards (Whole Card Clickable, Clean White Cards) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {widgetCards.map((card) => {
           return (
