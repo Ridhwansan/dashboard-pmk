@@ -90,7 +90,6 @@ function cleanCapaianDisplay(raw: string): string {
   if (!raw) return '—';
   return raw
     .replace(/\s*\(Capaian Nasional\)/gi, '')
-    .replace(/\s*\(100% Berproses\)/gi, ' (100%)')
     .trim();
 }
 
@@ -225,14 +224,14 @@ export const WilayahSidePanel: React.FC<WilayahSidePanelProps> = ({
                         </div>
 
                         {/* Clean 2-Column: Target vs Capaian */}
-                        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+                        <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-slate-100">
                           {/* Target */}
                           <div className="flex flex-col min-w-0">
                             <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                               Target
                             </span>
                             <span
-                              className="text-xs font-bold text-slate-700 truncate tabular-nums mt-0.5"
+                              className="text-xs font-bold text-slate-700 leading-snug tabular-nums mt-0.5 break-words"
                               title={ind.target2026}
                             >
                               {ind.target2026}
@@ -245,13 +244,20 @@ export const WilayahSidePanel: React.FC<WilayahSidePanelProps> = ({
                               Capaian
                             </span>
                             <span
-                              className={`text-xs font-extrabold truncate tabular-nums mt-0.5 ${theme.capaianText}`}
+                              className={`text-xs font-extrabold leading-snug tabular-nums mt-0.5 break-words ${theme.capaianText}`}
                               title={cleanDisplay}
                             >
                               {cleanDisplay}
                             </span>
                           </div>
                         </div>
+
+                        {/* Subtext Context Note (if present) */}
+                        {val.subtext && (
+                          <div className="mt-2 pt-1.5 border-t border-slate-100/90 text-[11px] font-medium text-slate-500 leading-relaxed">
+                            {val.subtext}
+                          </div>
+                        )}
                       </div>
                     );
                   })}

@@ -337,10 +337,10 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program peningkatan kualitas dan kelayakan sarana-prasarana sekolah melalui rehabilitasi dan pembangunan fasilitas pendidikan untuk mendukung pemerataan akses dan mutu pembelajaran.',
     picKementerian: 'Kemendikdasmen, Kemenag, Kementerian PUPR, Kemendagri',
-    unit: 'satdik',
+    unit: 'satuan pendidikan',
     currentValue: '36.669',
-    target2026: '80.282 satdik',
-    status: 'Capaian 2026 (45,7%)',
+    target2026: '80.282 satuan pendidikan',
+    status: 'Capaian 2026',
     subtext: 'Realisasi 2025: 17.508 satdik (136,5% target 2025)',
     kendalaList: [
       {
@@ -369,12 +369,12 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
       },
     ],
     monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '80.282 satdik',
-      capaian2026OktFormatted: '36.669 satdik',
+      target2026Formatted: '80.282 satuan pendidikan',
+      capaian2026OktFormatted: '36.669 satuan pendidikan',
       percentage2026OktFormatted: '45,7 %',
       target2026Numeric: 80282,
       capaian2026OktNumeric: 36669,
-      unit: 'satdik',
+      unit: 'satuan pendidikan',
     }),
   },
 
@@ -387,10 +387,10 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program yang mengintegrasikan sekolah jenjang SMP dan SMA dalam satu ekosistem berkelanjutan, mulai dari pembelajaran, pengembangan guru, pembinaan karakter, hingga penjaminan mutu.',
     picKementerian: 'Kemendikdasmen, KemenPANRB, Kemendagri, Bappenas',
-    unit: 'unit',
+    unit: 'Sekolah Operasional',
     currentValue: '17',
-    target2026: '35 unit',
-    status: 'Capaian 2026 (45,9%)',
+    target2026: '35 SNT Operasional',
+    status: 'Capaian 2026',
     subtext: 'Target Kumulatif 2027: 135 unit · 2028: 335 unit · 2029: 500 unit',
     kendalaList: [
       {
@@ -419,12 +419,12 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
       },
     ],
     monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '35 unit',
-      capaian2026OktFormatted: '17 unit',
-      percentage2026OktFormatted: '45,9 %',
+      target2026Formatted: '35 SNT Operasional',
+      capaian2026OktFormatted: '17 Sekolah Operasional',
+      percentage2026OktFormatted: '48,6 %',
       target2026Numeric: 35,
       capaian2026OktNumeric: 17,
-      unit: 'unit',
+      unit: 'Sekolah Operasional',
     }),
   },
 
@@ -464,18 +464,18 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
 
   'sug_transformasi': {
     id: 'sug_transformasi',
-    title: 'Sekolah Unggul Garuda Transformasi (SUG)',
+    title: 'Sekolah Unggul Garuda Transformasi',
     pillarId: 'pendidikan',
     pillarTitle: 'Pendidikan',
     category: 'Transformasi Mutu Sekolah',
     description:
       'Program peningkatan mutu SMA unggulan eksisting menjadi Sekolah Unggul Garuda Transformasi dengan penguatan kurikulum sains, teknologi, dan penyiapan talenta berprestasi global.',
     picKementerian: 'Kemendikdasmen, Bappenas, Kemenkeu',
-    unit: 'unit',
-    currentValue: '30',
-    target2026: '30 unit',
-    status: 'Capaian 2026 (100%)',
-    subtext: 'Posisi per 18 Oktober 2026 · Realisasi 2025: 12 unit · Target Kumulatif 2027: 50 unit',
+    unit: 'satuan pendidikan',
+    currentValue: '42',
+    target2026: '30 satuan pendidikan',
+    status: 'Capaian 2025 :12 satuan pendidikan; Capaian 2026: 30 satuan pendidikan',
+    subtext: 'Capaian 2025 :12 satuan pendidikan; Capaian 2026: 30 satuan pendidikan · Target 2026: 30 satuan pendidikan',
     kendalaList: [
       {
         id: 1,
@@ -487,29 +487,29 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
       },
     ],
     monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '30 unit',
-      capaian2026OktFormatted: '30 unit',
+      target2026Formatted: '30 satuan pendidikan',
+      capaian2026OktFormatted: '42 satuan pendidikan',
       percentage2026OktFormatted: '100 %',
       target2026Numeric: 30,
-      capaian2026OktNumeric: 30,
-      unit: 'unit',
+      capaian2026OktNumeric: 42,
+      unit: 'satuan pendidikan',
     }),
   },
 
   'sug_baru': {
     id: 'sug_baru',
-    title: 'Sekolah Unggul Garuda Baru (SUG)',
+    title: 'Sekolah Unggul Garuda Baru',
     pillarId: 'pendidikan',
     pillarTitle: 'Pendidikan',
     category: 'Pendidikan Keunggulan',
     description:
       'Program pengembangan sekolah menengah atas unggulan melalui pembangunan unit baru Sekolah Unggul Garuda berasrama dengan kurikulum sains & teknologi global di daerah prioritas.',
     picKementerian: 'Kemendikdasmen, Kemenkeu, Kementerian PUPR, Setneg',
-    unit: 'unit',
+    unit: 'satuan pendidikan',
     currentValue: '3',
-    target2026: '4 unit',
-    status: 'Capaian 2026 (75%)',
-    subtext: 'Posisi per 18 Oktober 2026 · Target 2026: 4 unit · Realisasi: 3 unit (75%)',
+    target2026: '4 satuan pendidikan',
+    status: 'Capaian 2026',
+    subtext: 'Target 2026: 4 satuan pendidikan · Realisasi: 3 satuan pendidikan (75%)',
     kendalaList: [
       {
         id: 1,
@@ -521,12 +521,12 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
       },
     ],
     monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '4 unit',
-      capaian2026OktFormatted: '3 unit',
+      target2026Formatted: '4 satuan pendidikan',
+      capaian2026OktFormatted: '3 satuan pendidikan',
       percentage2026OktFormatted: '75 %',
       target2026Numeric: 4,
       capaian2026OktNumeric: 3,
-      unit: 'unit',
+      unit: 'satuan pendidikan',
     }),
   },
 
@@ -539,11 +539,11 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program transformasi pembelajaran melalui penyediaan Interactive Flat Panel (IFP), konten pembelajaran digital, dan infrastruktur penunjang di satuan pendidikan.',
     picKementerian: 'Kemendikdasmen, Kemenkomdigi, Kemenkeu, Kemenag',
-    unit: 'perangkat & satdik',
+    unit: 'unit',
     currentValue: '727.436',
     target2026: '727.436 unit',
-    status: 'Capaian 2026 (100% Berproses)',
-    subtext: 'Posisi per 18 Oktober 2026 (Berproses disalurkan) · Realisasi 2025: 288.865 unit (100%)',
+    status: 'Capaian 2026 (Berproses disalurkan ke 316.535 sekolah)',
+    subtext: 'Posisi per 18 Oktober 2026 (Berproses disalurkan ke 316.535 sekolah) · Realisasi 2025: 288.865 unit (100%)',
     kendalaList: [
       {
         id: 1,
@@ -574,10 +574,10 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
       'Program penyediaan pusat produksi dan penyebarluasan konten pembelajaran digital berkualitas dari guru untuk meningkatkan pemerataan mutu pembelajaran di Indonesia.',
     picKementerian: 'Kemendikdasmen, Kemenkomdigi, Bappenas',
     unit: 'studio',
-    currentValue: '—',
-    target2026: 'Peluncuran Nov 2027',
-    status: 'Tahap Penyiapan',
-    subtext: 'Target: Peluncuran 1 Studio pusat dengan minimal 100 Konten Pembelajaran (Nov 2026) · Operasional: 2027',
+    currentValue: '1 studio pusat + 110 konten',
+    target2026: 'Studio Guru beroperasi penuh',
+    status: '1 studio pusat + 110 konten pembelajaran, launching 25 November 2026',
+    subtext: 'Target 2026: Studio Guru beroperasi penuh',
     kendalaList: [],
     monthlyData: generateStudioGuruMonthlyData(),
   },

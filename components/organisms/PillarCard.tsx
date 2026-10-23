@@ -37,13 +37,13 @@ export const PillarCard: React.FC<PillarCardProps> = ({
           lead: {
             label: 'Revitalisasi Satuan Pendidikan',
             value: '45,7%',
-            target: '80.282 satdik',
-            realisasi: '36.669 satdik',
+            target: '80.282 satuan pendidikan',
+            realisasi: '36.669 satuan pendidikan',
           },
           secondary: [
-            { label: 'Indeks Modal Manusia (IMM)', value: '0,56 (T: 0,57)' },
-            { label: 'Sekolah Unggul Garuda', value: '3 unit (T: 4 unit)' },
-            { label: 'SNT Operasional', value: '17 unit (T: 35 unit)' },
+            { label: 'Sekolah Nasional Terintegrasi (SNT)', value: '17 (T: 35 SNT Operasional)' },
+            { label: 'Sekolah Unggul Garuda Baru', value: '3 (T: 4 satuan pendidikan)' },
+            { label: 'SUG Transformasi', value: '42 (T: 30 satuan pendidikan)' },
           ],
         };
       case 'kesehatan':

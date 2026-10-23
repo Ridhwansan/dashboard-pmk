@@ -4,6 +4,9 @@ import { PilarDetailClient } from './PilarDetailClient';
 
 const VALID_PILLARS: PillarId[] = ['pendidikan', 'kesehatan', 'bencana', 'kemiskinan'];
 
+export const dynamic = 'force-static';
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return VALID_PILLARS.map((pillarId) => ({
     pillarId,

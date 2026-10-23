@@ -210,16 +210,16 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
   },
 
   // ==========================================================
-  // 1. PILAR PENDIDIKAN (SESUAI TARGET & SATUAN RESMI PKPN)
+  // 1. PILAR PENDIDIKAN (SESUAI TARGET & SATUAN RESMI PKPN / IKHTISAR)
   // ==========================================================
   {
     id: 'revitalisasi_satdik',
     pillarId: 'pendidikan',
-    name: 'Revitalisasi Sarana dan Prasarana Sekolah/Madrasah',
-    shortName: 'Revitalisasi Sarpras',
-    unit: 'satdik',
-    nationalValue: '36.669 satdik (45,7%)',
-    target2026: '80.282 satdik',
+    name: 'Revitalisasi Satuan Pendidikan',
+    shortName: 'Revitalisasi Satdik',
+    unit: 'satuan pendidikan',
+    nationalValue: '36.669 satuan pendidikan (45,7%)',
+    target2026: '80.282 satuan pendidikan',
     description:
       'Program peningkatan kualitas dan kelayakan sarana-prasarana sekolah melalui rehabilitasi dan pembangunan fasilitas pendidikan untuk mendukung pemerataan akses dan mutu pembelajaran.',
     minVal: 30.0,
@@ -228,90 +228,25 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     getValue: (w) => {
       const heroVal = w.pillarDetails?.pendidikan?.heroValue || '45,7%';
       const num = parsePercent(heroVal, 45.7);
-      const satdikVal = Math.round((num / 100) * 80282);
+      if (w.level === 'nasional') {
+        return {
+          num: 45.7,
+          display: '36.669 satuan pendidikan (45,7%)',
+          label: 'Realisasi Revitalisasi',
+          subtext: 'Capaian 2026',
+          statusLabel: 'On Track 2026',
+          statusType: 'normal',
+        };
+      }
+      const match = w.pillarDetails?.pendidikan?.metric1?.value?.match(/([0-9.,]+)\s*\/\s*([0-9.,]+)/);
+      const satdikVal = match ? match[1] : Math.round((num / 100) * 80282).toLocaleString('id-ID');
       return {
         num,
-        display: `${satdikVal.toLocaleString('id-ID')} satdik (${heroVal})`,
+        display: `${satdikVal} satuan pendidikan (${heroVal})`,
         label: 'Realisasi Revitalisasi',
-        subtext: 'Target 2026: 80.282 satdik',
+        subtext: 'Target 2026: 80.282 satuan pendidikan',
         statusLabel: num >= 60 ? 'Realisasi Cepat' : num >= 45 ? 'On Track 2026' : 'Perlu Percepatan Pemda',
         statusType: num >= 60 ? 'success' : num >= 45 ? 'normal' : 'warning',
-      };
-    },
-  },
-  {
-    id: 'sug_transformasi',
-    pillarId: 'pendidikan',
-    name: 'Sekolah Unggul Garuda Transformasi (SUG)',
-    shortName: 'SUG Transformasi',
-    unit: 'unit',
-    nationalValue: '30 unit (100%)',
-    target2026: '30 unit',
-    description:
-      'Transformasi dan peningkatan mutu SMA unggulan eksisting menjadi Sekolah Unggul Garuda Transformasi dengan penguatan sains dan teknologi global.',
-    minVal: 1,
-    maxVal: 7,
-    colorScheme: 'blue',
-    customRegionType: 'sugt',
-    getValue: (w) => {
-      const sugtLoc = SUG_LOCATIONS.find(
-        (l) => l.type === 'SUGT' && (l.provinceId === w.id || l.kodeBps === w.kodeBps)
-      );
-      if (sugtLoc) {
-        return {
-          num: sugtLoc.count,
-          display: `${sugtLoc.count} Unit`,
-          label: 'Alokasi SUG Transformasi',
-          subtext: `Target Nasional: 30 unit · Capaian: 30 unit (100%)`,
-          statusLabel: `${sugtLoc.count} Unit`,
-          statusType: 'success',
-        };
-      }
-      return {
-        num: 0,
-        display: '0 Unit',
-        label: 'SUG Transformasi',
-        subtext: '0 Unit (Area Putih)',
-        statusLabel: '0 Unit',
-        statusType: 'normal',
-      };
-    },
-  },
-  {
-    id: 'sug_baru',
-    pillarId: 'pendidikan',
-    name: 'Sekolah Unggul Garuda Baru (SUG)',
-    shortName: 'SUG Baru',
-    unit: 'unit',
-    nationalValue: '3 unit (75%)',
-    target2026: '4 unit',
-    description:
-      'Pembangunan unit baru Sekolah Unggul Garuda berasrama dengan kurikulum sains & teknologi global di daerah prioritas.',
-    minVal: 1,
-    maxVal: 1,
-    colorScheme: 'blue',
-    customRegionType: 'sugb',
-    getValue: (w) => {
-      const sugbLoc = SUG_LOCATIONS.find(
-        (l) => l.type === 'SUGB' && (l.provinceId === w.id || l.kodeBps === w.kodeBps)
-      );
-      if (sugbLoc) {
-        return {
-          num: sugbLoc.count,
-          display: `${sugbLoc.count} Unit`,
-          label: 'Alokasi SUG Baru',
-          subtext: `Target: 4 unit · Realisasi: 3 unit (75%)`,
-          statusLabel: `${sugbLoc.count} Unit`,
-          statusType: 'success',
-        };
-      }
-      return {
-        num: 0,
-        display: '0 Unit',
-        label: 'SUG Baru',
-        subtext: '0 Unit (Area Putih)',
-        statusLabel: '0 Unit',
-        statusType: 'normal',
       };
     },
   },
@@ -320,9 +255,9 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     pillarId: 'pendidikan',
     name: 'Sekolah Nasional Terintegrasi (SNT)',
     shortName: 'SNT Terintegrasi',
-    unit: 'unit - kumulatif',
-    nationalValue: '17 unit (45,9%)',
-    target2026: '35 unit',
+    unit: 'Sekolah Operasional',
+    nationalValue: '17 Sekolah Operasional (48,6%)',
+    target2026: '35 SNT Operasional',
     description:
       'Program yang mengintegrasikan sekolah jenjang SMP dan SMA dalam satu ekosistem berkelanjutan, mulai dari pembelajaran, pengembangan guru, pembinaan karakter, hingga penjaminan mutu.',
     minVal: 35.0,
@@ -331,11 +266,107 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     isNationalOnly: true,
     getValue: () => {
       return {
-        num: 45.9,
-        display: '17 unit (45,9%)',
+        num: 48.6,
+        display: '17 Sekolah Operasional (48,6%)',
         label: 'Capaian Nasional SNT',
-        subtext: 'Target 2026: 35 unit · Capaian Nasional: 17 unit (45,9%)',
+        subtext: 'Capaian 2026',
         statusLabel: 'Area Putih (Capaian Nasional)',
+        statusType: 'normal',
+      };
+    },
+  },
+  {
+    id: 'sug_baru',
+    pillarId: 'pendidikan',
+    name: 'Sekolah Unggul Garuda Baru',
+    shortName: 'SUG Baru',
+    unit: 'satuan pendidikan',
+    nationalValue: '3 satuan pendidikan (75%)',
+    target2026: '4 satuan pendidikan',
+    description:
+      'Pembangunan unit baru Sekolah Unggul Garuda berasrama dengan kurikulum sains & teknologi global di daerah prioritas.',
+    minVal: 1,
+    maxVal: 1,
+    colorScheme: 'blue',
+    customRegionType: 'sugb',
+    getValue: (w) => {
+      if (w.level === 'nasional') {
+        return {
+          num: 75,
+          display: '3 satuan pendidikan (75%)',
+          label: 'Capaian SUG Baru',
+          subtext: 'Capaian 2026',
+          statusLabel: '3 dari 4 Satdik',
+          statusType: 'success',
+        };
+      }
+      const sugbLoc = SUG_LOCATIONS.find(
+        (l) => l.type === 'SUGB' && (l.provinceId === w.id || l.kodeBps === w.kodeBps)
+      );
+      if (sugbLoc) {
+        return {
+          num: sugbLoc.count,
+          display: `${sugbLoc.count} satuan pendidikan`,
+          label: 'Alokasi SUG Baru',
+          subtext: 'Target 2026: 4 satuan pendidikan',
+          statusLabel: `${sugbLoc.count} Satdik`,
+          statusType: 'success',
+        };
+      }
+      return {
+        num: 0,
+        display: '0 satuan pendidikan',
+        label: 'SUG Baru',
+        subtext: 'Target 2026: 4 satuan pendidikan',
+        statusLabel: '0 Satdik',
+        statusType: 'normal',
+      };
+    },
+  },
+  {
+    id: 'sug_transformasi',
+    pillarId: 'pendidikan',
+    name: 'Sekolah Unggul Garuda Transformasi',
+    shortName: 'SUG Transformasi',
+    unit: 'satuan pendidikan',
+    nationalValue: '42 satuan pendidikan',
+    target2026: '30 satuan pendidikan',
+    description:
+      'Transformasi dan peningkatan mutu SMA unggulan eksisting menjadi Sekolah Unggul Garuda Transformasi dengan penguatan sains dan teknologi global.',
+    minVal: 1,
+    maxVal: 7,
+    colorScheme: 'blue',
+    customRegionType: 'sugt',
+    getValue: (w) => {
+      if (w.level === 'nasional') {
+        return {
+          num: 100,
+          display: '42 satuan pendidikan',
+          label: 'Alokasi SUG Transformasi',
+          subtext: 'Capaian 2025 :12 satuan pendidikan; Capaian 2026: 30 satuan pendidikan',
+          statusLabel: '42 Satuan Pendidikan',
+          statusType: 'success',
+        };
+      }
+      const sugtLoc = SUG_LOCATIONS.find(
+        (l) => l.type === 'SUGT' && (l.provinceId === w.id || l.kodeBps === w.kodeBps)
+      );
+      if (sugtLoc) {
+        return {
+          num: sugtLoc.count,
+          display: `${sugtLoc.count} satuan pendidikan`,
+          label: 'Alokasi SUG Transformasi',
+          subtext: 'Target 2026: 30 satuan pendidikan',
+          statusLabel: `${sugtLoc.count} Satdik`,
+          statusType: 'success',
+        };
+      }
+      return {
+        num: 0,
+        display: '0 satuan pendidikan',
+        label: 'SUG Transformasi',
+        subtext: 'Target 2026: 30 satuan pendidikan',
+        statusLabel: '0 Satdik',
         statusType: 'normal',
       };
     },
@@ -345,8 +376,8 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     pillarId: 'pendidikan',
     name: 'Digitalisasi Pendidikan',
     shortName: 'Digitalisasi Pendidikan',
-    unit: 'perangkat & satdik',
-    nationalValue: '727.436 unit (100% Berproses)',
+    unit: 'unit',
+    nationalValue: '727.436 unit',
     target2026: '727.436 unit',
     description:
       'Program transformasi pembelajaran melalui penyediaan Interactive Flat Panel (IFP), konten pembelajaran digital, dan infrastruktur penunjang di satuan pendidikan.',
@@ -357,9 +388,9 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     getValue: () => {
       return {
         num: 100,
-        display: '727.436 unit (100% Berproses)',
+        display: '727.436 unit',
         label: 'Capaian Nasional Digitalisasi',
-        subtext: 'Target 2026: 727.436 perangkat & satdik di seluruh Indonesia',
+        subtext: 'Berproses disalurkan ke 316.535 sekolah',
         statusLabel: 'Area Putih (Capaian Nasional)',
         statusType: 'normal',
       };
@@ -371,8 +402,8 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     name: 'Studio Guru',
     shortName: 'Studio Guru',
     unit: 'studio',
-    nationalValue: 'Tahap Penyiapan',
-    target2026: 'Peluncuran Nov 2026',
+    nationalValue: '1 studio pusat + 110 konten',
+    target2026: 'Studio Guru beroperasi penuh',
     description:
       'Program penyediaan pusat produksi dan penyebarluasan konten pembelajaran digital berkualitas dari guru untuk meningkatkan pemerataan mutu pembelajaran di Indonesia.',
     minVal: 40.0,
@@ -382,9 +413,9 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     getValue: () => {
       return {
         num: 50,
-        display: 'Tahap Penyiapan',
+        display: '1 studio pusat + 110 konten pembelajaran',
         label: 'Studio Guru',
-        subtext: 'Target: Peluncuran Nov 2027 · Operasional 2028',
+        subtext: 'Launching 25 November 2026',
         statusLabel: 'Area Putih (Capaian Nasional)',
         statusType: 'normal',
       };

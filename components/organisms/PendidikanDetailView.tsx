@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GraduationCap, ChevronRight, BarChart3 } from 'lucide-react';
+import { GraduationCap, ChevronRight, BarChart3, ChevronDown } from 'lucide-react';
 import { PillarData } from '@/types/dashboard';
 import { ProgramDetailPageView } from './ProgramDetailPageView';
 import { getProgramDetailData } from '@/data/programDetailData';
@@ -16,12 +16,14 @@ interface WidgetCardItem {
   id: string;
   chipLabel?: string;
   title: string;
-  value: string;
-  unit: string;
-  status: string;
-  target: string;
+  value?: string;
+  unit?: string;
+  status?: string;
+  target?: string;
   percent?: number;
   subtext?: string;
+  isMilestone?: boolean;
+  milestoneContent?: string;
 }
 
 export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
@@ -41,7 +43,7 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
     );
   }
 
-  // 6 Priority Program Widgets from Gambar 2 (Verbatim)
+  // 6 Priority Program Widgets matching Gambar 1 verbatim
   const widgetCards: WidgetCardItem[] = [
     {
       id: 'revitalisasi_satdik',
@@ -56,31 +58,31 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
     {
       id: 'snt_operasional',
       chipLabel: 'PKPN',
-      title: 'SNT operasional',
+      title: 'Sekolah Nasional Terintegrasi (SNT)',
       value: '17',
-      unit: 'satuan pendidikan',
+      unit: 'Sekolah Operasional',
       status: 'Capaian 2026',
-      target: 'Target 2026: 35 satuan pendidikan',
-      percent: 45.9,
+      target: 'Target 2026: 35 SNT Operasional',
+      percent: 48.6,
     },
     {
       id: 'sug_baru',
       chipLabel: 'PKPN',
-      title: 'Sekolah Unggul Garuda Baru (SUG)',
+      title: 'Sekolah Unggul Garuda Baru',
       value: '3',
-      unit: 'unit',
-      status: 'Capaian 2026 (75%)',
-      target: 'Target 2026: 4 unit',
+      unit: 'satuan pendidikan',
+      status: 'Capaian 2026',
+      target: 'Target 2026: 4 satuan pendidikan',
       percent: 75,
     },
     {
       id: 'sug_transformasi',
       chipLabel: 'PKPN',
-      title: 'Sekolah Unggul Garuda Transformasi (SUG)',
-      value: '30',
-      unit: 'unit',
-      status: 'Capaian 2026: 30 unit (100%) · 2025: 12 unit',
-      target: 'Target 2026: 30 unit',
+      title: 'Sekolah Unggul Garuda Transformasi',
+      value: '42',
+      unit: 'satuan pendidikan',
+      status: 'Capaian 2025 :12 satuan pendidikan; Capaian 2026: 30 satuan pendidikan',
+      target: 'Target 2026: 30 satuan pendidikan',
       percent: 100,
     },
     {
@@ -89,34 +91,35 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
       title: 'Digitalisasi Pendidikan',
       value: '727.436',
       unit: 'unit',
-      status: 'Capaian 2026: 727.436 (100% Berproses)',
-      target: 'Target 2026: 727.436 unit',
+      status: 'Capaian 2026 (Berproses disalurkan ke 316.535 sekolah)',
       percent: 100,
     },
     {
       id: 'studio_guru',
       chipLabel: 'PKPN',
       title: 'Studio Guru',
-      value: 'Penyiapan',
-      unit: 'Studio',
-      status: 'Target Peluncuran November 2026',
-      target: '1 Studio pusat & min. 100 Konten',
+      isMilestone: true,
+      milestoneContent: '1 studio pusat + 110 konten pembelajaran, launching 25 November 2026',
+      target: 'Target 2026: Studio Guru beroperasi penuh',
     },
   ];
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
-      {/* 1. Header Card: Factual Title */}
+      {/* 1. Header Card: Factual Title aligned with 'v Pendidikan' */}
       <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-2xs shrink-0">
             <GraduationCap className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
-              {category === 'PKPN' ? 'PKPN Pendidikan' : 'Pendidikan'}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium">
+            <div className="flex items-center gap-2">
+              <ChevronDown className="w-5 h-5 text-blue-600" />
+              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
+                Pendidikan
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
               Target dan Capaian
             </p>
           </div>
@@ -155,26 +158,38 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
                   </h3>
                 </div>
 
-                {/* Big Number & Unit */}
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tabular-nums tracking-tight">
-                    {card.value}
-                  </span>
-                  <span className="text-xs font-semibold text-slate-500">
-                    {card.unit}
-                  </span>
-                </div>
-
-                {/* Target & Status Information */}
-                <div className="space-y-2 pt-3 border-t border-slate-100 text-xs">
-                  <div className="flex items-center justify-between text-slate-600 font-medium">
-                    <span>{card.status}</span>
-                    {card.percent !== undefined && (
-                      <span className="font-bold text-blue-700 tabular-nums">
-                        {card.percent}%
+                {/* Metric Display: Big Number or Milestone Description */}
+                {card.isMilestone ? (
+                  <div className="mb-4 min-h-[44px] flex items-center">
+                    <p className="text-sm sm:text-[15px] font-bold text-slate-900 leading-snug">
+                      {card.milestoneContent}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1 mb-4 min-h-[44px]">
+                    <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tabular-nums tracking-tight">
+                      {card.value}
+                    </span>
+                    {card.unit && (
+                      <span className="text-xs sm:text-sm font-semibold text-slate-600">
+                        {card.unit}
                       </span>
                     )}
                   </div>
+                )}
+
+                {/* Target & Status Information */}
+                <div className="space-y-2 pt-3 border-t border-slate-100 text-xs">
+                  {card.status && (
+                    <div className="flex items-start justify-between gap-2 text-slate-700 font-medium leading-relaxed">
+                      <span>{card.status}</span>
+                      {card.percent !== undefined && (
+                        <span className="font-bold text-blue-700 tabular-nums shrink-0">
+                          {card.percent}%
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Visual Progress Bar */}
                   {card.percent !== undefined && (
@@ -186,12 +201,14 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
                     </div>
                   )}
 
-                  <div className="text-slate-700 font-semibold truncate pt-0.5">
-                    {card.target}
-                  </div>
+                  {card.target && (
+                    <div className="text-slate-800 font-semibold leading-relaxed pt-0.5">
+                      {card.target}
+                    </div>
+                  )}
 
                   {card.subtext && (
-                    <div className="text-[11px] text-slate-500 font-medium">
+                    <div className="text-[11px] text-slate-500 font-medium leading-normal">
                       {card.subtext}
                     </div>
                   )}

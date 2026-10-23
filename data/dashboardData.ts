@@ -141,12 +141,12 @@ export const PILLARS_DATA: Record<string, PillarData> = {
     title: 'Pilar Pendidikan',
     subtitle: 'Revitalisasi Sekolah | Digitalisasi | SNT | Sekolah Garuda | Studio Guru',
     summaryIndicators: [
-      { label: 'Revitalisasi Satuan Pendidikan', target: '80.282 satuan pendidikan', achievement: '36.669', percent: 45.7, statusType: 'warning', note: '2025: T: 12.825 | C: 17.508' },
-      { label: 'SNT operasional', target: '35 satuan pendidikan', achievement: '17', percent: 48.6, statusType: 'warning' },
-      { label: 'Sekolah Unggul Garuda Baru', target: '4 satuan pendidikan', achievement: '3', percent: 75, statusType: 'normal' },
-      { label: 'Sekolah Unggul Garuda Transformasi', target: '30 satuan pendidikan', achievement: '42 (2026: 30 | 2025: 12)', percent: 100, statusType: 'success' },
-      { label: 'Digitalisasi Pendidikan', target: '727.436 unit', achievement: '727.436 (100%)', percent: 100, statusType: 'success', note: 'Berproses disalurkan' },
-      { label: 'Indeks Modal Manusia (IMM)', target: '0.57', achievement: '0,562', note: 'Capaian 2025' },
+      { label: 'Revitalisasi Satuan Pendidikan', target: '80.282 satuan pendidikan', achievement: '36.669', percent: 45.7, statusType: 'warning', note: 'Capaian 2026' },
+      { label: 'Sekolah Nasional Terintegrasi (SNT)', target: '35 SNT Operasional', achievement: '17', percent: 48.6, statusType: 'warning', note: 'Capaian 2026' },
+      { label: 'Sekolah Unggul Garuda Baru', target: '4 satuan pendidikan', achievement: '3', percent: 75, statusType: 'normal', note: 'Capaian 2026' },
+      { label: 'Sekolah Unggul Garuda Transformasi', target: '30 satuan pendidikan', achievement: '42', percent: 100, statusType: 'success', note: 'Capaian 2025 :12; Capaian 2026: 30' },
+      { label: 'Digitalisasi Pendidikan', target: '727.436 unit', achievement: '727.436', percent: 100, statusType: 'success', note: 'Capaian 2026 (Berproses disalurkan ke 316.535 sekolah)' },
+      { label: 'Studio Guru', target: 'Studio Guru beroperasi penuh', achievement: '1 studio pusat + 110 konten', statusType: 'normal', note: 'Launching 25 November 2026' },
     ],
     kendalaHighlights: [
       'Pendidikan Gratis (kepastian postur anggaran, skema pembiayaan & regulasi).',
