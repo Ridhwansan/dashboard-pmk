@@ -51,7 +51,7 @@ export const SubHeader: React.FC<SubHeaderProps> = ({
       return `Ikhtisar Indikator Program Prioritas — ${activePillarName}`;
     }
     if (isProfilWilayahActive) {
-      return 'Profil Wilayah & Pemetaan Geospasial';
+      return 'PKPN Wilayah';
     }
     return 'Pusat Pemantauan Program Prioritas Nasional';
   };

@@ -423,7 +423,7 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
   },
 
   // ==========================================================
-  // 2. PILAR KESEHATAN
+  // 2. PILAR KESEHATAN (9 Indikator Sesuai Ikhtisar)
   // ==========================================================
   {
     id: 'ckg_kesehatan',
@@ -432,7 +432,7 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     shortName: 'Cek Kesehatan Gratis',
     unit: 'juta jiwa',
     nationalValue: '105,98 Juta Jiwa (81,5%)',
-    target2026: '130 Juta Jiwa',
+    target2026: 'Target 2026: 130 Juta Jiwa',
     description:
       'Program pemeriksaan kesehatan gratis bagi seluruh masyarakat berdasarkan siklus hidup untuk mendeteksi dini penyakit dan faktor risiko kesehatan, serta mendorong pencegahan dan penanganan penyakit secara tepat waktu.',
     minVal: 45.0,
@@ -441,403 +441,564 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     getValue: (w) => {
       const heroVal = w.pillarDetails?.kesehatan?.heroValue || '81,5%';
       const num = parsePercent(heroVal, 81.5);
-      
-      let jumlahJiwa = '';
-      if (w.level === 'nasional') {
-        jumlahJiwa = '105,98 Juta Jiwa';
-      } else {
-        const ckgMatch = w.pillars?.kesehatan?.match(/CKG Terealisasi:?\s*([0-9.,]+\s*(?:Juta|Ribu)?\s*Jiwa)/i);
-        if (ckgMatch) {
-          jumlahJiwa = ckgMatch[1].trim();
-        } else if (w.pillarDetails?.kesehatan?.metric1?.value) {
-          jumlahJiwa = w.pillarDetails.kesehatan.metric1.value;
-        } else {
-          const calcVal = (Math.round((num / 100) * 3.1 * 10) / 10).toString().replace('.', ',');
-          jumlahJiwa = `${calcVal} Juta Jiwa`;
-        }
-      }
-
+      const valStr = w.level === 'nasional' ? '105,98 Juta Jiwa (81,5%)' : `${heroVal}`;
       return {
         num,
-        display: `${jumlahJiwa} (${heroVal})`,
-        label: 'Cakupan Peserta',
-        subtext: `Target: 130 Juta Jiwa · ${jumlahJiwa}`,
-        statusLabel: num >= 80 ? 'Sangat Baik' : num >= 65 ? 'Cukup' : 'Perlu Akselerasi Timur',
-        statusType: num >= 80 ? 'success' : num >= 65 ? 'normal' : 'warning',
+        display: valStr,
+        label: 'Cakupan Peserta CKG',
+        subtext: 'Target 2026: 130 Juta Jiwa',
+        statusLabel: num >= 80 ? 'Target Terlampaui' : 'Progresif',
+        statusType: 'success',
       };
     },
   },
   {
     id: 'tb_penemuan',
     pillarId: 'kesehatan',
-    name: 'Penuntasan Tuberkulosis',
-    shortName: 'Penuntasan TB',
+    name: 'Penemuan kasus TB',
+    shortName: 'Penemuan kasus TB',
     unit: 'kasus',
-    nationalValue: '656.517 kasus (67,5%)',
-    target2026: '972.000 kasus',
+    nationalValue: '663.455 kasus (68,3%)',
+    target2026: 'Target 2026: 972.000',
     description:
       'Program percepatan eliminasi tuberkulosis melalui peningkatan deteksi dini, penemuan kasus secara aktif, pemeriksaan, pengobatan hingga tuntas, serta pencegahan penularan untuk menurunkan kasus tuberkulosis.',
     minVal: 38.0,
     maxVal: 88.0,
     colorScheme: 'green',
     getValue: (w) => {
-      const baseNum = parsePercent(w.pillarDetails?.kesehatan?.heroValue, 63.5);
-      const num = Math.min(92, Math.max(35, Math.round((baseNum * 0.8 + 8) * 10) / 10));
-      const numStr = num.toString().replace('.', ',');
-
-      let kasusStr = '';
-      if (w.level === 'nasional') {
-        kasusStr = '656.517 kasus';
-      } else {
-        const tbMatch =
-          w.pillars?.kesehatan?.match(/TB:?\s*([0-9.,]+)/i) ||
-          w.pillarDetails?.kesehatan?.metric2?.value?.match(/([0-9.,]+)\s*kasus/i);
-        if (tbMatch) {
-          kasusStr = `${tbMatch[1]} kasus`;
-        } else {
-          const kasus = Math.round((num / 100) * 972000);
-          kasusStr = `${kasus.toLocaleString('id-ID')} kasus`;
-        }
-      }
-
+      const num = 68.3;
+      const display = w.level === 'nasional' ? '663.455 kasus (68,3%)' : 'Kasus TB Ternotifikasi';
       return {
         num,
-        display: `${kasusStr} (${numStr}%)`,
-        label: 'Notifikasi Kasus',
-        subtext: 'Target Nasional: 972.000 kasus',
-        statusLabel: num >= 70 ? 'Pelacakan Intensif' : 'Notifikasi Rendah',
-        statusType: num >= 70 ? 'success' : 'warning',
+        display,
+        label: 'Notifikasi Kasus TB',
+        subtext: 'Target 2026: 972.000',
+        statusLabel: 'Pelacakan Berjalan',
+        statusType: 'normal',
       };
     },
   },
   {
     id: 'rsud_spesialis',
     pillarId: 'kesehatan',
-    name: 'Revitalisasi Rumah Sakit Umum Daerah (RSUD)',
-    shortName: 'Revitalisasi RSUD',
+    name: 'Renovasi RSUD Tipe D ke C',
+    shortName: 'Renovasi RSUD Tipe D ke C',
     unit: 'RSUD',
-    nationalValue: '18 Konstruksi (90%)',
-    target2026: '20 RSUD (Kelas D ke C)',
+    nationalValue: 'Capaian 2025 :21 RSUD Capaian 2026: 18 RSUD proses konstruksi (90%)',
+    target2026: 'Target 2026: 20 RSUD',
     description:
-      'Program peningkatan kapasitas dan kualitas RSUD, terutama dari kelas D menjadi kelas C, melalui pembangunan dan peningkatan fasilitas, penyediaan alat kesehatan, serta penguatan tenaga medis untuk memperluas akses layanan kesehatan rujukan yang berkualitas.',
+      'Program peningkatan kapasitas dan kualitas RSUD, terutama dari kelas D menjadi kelas C, melalui pembangunan dan peningkatan fasilitas, penyediaan alat kesehatan, serta penguatan tenaga medis.',
     minVal: 50.0,
     maxVal: 100.0,
     colorScheme: 'green',
-    getValue: (w) => {
-      if (w.level === 'nasional') {
-        return {
-          num: 90,
-          display: '18 RSUD (90%)',
-          label: 'Kesiapan RS Rujukan',
-          subtext: 'Peningkatan Kelas D ke C & 7 Dokter Spesialis',
-          statusLabel: '18 dari 20 RSUD',
-          statusType: 'success',
-        };
-      }
-      const num = w.isPrioritas ? 68.0 : 92.0;
-      const count = w.isPrioritas ? 14 : 18;
-      const numStr = num.toString().replace('.', ',');
+    getValue: () => {
       return {
-        num,
-        display: `${count} RSUD (${numStr}%)`,
-        label: 'Kesiapan RS Rujukan',
-        subtext: 'Peningkatan Kelas D ke C & 7 Dokter Spesialis',
-        statusLabel: num >= 85 ? 'Spesialis Lengkap' : 'Kendala Tenaga Dokter',
-        statusType: num >= 85 ? 'success' : 'warning',
+        num: 90,
+        display: 'Capaian 2025 :21 RSUD; Capaian 2026: 18 RSUD proses konstruksi (90%)',
+        label: 'Kesiapan RSUD',
+        subtext: 'Target 2026: 20 RSUD · Target 2027: 66 RSUD',
+        statusLabel: '18 dari 20 RSUD Konstruksi',
+        statusType: 'success',
       };
     },
   },
   {
-    id: 'mbg_3b',
+    id: 'stunting_prev',
     pillarId: 'kesehatan',
-    name: 'MBG Ibu Hamil, Ibu Menyusui, dan Balita (3B)',
-    shortName: 'MBG 3B',
-    unit: '% sasaran',
-    nationalValue: '44,28%–86,87%',
-    target2026: '50% sasaran 3B',
-    description:
-      'Program pemberian makanan bergizi gratis kepada ibu hamil, ibu menyusui, dan balita untuk memenuhi kebutuhan gizi kelompok rentan, mendukung kesehatan ibu dan tumbuh kembang anak, serta mencegah stunting sejak dini.',
-    minVal: 35.0,
-    maxVal: 92.0,
-    colorScheme: 'green',
-    getValue: (w) => {
-      const num = w.isPrioritas ? 52.4 : 76.8;
-      const numStr = num.toString().replace('.', ',');
-      const sasaranPct = (Math.round(num * 0.5 * 10) / 10).toString().replace('.', ',');
-      return {
-        num,
-        display: `${sasaranPct}% sasaran (${numStr}%)`,
-        label: 'Cakupan MBG 3B',
-        subtext: 'Fokus Wilayah Rawan Stunting & 3T',
-        statusLabel: num >= 70 ? 'Cakupan Tinggi' : 'Refocusing BGN & Pemda',
-        statusType: num >= 70 ? 'success' : 'warning',
-      };
-    },
-  },
-
-  // ==========================================================
-  // 3. PILAR KETAHANAN BENCANA
-  // ==========================================================
-  {
-    id: 'rehabilitasi_sumatera',
-    pillarId: 'bencana',
-    name: 'Rehabilitasi dan Rekonstruksi Sumatera',
-    shortName: 'Rehab & Rekon Sumatera',
-    unit: 'unit / %',
-    nationalValue: 'Huntap 1.707 (4,3%) · Huntara 20.267 (99%)',
-    target2026: '39.501 Huntap · 20.544 Huntara',
-    description:
-      'Program percepatan pemulihan pascabencana di Provinsi Aceh, Sumatera Utara, dan Sumatera Barat melalui pembangunan kembali wilayah terdampak dengan pendekatan Build Back Better untuk mewujudkan hunian, infrastruktur, layanan dasar, dan kehidupan sosial ekonomi masyarakat yang lebih baik, aman, tangguh, dan berkelanjutan serta mengurangi risiko bencana di masa depan.',
-    minVal: 0,
-    maxVal: 100,
-    colorScheme: 'brown',
-    customRegionType: 'sumatera_rehab',
-    getValue: (w) => {
-      const isSumatera =
-        SUMATERA_REHAB_PROVINCES.includes(w.id) ||
-        SUMATERA_REHAB_KODE_BPS.includes(w.kodeBps);
-      if (isSumatera) {
-        return {
-          num: 85.0,
-          display: 'Wilayah Intervensi Program',
-          label: 'Rehabilitasi & Rekonstruksi',
-          subtext: 'Fokus: Aceh, Sumatera Utara, dan Sumatera Barat',
-          statusLabel: 'Lokasi Prioritas Bencana',
-          statusType: 'alert',
-        };
-      }
-      return {
-        num: 0,
-        display: 'Bukan Wilayah Intervensi Program',
-        label: 'Rehabilitasi & Rekonstruksi Sumatera',
-        subtext: 'Program khusus wilayah terdampak bencana Sumatera',
-        statusLabel: 'Area Putih (Di Luar Sasaran)',
-        statusType: 'normal',
-      };
-    },
-  },
-  {
-    id: 'huntap_bencana',
-    pillarId: 'bencana',
-    name: 'Hunian Tetap Pascabencana (Huntap)',
-    shortName: 'Huntap Relokasi',
+    name: 'Stunting',
+    shortName: 'Stunting',
     unit: '%',
-    nationalValue: '4,3% (1.707 unit)',
-    target2026: '39.501 unit (Kebutuhan: 57.027)',
-    description: 'Pembangunan rumah relokasi permanen tahan gempa di zona aman risiko bencana.',
-    minVal: 2.0,
+    nationalValue: '19,8% (Survei SKI 2024)',
+    target2026: 'Target 14% pada 2029',
+    description: 'Intervensi penurunan prevalensi stunting terintegrasi lintas kementerian.',
+    minVal: 10.0,
     maxVal: 35.0,
-    colorScheme: 'brown',
-    customRegionType: 'sumatera_rehab',
-    getValue: (w) => {
-      const isSumatera =
-        SUMATERA_REHAB_PROVINCES.includes(w.id) ||
-        SUMATERA_REHAB_KODE_BPS.includes(w.kodeBps);
-      if (isSumatera) {
-        const huntapStr = w.level === 'nasional' ? '1.707 unit (4,3%)' : '3.357 unit (8,5%)';
-        return {
-          num: w.level === 'nasional' ? 4.3 : 8.5,
-          display: huntapStr,
-          label: 'Realisasi Huntap',
-          subtext: 'Pembangunan Huntap di Kawasan Aman Relokasi',
-          statusLabel: 'Perlu Akselerasi Satgas',
-          statusType: 'alert',
-        };
-      }
+    isLowerBetter: true,
+    colorScheme: 'green',
+    getValue: () => {
       return {
-        num: 0,
-        display: 'Bukan Lokasi Huntap',
-        label: 'Huntap Pascabencana',
-        subtext: 'Program fokus di Aceh, Sumut, Sumbar',
-        statusLabel: 'Area Putih',
+        num: 19.8,
+        display: '19,8% (Survei SKI)',
+        label: 'Prevalensi Stunting',
+        subtext: 'Target 14% pada 2029',
+        statusLabel: 'Survei Kesehatan Indonesia',
         statusType: 'normal',
       };
     },
   },
   {
-    id: 'huntara_bencana',
-    pillarId: 'bencana',
-    name: 'Kesiapan Hunian Antara (Huntara)',
-    shortName: 'Huntara Terbangun',
-    unit: '%',
-    nationalValue: '20.267 unit (99%)',
-    target2026: '20.544 unit',
-    description: 'Penyediaan tempat tinggal darurat layak huni bagi warga penyintas bencana alam.',
-    minVal: 65.0,
-    maxVal: 100.0,
-    colorScheme: 'brown',
-    customRegionType: 'sumatera_rehab',
-    getValue: (w) => {
-      const isSumatera =
-        SUMATERA_REHAB_PROVINCES.includes(w.id) ||
-        SUMATERA_REHAB_KODE_BPS.includes(w.kodeBps);
-      if (isSumatera) {
-        return {
-          num: 99.0,
-          display: '20.267 unit (99,0%)',
-          label: 'Kesiapan Huntara',
-          subtext: 'Target 2026: 20.544 unit terbangun',
-          statusLabel: 'Tersedia Lengkap',
-          statusType: 'success',
-        };
-      }
+    id: 'mbg_balita',
+    pillarId: 'kesehatan',
+    name: 'MBG balita non-PAUD',
+    shortName: 'MBG balita',
+    unit: 'juta jiwa',
+    nationalValue: '4,89 juta jiwa (29,2% sasaran)',
+    target2026: 'Target 2026: 16,7 juta jiwa',
+    description: 'Pemberian makanan bergizi gratis untuk balita non-PAUD.',
+    minVal: 20.0,
+    maxVal: 80.0,
+    colorScheme: 'green',
+    getValue: () => {
       return {
-        num: 0,
-        display: 'Bukan Lokasi Huntara',
-        label: 'Huntara Pascabencana',
-        subtext: 'Program fokus di Aceh, Sumut, Sumbar',
-        statusLabel: 'Area Putih',
+        num: 29.2,
+        display: '4,89 juta jiwa (29,2% dari sasaran)',
+        label: 'Sasaran Balita',
+        subtext: 'Target 2026: 16,7 juta jiwa',
+        statusLabel: '29,2% Sasaran',
         statusType: 'normal',
       };
     },
   },
   {
-    id: 'infrastruktur_bencana',
-    pillarId: 'bencana',
-    name: 'Pemulihan Infrastruktur & Sabodam',
-    shortName: 'Infrastruktur Bencana',
-    unit: '%',
-    nationalValue: '99% (Realisasi Berjalan)',
-    target2026: '100% Rekonstruksi',
-    description: 'Pembangunan sabodam lahar dingin, perbaikan jembatan vital, dan normalisasi tanggul sungai.',
-    minVal: 65.0,
-    maxVal: 100.0,
-    colorScheme: 'brown',
-    getValue: (w) => {
-      const num = w.isPrioritas ? 82.0 : 96.5;
+    id: 'mbg_ibu_hamil',
+    pillarId: 'kesehatan',
+    name: 'MBG ibu hamil',
+    shortName: 'MBG ibu hamil',
+    unit: 'juta jiwa',
+    nationalValue: '0,65 juta jiwa (26,3% sasaran)',
+    target2026: 'Target 2026: 2,49 juta jiwa',
+    description: 'Pemberian makanan bergizi gratis untuk ibu hamil.',
+    minVal: 20.0,
+    maxVal: 80.0,
+    colorScheme: 'green',
+    getValue: () => {
       return {
-        num,
-        display: `${num.toString().replace('.', ',')}%`,
-        label: 'Fasilitas Pulih',
-        subtext: 'Konektivitas Jalur Evakuasi & Sabodam',
-        statusLabel: num >= 90 ? 'Rekonstruksi Optimal' : 'Pekerjaan Fisik Berjalan',
-        statusType: num >= 90 ? 'success' : 'normal',
+        num: 26.3,
+        display: '0,65 juta jiwa (26,3% dari sasaran)',
+        label: 'Sasaran Ibu Hamil',
+        subtext: 'Target 2026: 2,49 juta jiwa',
+        statusLabel: '26,3% Sasaran',
+        statusType: 'normal',
       };
     },
   },
   {
-    id: 'mitigasi_bencana',
-    pillarId: 'bencana',
-    name: 'Kesiapsiagaan & Jalur Evakuasi (EWS)',
-    shortName: 'Mitigasi & EWS',
-    unit: '%',
-    nationalValue: '88% Kesiapan Daerah',
-    target2026: '100% Peringatan Dini Terpadu',
-    description: 'Integrasi sistem deteksi dini multi-bahaya (Early Warning System for All) dan kesiapan logistik BPBD.',
-    minVal: 55.0,
-    maxVal: 98.0,
-    colorScheme: 'brown',
-    getValue: (w) => {
-      const num = w.isPrioritas ? 72.0 : 90.0;
+    id: 'mbg_ibu_menyusui',
+    pillarId: 'kesehatan',
+    name: 'MBG ibu menyusui',
+    shortName: 'MBG ibu menyusui',
+    unit: 'juta jiwa',
+    nationalValue: '1,77 juta jiwa (64,5% sasaran)',
+    target2026: 'Target 2026: 2,75 juta jiwa',
+    description: 'Pemberian makanan bergizi gratis untuk ibu menyusui.',
+    minVal: 30.0,
+    maxVal: 90.0,
+    colorScheme: 'green',
+    getValue: () => {
       return {
-        num,
-        display: `${num.toString().replace('.', ',')}%`,
-        label: 'Indeks Kesiapsiagaan',
-        subtext: 'Sirine Aktif & SOP Evakuasi Warga',
-        statusLabel: num >= 85 ? 'Siap Siaga' : 'Perlu Penguatan Alat EWS',
-        statusType: num >= 85 ? 'success' : 'warning',
+        num: 64.5,
+        display: '1,77 juta jiwa (64,5% dari sasaran)',
+        label: 'Sasaran Ibu Menyusui',
+        subtext: 'Target 2026: 2,75 juta jiwa',
+        statusLabel: '64,5% Sasaran',
+        statusType: 'success',
+      };
+    },
+  },
+  {
+    id: 'revitalisasi_puskesmas',
+    pillarId: 'kesehatan',
+    name: 'Revitalisasi Puskesmas',
+    shortName: 'Revitalisasi Puskesmas',
+    unit: 'puskesmas',
+    nationalValue: 'Target 2027',
+    target2026: 'Target 2027: 10.000 puskesmas',
+    description: 'Standardisasi gedung, alat laboratorium, dan tenaga medis di 10.000 Puskesmas.',
+    minVal: 0,
+    maxVal: 10000,
+    colorScheme: 'green',
+    getValue: () => {
+      return {
+        num: 10000,
+        display: 'Target 2027',
+        label: 'Revitalisasi Puskesmas',
+        subtext: 'Target 2027: 10.000 puskesmas',
+        statusLabel: 'Perencanaan 2027',
+        statusType: 'normal',
+      };
+    },
+  },
+  {
+    id: 'revitalisasi_rs',
+    pillarId: 'kesehatan',
+    name: 'Revitalisasi RS',
+    shortName: 'Revitalisasi RS',
+    unit: 'RS',
+    nationalValue: 'Target 2027-2028',
+    target2026: 'Target 2027-2028: 450 RS',
+    description: 'Peningkatan kapabilitas 450 RS rujukan regional penanganan layanan KJSU.',
+    minVal: 0,
+    maxVal: 450,
+    colorScheme: 'green',
+    getValue: () => {
+      return {
+        num: 450,
+        display: 'Target 2027-2028',
+        label: 'Revitalisasi RS Rujukan',
+        subtext: 'Target 2027-2028: 450 RS',
+        statusLabel: 'Perencanaan 2027–2028',
+        statusType: 'normal',
       };
     },
   },
 
   // ==========================================================
-  // 4. PILAR PENURUNAN KEMISKINAN
+  // 3. PILAR KETAHANAN BENCANA (6 Indikator Sesuai Ikhtisar)
   // ==========================================================
   {
-    id: 'tingkat_kemiskinan_pilar',
+    id: 'jumlah_kejadian_bencana',
+    pillarId: 'bencana',
+    name: 'Jumlah kejadian bencana',
+    shortName: 'Jumlah kejadian bencana',
+    unit: 'kejadian',
+    nationalValue: '2.100 kejadian (s.d. Okt 2026)',
+    target2026: '2025: 4.727 kejadian',
+    description: 'Pemantauan kesiapsiagaan darurat bencana nasional.',
+    minVal: 0,
+    maxVal: 5000,
+    colorScheme: 'brown',
+    getValue: () => {
+      return {
+        num: 2100,
+        display: '2.100 kejadian',
+        label: 'Kejadian Bencana',
+        subtext: '2025: 4.727 kejadian · Tercatat s.d. Okt 2026',
+        statusLabel: 'Posisi s.d. Okt 2026',
+        statusType: 'normal',
+      };
+    },
+  },
+  {
+    id: 'huntara_sumatera',
+    pillarId: 'bencana',
+    name: 'Pembangunan Huntara Sumatera',
+    shortName: 'Huntara Sumatera',
+    unit: 'unit',
+    nationalValue: '20.770 unit (99,8%)',
+    target2026: 'Target 2026: 20.803',
+    description: 'Penyediaan hunian sementara pengungsi pascabencana.',
+    minVal: 0,
+    maxVal: 21000,
+    colorScheme: 'brown',
+    customRegionType: 'sumatera_rehab',
+    getValue: () => {
+      return {
+        num: 99.8,
+        display: '20.770 unit (99,8%)',
+        label: 'Kesiapan Huntara',
+        subtext: 'Target 2026: 20.803 unit',
+        statusLabel: 'Hampir Tuntas (99,8%)',
+        statusType: 'success',
+      };
+    },
+  },
+  {
+    id: 'huntap_sumatera',
+    pillarId: 'bencana',
+    name: 'Pembangunan Huntap Sumatera',
+    shortName: 'Huntap Sumatera',
+    unit: 'unit',
+    nationalValue: '1.012 unit (2,3%)',
+    target2026: 'Target 2026: 44.121',
+    description: 'Pembangunan hunian tetap relokasi bencana di kawasan aman.',
+    minVal: 0,
+    maxVal: 45000,
+    colorScheme: 'brown',
+    customRegionType: 'sumatera_rehab',
+    getValue: () => {
+      return {
+        num: 2.3,
+        display: '1.012 unit (2,3%)',
+        label: 'Realisasi Huntap',
+        subtext: 'Target 2026: 44.121 unit',
+        statusLabel: 'Dalam Percepatan Satgas',
+        statusType: 'alert',
+      };
+    },
+  },
+  {
+    id: 'provinsi_karhutla',
+    pillarId: 'bencana',
+    name: 'Provinsi Prioritas Terdampak Karhutla',
+    shortName: 'Provinsi Karhutla',
+    unit: 'Provinsi',
+    nationalValue: '6 Provinsi',
+    target2026: 'Fokus pengendalian & pencegahan terpadu',
+    description: 'Wilayah prioritas kerawanan kebakaran hutan dan lahan.',
+    minVal: 1,
+    maxVal: 6,
+    colorScheme: 'brown',
+    getValue: () => {
+      return {
+        num: 6,
+        display: '6 Provinsi',
+        label: 'Provinsi Prioritas Karhutla',
+        subtext: 'Data 13 Oktober 2026',
+        statusLabel: 'Fokus Pengendalian Terpadu',
+        statusType: 'warning',
+      };
+    },
+  },
+  {
+    id: 'luas_karhutla',
+    pillarId: 'bencana',
+    name: 'Luas Karhutla yang sudah dipadamkan',
+    shortName: 'Luas Pemadaman Karhutla',
+    unit: 'Ha',
+    nationalValue: '129.434,18 Ha (99,5%)',
+    target2026: 'Jumlah Luas Karhutla: 130.097,79 Ha',
+    description: 'Efektivitas satgas pemadaman karhutla tuntas 99,5%.',
+    minVal: 0,
+    maxVal: 135000,
+    colorScheme: 'brown',
+    getValue: () => {
+      return {
+        num: 99.5,
+        display: '129.434,18 Ha (99,5%)',
+        label: 'Luas Dipadamkan',
+        subtext: 'Total: 130.097,79 Ha · Proses: 663,61 Ha',
+        statusLabel: 'Tuntas 99,5%',
+        statusType: 'success',
+      };
+    },
+  },
+  {
+    id: 'kerugian_bencana',
+    pillarId: 'bencana',
+    name: 'Kerugian bencana',
+    shortName: 'Kerugian bencana',
+    unit: '% PDB',
+    nationalValue: '— % PDB',
+    target2026: 'Target 2026: 0,136',
+    description: 'Monitoring dampak kerugian ekonomi terhadap Produk Domestik Bruto.',
+    minVal: 0,
+    maxVal: 1,
+    isLowerBetter: true,
+    colorScheme: 'brown',
+    getValue: () => {
+      return {
+        num: 0.136,
+        display: '— % PDB',
+        label: 'Kerugian Ekonomi',
+        subtext: 'Target 2026: 0,136 % PDB',
+        statusLabel: 'Dalam Batas Aman',
+        statusType: 'normal',
+      };
+    },
+  },
+
+  // ==========================================================
+  // 4. PILAR PENURUNAN KEMISKINAN (9 Indikator Sesuai Ikhtisar)
+  // ==========================================================
+  {
+    id: 'tingkat_kemiskinan',
     pillarId: 'kemiskinan',
-    name: 'Tingkat Kemiskinan Makro Wilayah',
-    shortName: 'Tingkat Kemiskinan',
+    name: 'Tingkat kemiskinan',
+    shortName: 'Tingkat kemiskinan',
     unit: '%',
     nationalValue: '8,07%',
-    target2026: '6,5–7,5%',
-    description: 'Persentase penduduk miskin dengan target penurunan bertahap menuju RPJMN 2029 (4,5–5,0%).',
+    target2026: 'Target 2026: 6,5–7,5',
+    description: 'Pemantauan laju penurunan kemiskinan nasional.',
     minVal: 4.0,
     maxVal: 22.0,
     isLowerBetter: true,
     colorScheme: 'red',
     getValue: (w) => {
-      const num = parsePercent(w.tingkatKemiskinan, 8.07);
+      const val = w.tingkatKemiskinan || '8,07%';
+      const num = parsePercent(val, 8.07);
       return {
         num,
-        display: w.tingkatKemiskinan,
+        display: `${val} (% penduduk)`,
         label: 'Tingkat Kemiskinan',
-        subtext: `Target 2026: 6,5–7,5% · Ekstrem: ${w.kemiskinanEkstrem}`,
-        statusLabel: num <= 7.5 ? 'Di Bawah Rata-rata' : num <= 11.5 ? 'Waspada Disparitas' : 'Kantong Kemiskinan',
-        statusType: num <= 7.5 ? 'success' : num <= 11.5 ? 'warning' : 'alert',
+        subtext: 'Target 2026: 6,5–7,5% · Capaian 2026',
+        statusLabel: num <= 7.5 ? 'Sesuai Target' : 'Waspada Disparitas',
+        statusType: num <= 7.5 ? 'success' : 'warning',
       };
     },
   },
   {
-    id: 'kemiskinan_ekstrem_pilar',
+    id: 'kemiskinan_ekstrem',
     pillarId: 'kemiskinan',
-    name: 'Kemiskinan Ekstrem Wilayah',
-    shortName: 'Kemiskinan Ekstrem',
+    name: 'Kemiskinan ekstrem',
+    shortName: 'Kemiskinan ekstrem',
     unit: '%',
-    nationalValue: '0,83%',
-    target2026: '0–0,5%',
-    description: 'Kelompok masyarakat dengan pengeluaran di bawah garis kemiskinan ekstrem PPP $2,15/hari.',
+    nationalValue: '0.78% (85%)',
+    target2026: 'Target 2026: 0–0,5',
+    description: 'Target penurunan kemiskinan ekstrem mendekati 0%.',
     minVal: 0.1,
     maxVal: 5.5,
     isLowerBetter: true,
     colorScheme: 'red',
     getValue: (w) => {
-      const num = parsePercent(w.kemiskinanEkstrem, 0.83);
+      const val = w.level === 'nasional' ? '0.78% (% penduduk)' : (w.kemiskinanEkstrem || '0,83%');
       return {
-        num,
-        display: w.kemiskinanEkstrem,
+        num: 0.78,
+        display: val,
         label: 'Kemiskinan Ekstrem',
-        subtext: 'Target Nol Persen (0–0,5%)',
-        statusLabel: num <= 0.5 ? 'Target Tercapai' : 'Perlu Bansos Khusus',
-        statusType: num <= 0.5 ? 'success' : 'alert',
+        subtext: 'Target 2026: 0–0,5 · Capaian 2025',
+        statusLabel: 'Menuju 0%',
+        statusType: 'normal',
       };
     },
   },
   {
-    id: 'dtsen_desil_pilar',
+    id: 'bantuan_permakanan_lansia',
     pillarId: 'kemiskinan',
-    name: 'Cakupan Desil 1–2 Terpadu DTSEN',
-    shortName: 'Cakupan DTSEN Desil 1–2',
-    unit: '%',
-    nationalValue: '100% Pemadanan BPS',
-    target2026: 'Desil 1–2 Akurat',
-    description: 'Pemutakhiran Data Terpadu Sasaran Perlindungan Sosial bagi lansia tunggal dan penyandang disabilitas.',
-    minVal: 60.0,
-    maxVal: 98.0,
+    name: 'Bantuan permakanan lansia',
+    shortName: 'Permakanan lansia',
+    unit: 'orang penerima',
+    nationalValue: '116.754 orang penerima',
+    target2026: 'Target 2027 ≥116.754 | 2026 terhenti',
+    description: 'Dalam proses peralihan & sinkronisasi program ke BGN.',
+    minVal: 0,
+    maxVal: 150000,
     colorScheme: 'red',
-    getValue: (w) => {
-      const num = w.isPrioritas ? 74.0 : 93.0;
+    getValue: () => {
       return {
-        num,
-        display: `${num.toString().replace('.', ',')}%`,
-        label: 'Validasi DTSEN',
-        subtext: 'Fokus MBG Lansia & Disabilitas',
-        statusLabel: num >= 85 ? 'Data Padan 100%' : 'Verval Terus Berjalan',
-        statusType: num >= 85 ? 'success' : 'normal',
+        num: 116754,
+        display: '116.754 orang penerima',
+        label: 'Penerima Lansia',
+        subtext: 'Target 2027 ≥116.754 | 2026 terhenti · Capaian 2025',
+        statusLabel: 'Proses Sinkronisasi BGN',
+        statusType: 'warning',
       };
     },
   },
   {
-    id: 'graduasi_bansos_pilar',
+    id: 'bantuan_permakanan_disabilitas',
     pillarId: 'kemiskinan',
-    name: 'Graduasi Bansos & MBG Kantong Kemiskinan',
-    shortName: 'Graduasi Mandiri',
-    unit: '%',
-    nationalValue: '8,2% Lolos Graduasi',
-    target2026: '10,0% Graduasi Mandiri',
-    description: 'Kemandirian ekonomi keluarga rentan melalui program pemberdayaan dan permodalan usaha terpadu.',
-    minVal: 4.0,
-    maxVal: 15.0,
+    name: 'Bantuan permakanan disabilitas',
+    shortName: 'Permakanan disabilitas',
+    unit: 'orang penerima',
+    nationalValue: '36.000 orang penerima',
+    target2026: 'Target 2027 ≥36.000 | 2026 terhenti',
+    description: 'Dalam proses peralihan & sinkronisasi program ke BGN.',
+    minVal: 0,
+    maxVal: 50000,
     colorScheme: 'red',
-    getValue: (w) => {
-      const num = w.isPrioritas ? 5.2 : 9.8;
+    getValue: () => {
       return {
-        num,
-        display: `${num.toString().replace('.', ',')}%`,
-        label: 'Tingkat Graduasi',
-        subtext: 'Keluarga Binaan Berhasil Mandiri',
-        statusLabel: num >= 8.0 ? 'Pemberdayaan Berhasil' : 'Butuh Pendampingan PKH',
-        statusType: num >= 8.0 ? 'success' : 'warning',
+        num: 36000,
+        display: '36.000 orang penerima',
+        label: 'Penerima Disabilitas',
+        subtext: 'Target 2027 ≥36.000 | 2026 terhenti · Capaian 2025',
+        statusLabel: 'Proses Sinkronisasi BGN',
+        statusType: 'warning',
+      };
+    },
+  },
+  {
+    id: 'cakupan_lansia_desil',
+    pillarId: 'kemiskinan',
+    name: 'Cakupan lansia desil 1–5',
+    shortName: 'Lansia desil 1–5',
+    unit: '% sasaran',
+    nationalValue: '0,66% sasaran',
+    target2026: '2026 belum tersedia',
+    description: 'Perlindungan sosial & jaminan kesejahteraan lanjut usia.',
+    minVal: 0,
+    maxVal: 2,
+    colorScheme: 'red',
+    getValue: () => {
+      return {
+        num: 0.66,
+        display: '0,66% sasaran',
+        label: 'Cakupan Lansia',
+        subtext: '2026 belum tersedia · Capaian 2025',
+        statusLabel: 'Capaian 2025',
+        statusType: 'normal',
+      };
+    },
+  },
+  {
+    id: 'cakupan_disabilitas_desil',
+    pillarId: 'kemiskinan',
+    name: 'Cakupan disabilitas desil 1–5',
+    shortName: 'Disabilitas desil 1–5',
+    unit: '% sasaran',
+    nationalValue: '0,41% sasaran',
+    target2026: '2026 belum tersedia',
+    description: 'Perlindungan sosial & pemenuhan hak penyandang disabilitas.',
+    minVal: 0,
+    maxVal: 2,
+    colorScheme: 'red',
+    getValue: () => {
+      return {
+        num: 0.41,
+        display: '0,41% sasaran',
+        label: 'Cakupan Disabilitas',
+        subtext: '2026 belum tersedia · Capaian 2025',
+        statusLabel: 'Capaian 2025',
+        statusType: 'normal',
+      };
+    },
+  },
+  {
+    id: 'bos_reguler',
+    pillarId: 'kemiskinan',
+    name: 'Bantuan Operasional Sekolah Reguler',
+    shortName: 'BOS Reguler',
+    unit: 'sekolah penerima',
+    nationalValue: '432.654 (99%)',
+    target2026: 'Target 2026: 432.716',
+    description: 'Penyaluran dana BOS reguler sekolah dasar & menengah.',
+    minVal: 0,
+    maxVal: 450000,
+    colorScheme: 'red',
+    getValue: () => {
+      return {
+        num: 99.9,
+        display: '432.654 (99%) sekolah',
+        label: 'Sekolah Penerima BOS',
+        subtext: 'Target 2026: 432.716 · Capaian 2026 (99,9%)',
+        statusLabel: 'Tersalurkan 99,9%',
+        statusType: 'success',
+      };
+    },
+  },
+  {
+    id: 'bop_pendidikan',
+    pillarId: 'kemiskinan',
+    name: 'Bantuan Operasional Pendidikan',
+    shortName: 'BOP Pendidikan',
+    unit: 'Lembaga Penerima',
+    nationalValue: '396.618 lembaga (97,5%)',
+    target2026: 'Target 2026: 406.741',
+    description: 'Dukungan operasional PAUD & pendidikan non-formal.',
+    minVal: 0,
+    maxVal: 420000,
+    colorScheme: 'red',
+    getValue: () => {
+      return {
+        num: 97.5,
+        display: '396.618 lembaga (97,5%)',
+        label: 'Lembaga Penerima BOP',
+        subtext: 'Target 2026: 406.741 · Capaian 2026 (97,5%)',
+        statusLabel: 'Tersalurkan 97,5%',
+        statusType: 'success',
+      };
+    },
+  },
+  {
+    id: 'bos_madrasah',
+    pillarId: 'kemiskinan',
+    name: 'Bantuan Operasional Sekolah Madrasah',
+    shortName: 'BOS Madrasah',
+    unit: 'juta penerima',
+    nationalValue: '10.36 juta penerima (100%)',
+    target2026: 'Target 2026: 10,36 juta',
+    description: 'Penyaluran BOS madrasah di lingkungan Kementerian Agama.',
+    minVal: 0,
+    maxVal: 15,
+    colorScheme: 'red',
+    getValue: () => {
+      return {
+        num: 100,
+        display: '10.36 juta penerima (100%)',
+        label: 'Penerima BOS Madrasah',
+        subtext: 'Target 2026 · Capaian 2026 (100%)',
+        statusLabel: 'Tersalurkan 100%',
+        statusType: 'success',
       };
     },
   },

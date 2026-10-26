@@ -18,12 +18,12 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
       {/* 1. Header with Official Kemenko PMK Emblem (Navbar is removed on landing) */}
       <div className="text-center space-y-4 max-w-2xl mx-auto flex flex-col items-center">
         <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg mb-1">
-          <div className="relative h-7 w-7 sm:h-8 sm:w-8 shrink-0 overflow-hidden rounded-full bg-white/20 p-0.5">
+          <div className="relative h-7 w-7 sm:h-8 sm:w-8 shrink-0 overflow-hidden rounded-full shadow-2xs">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/images/logo-kemenko-pmk.png"
+              src="/images/logo-kemenko-pmk-official.png"
               alt="Logo Kemenko PMK"
-              className="h-full w-full object-contain"
+              className="h-full w-full object-cover scale-105"
             />
           </div>
           <span className="text-xs sm:text-sm font-extrabold text-white tracking-wider uppercase">
@@ -32,15 +32,11 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
         </div>
 
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
-          Pusat Pemantauan Program Prioritas Nasional
+          Pusat Pemantauan Program Kerja Prioritas Nasional
         </h1>
 
-        <p className="text-sm sm:text-base text-slate-200 font-normal leading-relaxed max-w-xl">
-          Pilih fokus analisis dashboard untuk memantau capaian indikator atau eksplorasi geospasial wilayah.
-        </p>
-
-        <p className="text-xs text-slate-300 font-medium pt-0.5">
-          Pembaruan data: {DASHBOARD_META.cutoffDate} · RPJMN 2025–2029
+        <p className="text-xs sm:text-sm text-slate-300 font-medium pt-1">
+          Pembaruan data: {DASHBOARD_META.cutoffDate}
         </p>
       </div>
 
@@ -106,7 +102,7 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
 
             <div className="space-y-3">
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 group-hover:text-emerald-900 transition-colors tracking-tight">
-                Profil Wilayah
+                PKPN Wilayah
               </h2>
 
               <p className="text-sm text-slate-600 font-medium leading-relaxed">
@@ -120,7 +116,7 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
               Peta Layar Penuh
             </span>
             <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 group-hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-all group-hover:translate-x-1">
-              <span>Buka Profil Wilayah</span>
+              <span>Buka PKPN Wilayah</span>
               <ArrowRight className="h-4 w-4" />
             </div>
           </div>

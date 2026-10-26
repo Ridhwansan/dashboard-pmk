@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft,
   ChevronDown,
@@ -25,6 +25,8 @@ interface ProgramDetailPageViewProps {
   program: ProgramDetailData;
   onBack: () => void;
   category?: string;
+  initialSection?: 'overview' | 'kendala';
+  highlightKendalaId?: string | number;
 }
 
 const MONTH_SHORT = [
@@ -123,7 +125,22 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   program,
   onBack,
   category = 'PKPN',
+  initialSection,
+  highlightKendalaId,
 }) => {
+  // Auto-scroll to kendala section if requested from Kendala list tab
+  useEffect(() => {
+    if (initialSection === 'kendala') {
+      const timer = setTimeout(() => {
+        const el = document.getElementById('kendala-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [initialSection]);
+
   // Default view is 'tahunan' (2025–2029) as requested
   const [tableType, setTableType] = useState<'tahunan' | 'bulanan'>('tahunan');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
@@ -405,9 +422,9 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         </div>
       </div>
 
-      {/* 2. PROGRAM OVERVIEW & 3 KPI STAT CARDS */}
+      {/* 2. PROGRAM OVERVIEW & 3 FOCUSED KPI STAT CARDS (Gambar 4) */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200/90 shadow-2xs">
               {category || 'PKPN'}
@@ -416,44 +433,42 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
             {program.title}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            Pilar {program.pillarTitle} · Pelaksana: {program.picKementerian}
-          </p>
-        </div>
-
-        {/* Factual description container */}
-        <div className="bg-slate-50/90 rounded-2xl p-5 sm:p-6 border border-slate-200/80 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Deskripsi Program
-            </span>
-          </div>
-          <p className="text-sm sm:text-base text-slate-800 font-medium leading-relaxed">
+          {/* Program explanation directly below the title, without gray box or "Deskripsi Program" label */}
+          <p className="text-sm sm:text-base text-slate-600 font-normal leading-relaxed max-w-4xl">
             {program.description}
           </p>
         </div>
 
-        {/* 3-Metric Summary Strip */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-5 border-t border-slate-100">
-          <div className="space-y-1">
-            <span className="text-xs font-semibold text-slate-500 block">Target 2026</span>
-            <span className="text-xl sm:text-2xl font-extrabold text-slate-900 block tracking-tight">
+        {/* 3 Prominent KPI Stat Cards for Focus */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+          {/* Card 1: Target 2026 */}
+          <div className="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80 space-y-2 shadow-2xs">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              Target 2026
+            </span>
+            <span className="text-xl sm:text-2xl font-black text-slate-900 block tracking-tight">
               {program.target2026}
             </span>
           </div>
-          <div className="space-y-1">
-            <span className="text-xs font-semibold text-slate-500 block">Realisasi Berjalan</span>
-            <span
-              className="text-xl sm:text-2xl font-extrabold text-blue-900 block tracking-tight"
-            >
+
+          {/* Card 2: Realisasi Berjalan */}
+          <div className="bg-blue-50/40 rounded-2xl p-5 border border-blue-200/70 space-y-2 shadow-2xs">
+            <span className="text-[11px] font-bold text-blue-900/70 uppercase tracking-wider block">
+              Realisasi Berjalan
+            </span>
+            <span className="text-xl sm:text-2xl font-black text-blue-900 block tracking-tight">
               {program.currentValue === '—' || !program.currentValue
                 ? '—'
                 : `${program.currentValue} ${program.unit}`}
             </span>
           </div>
-          <div className="space-y-1">
-            <span className="text-xs font-semibold text-slate-500 block">Persentase Capaian</span>
-            <span className="text-xl sm:text-2xl font-extrabold text-emerald-700 block tracking-tight">
+
+          {/* Card 3: Persentase Capaian */}
+          <div className="bg-emerald-50/40 rounded-2xl p-5 border border-emerald-200/70 space-y-2 shadow-2xs">
+            <span className="text-[11px] font-bold text-emerald-900/70 uppercase tracking-wider block">
+              Persentase Capaian
+            </span>
+            <span className="text-xl sm:text-2xl font-black text-emerald-700 block tracking-tight">
               {summaryMetrics.avgPct > 0
                 ? `${summaryMetrics.avgPct}%`
                 : program.status.includes('%')
@@ -565,7 +580,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                       Capaian (C)
                     </th>
                     <th className="py-3.5 px-4 text-center min-w-[150px]">Persentase Capaian</th>
-                    <th className="py-3.5 px-4 min-w-[220px]">Catatan Pelaksanaan</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
@@ -668,10 +682,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                             <span className="text-slate-300">—</span>
                           )}
                         </td>
-
-                        <td className="py-3.5 px-4 text-slate-600 text-xs">
-                          {note}
-                        </td>
                       </tr>
                     );
                   })}
@@ -694,7 +704,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                       Capaian (C)
                     </th>
                     <th className="py-3.5 px-4 text-center min-w-[150px]">Persentase Capaian</th>
-                    <th className="py-3.5 px-4 min-w-[200px]">Catatan Pelaksanaan</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
@@ -778,13 +787,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                           ) : (
                             <span className="text-slate-300">—</span>
                           )}
-                        </td>
-                        <td className="py-3.5 px-4 text-slate-600 text-xs">
-                          {m.note !== undefined
-                            ? m.note
-                            : m.capaian !== null
-                            ? 'Laporan diverifikasi'
-                            : 'Menunggu periode berjalan'}
                         </td>
                       </tr>
                     );
@@ -1471,7 +1473,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       </div>
 
       {/* 5. KENDALA PELAKSANAAN & TINDAK LANJUT */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
+      <div id="kendala-section" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6 scroll-mt-6">
         <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
           <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
             <AlertCircle className="w-4.5 h-4.5" />
@@ -1495,36 +1497,71 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {resolvedKendalaList.map((item, idx) => (
-              <div key={item.id || idx} className="py-5 first:pt-0 last:pb-0 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <h4 className="text-sm sm:text-base font-bold text-slate-900">
-                    {item.title}
-                  </h4>
-                </div>
+            {resolvedKendalaList.map((item, idx) => {
+              const isHighlighted =
+                highlightKendalaId !== undefined &&
+                (item.id === highlightKendalaId ||
+                  String(item.id) === String(highlightKendalaId));
 
-                {/* 2 Clean Columns with Left Accent Borders */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-1">
-                  <div className="border-l-2 border-amber-400 pl-4 space-y-1.5">
-                    <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider block">
-                      Kendala Pelaksanaan
-                    </span>
-                    <div className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed whitespace-pre-line">
-                      {item.kendala}
+              return (
+                <div
+                  key={item.id || idx}
+                  className={`py-5 first:pt-0 last:pb-0 space-y-4 rounded-2xl transition-all duration-300 ${
+                    isHighlighted
+                      ? 'p-4 bg-amber-50/40 ring-2 ring-amber-400/80 shadow-xs'
+                      : ''
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm sm:text-base font-bold text-slate-900">
+                        {item.title}
+                      </h4>
+                      {isHighlighted && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+                          Fokus Isu Terpilih
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  <div className="border-l-2 border-blue-500 pl-4 space-y-1.5">
-                    <span className="text-[11px] font-bold text-blue-950 uppercase tracking-wider block">
-                      Tindak Lanjut
-                    </span>
-                    <div className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed whitespace-pre-line">
-                      {item.tindakLanjut}
+                  {/* 2 Clean Columns with Left Accent Borders */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-1">
+                    <div className="border-l-2 border-amber-400 pl-4 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider block">
+                          Kendala Pelaksanaan
+                        </span>
+                        {item.tanggalKendala && (
+                          <span className="text-[11px] text-slate-500 font-medium">
+                            {item.tanggalKendala}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed whitespace-pre-line">
+                        {item.kendala}
+                      </div>
+                    </div>
+
+                    <div className="border-l-2 border-blue-500 pl-4 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-blue-950 uppercase tracking-wider block">
+                          Tindak Lanjut
+                        </span>
+                        {item.tanggalTindakLanjut && (
+                          <span className="text-[11px] text-slate-500 font-medium">
+                            {item.tanggalTindakLanjut}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed whitespace-pre-line">
+                        {item.tindakLanjut}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

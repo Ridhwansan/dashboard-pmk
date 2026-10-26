@@ -223,34 +223,86 @@ export const WilayahSidePanel: React.FC<WilayahSidePanelProps> = ({
                           {ind.name}
                         </div>
 
-                        {/* Clean 2-Column: Target vs Capaian */}
-                        <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-slate-100">
-                          {/* Target */}
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                              Target
-                            </span>
-                            <span
-                              className="text-xs font-bold text-slate-700 leading-snug tabular-nums mt-0.5 break-words"
-                              title={ind.target2026}
-                            >
-                              {ind.target2026}
-                            </span>
-                          </div>
+                        {/* Dynamic Target vs Capaian: Stacks cleanly if either string is long or contains multiple clauses, preventing text collision */}
+                        {(() => {
+                          const isLong =
+                            (ind.target2026 && ind.target2026.length > 20) ||
+                            (cleanDisplay && cleanDisplay.length > 20) ||
+                            (ind.target2026 && ind.target2026.includes(';')) ||
+                            cleanDisplay.includes(';') ||
+                            cleanDisplay.includes('launching') ||
+                            cleanDisplay.includes('proses');
 
-                          {/* Capaian */}
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                              Capaian
-                            </span>
-                            <span
-                              className={`text-xs font-extrabold leading-snug tabular-nums mt-0.5 break-words ${theme.capaianText}`}
-                              title={cleanDisplay}
-                            >
-                              {cleanDisplay}
-                            </span>
-                          </div>
-                        </div>
+                          if (isLong) {
+                            return (
+                              <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
+                                {/* Target Box (Full Width) */}
+                                <div className="bg-slate-50/90 rounded-lg p-2 border border-slate-200/70 flex items-start justify-between gap-2">
+                                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider shrink-0 mt-0.5">
+                                    Target
+                                  </span>
+                                  <span
+                                    className="text-xs font-semibold text-slate-800 text-right leading-relaxed break-words flex-1"
+                                    title={ind.target2026}
+                                  >
+                                    {ind.target2026}
+                                  </span>
+                                </div>
+
+                                {/* Capaian Box (Full Width with Theme Tint) */}
+                                <div
+                                  className={`rounded-lg p-2 border flex items-start justify-between gap-2 ${theme.headerBg} ${theme.headerBorder}`}
+                                >
+                                  <span
+                                    className={`text-[10px] uppercase font-bold tracking-wider shrink-0 mt-0.5 ${theme.capaianText}`}
+                                  >
+                                    Capaian
+                                  </span>
+                                  <span
+                                    className={`text-xs font-extrabold text-right leading-relaxed break-words flex-1 ${theme.capaianText}`}
+                                    title={cleanDisplay}
+                                  >
+                                    {cleanDisplay}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs">
+                              {/* Target Box */}
+                              <div className="bg-slate-50/90 rounded-lg p-2 border border-slate-200/70 flex flex-col justify-between">
+                                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">
+                                  Target
+                                </span>
+                                <span
+                                  className="text-xs font-bold text-slate-700 leading-snug tabular-nums break-words"
+                                  title={ind.target2026}
+                                >
+                                  {ind.target2026}
+                                </span>
+                              </div>
+
+                              {/* Capaian Box */}
+                              <div
+                                className={`rounded-lg p-2 border flex flex-col justify-between ${theme.headerBg} ${theme.headerBorder}`}
+                              >
+                                <span
+                                  className={`text-[10px] uppercase font-bold tracking-wider mb-0.5 ${theme.capaianText}`}
+                                >
+                                  Capaian
+                                </span>
+                                <span
+                                  className={`text-xs font-extrabold leading-snug tabular-nums break-words ${theme.capaianText}`}
+                                  title={cleanDisplay}
+                                >
+                                  {cleanDisplay}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
 
                         {/* Subtext Context Note (if present) */}
                         {val.subtext && (

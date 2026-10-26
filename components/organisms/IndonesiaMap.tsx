@@ -194,6 +194,30 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
 
   return (
     <div className={`space-y-6 ${className}`}>
+      {/* Header Banner: PKPN Wilayah (Centered Vertically) */}
+      <div className="relative overflow-hidden rounded-3xl min-h-[140px] sm:min-h-[160px] border border-slate-200/90 shadow-xs flex flex-col justify-center p-6 sm:p-8 group bg-slate-900">
+        {/* Background Image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-105"
+          style={{ backgroundImage: `url('/images/banners/header-wilayah.jpg')` }}
+        />
+        {/* Multi-stop Gradient Overlay for Legibility & Contrast */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/85 to-emerald-950/45 backdrop-blur-[0.5px]" />
+        
+        {/* Ambient Subtle Accent Light */}
+        <div className="absolute -top-12 -right-12 w-64 h-64 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
+
+        {/* Content */}
+        <div className="relative z-10 space-y-1.5 max-w-2xl">
+          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-xs">
+            PKPN Wilayah
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-200 font-medium drop-shadow-xs">
+            Pemetaan Geospasial & Profil Capaian Program Wilayah
+          </p>
+        </div>
+      </div>
+
       {/* ======================================================== */}
       {/* 1. COMPACT & SIMPLIFIED FILTER TOOLBAR                   */}
       {/* ======================================================== */}

@@ -9,13 +9,13 @@ export const Logo: React.FC<LogoProps> = ({ className = '' }) => {
   return (
     <div className={`flex items-center gap-3.5 ${className}`}>
       {/* Logo Kemenko PMK Only */}
-      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-white/10 p-0.5">
+      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full shadow-2xs">
         <Image
-          src="/images/logo-kemenko-pmk.png"
+          src="/images/logo-kemenko-pmk-official.png"
           alt="Logo Kemenko PMK"
           width={40}
           height={40}
-          className="h-full w-full object-contain"
+          className="h-full w-full object-cover scale-105"
           priority
         />
       </div>

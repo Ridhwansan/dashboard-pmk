@@ -221,7 +221,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
 
-          {/* Menu 3: Profil Wilayah */}
+          {/* Menu 3: PKPN Wilayah */}
           <Link
             href="/dashboard/eksekutif?view=profil-wilayah"
             onClick={() => setIsPilarDropdownOpen(false)}
@@ -232,8 +232,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <Map className="h-4 w-4 text-emerald-600" />
-            <span className="hidden sm:inline">Profil Wilayah</span>
-            <span className="sm:hidden">Wilayah</span>
+            <span>PKPN Wilayah</span>
           </Link>
         </nav>
       </div>

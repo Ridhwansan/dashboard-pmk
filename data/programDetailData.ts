@@ -18,6 +18,14 @@ export interface KendalaDetailItem {
   tindakLanjut: string;
   klTerkait?: string;
   urgensi?: 'Tinggi' | 'Sedang';
+  tanggalKendala?: string;
+  tanggalTindakLanjut?: string;
+}
+
+export interface PillarKendalaItem extends KendalaDetailItem {
+  programId: string;
+  programTitle: string;
+  pillarId: 'pendidikan' | 'kesehatan' | 'bencana' | 'kemiskinan';
 }
 
 export interface ProgramDetailData {
@@ -1320,4 +1328,62 @@ export function getProgramDetailData(id: string, fallbackTitle?: string, fallbac
       unit: 'unit',
     }),
   };
+}
+
+/**
+ * Helper to fetch all kendala items for a given pillar, including dates and parent indicator info
+ */
+export function getKendalaListByPillar(
+  pillarId: 'pendidikan' | 'kesehatan' | 'bencana' | 'kemiskinan'
+): PillarKendalaItem[] {
+  const list: PillarKendalaItem[] = [];
+  const seenKeys = new Set<string>();
+
+  for (const [key, prog] of Object.entries(PROGRAM_DETAILS_DATA)) {
+    if (prog.pillarId !== pillarId) continue;
+
+    // Avoid alias duplicate entries
+    if (key === 'sekolah_unggul_garuda' || key === 'rehabilitasi_rekonstruksi_sumatera' || key === 'mbg_3b') {
+      continue;
+    }
+
+    if (prog.kendalaList && prog.kendalaList.length > 0) {
+      for (const k of prog.kendalaList) {
+        const uniqueKey = `${prog.id}-${k.title}`;
+        if (!seenKeys.has(uniqueKey)) {
+          seenKeys.add(uniqueKey);
+          list.push({
+            ...k,
+            programId: prog.id,
+            programTitle: prog.title,
+            pillarId: prog.pillarId,
+            tanggalKendala: k.tanggalKendala || '05 Okt 2026',
+            tanggalTindakLanjut: k.tanggalTindakLanjut || '14 Okt 2026',
+          });
+        }
+      }
+    } else if (prog.kendala && prog.kendala.trim() !== '') {
+      const uniqueKey = `${prog.id}-${prog.kendala.slice(0, 30)}`;
+      if (!seenKeys.has(uniqueKey)) {
+        seenKeys.add(uniqueKey);
+        list.push({
+          id: `${prog.id}-1`,
+          title: `Isu Operasional: ${prog.title}`,
+          kendala: prog.kendala,
+          tindakLanjut:
+            prog.tindakLanjut ||
+            'Koordinasi berkala lintas kementerian/lembaga untuk penanganan hambatan dan percepatan realisasi.',
+          klTerkait: prog.picKementerian,
+          urgensi: 'Sedang',
+          tanggalKendala: '10 Okt 2026',
+          tanggalTindakLanjut: '18 Okt 2026',
+          programId: prog.id,
+          programTitle: prog.title,
+          pillarId: prog.pillarId,
+        });
+      }
+    }
+  }
+
+  return list;
 }
