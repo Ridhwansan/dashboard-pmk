@@ -14,6 +14,7 @@ import {
   TrendingDown,
   BarChart3,
 } from 'lucide-react';
+import { ExecutivePdfButton } from '@/components/molecules/ExecutivePdfButton';
 
 interface IkhtisarViewProps {
   initialPillar?: PillarId;
@@ -167,8 +168,11 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
             </div>
           </div>
 
-          <div className="text-xs text-slate-500 font-medium">
-            Menampilkan seluruh indikator program prioritas <strong>PKPN</strong>
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-slate-500 font-medium hidden md:block">
+              Menampilkan seluruh indikator program prioritas <strong>PKPN</strong>
+            </div>
+            <ExecutivePdfButton currentPillar={activePillar} variant="toolbar" />
           </div>
         </div>
       </div>

@@ -11,6 +11,7 @@ import {
   PillarKendalaItem,
   getKendalaListByPillar,
 } from '@/data/programDetailData';
+import { ExecutivePdfButton } from '@/components/molecules/ExecutivePdfButton';
 
 interface PillarKendalaListProps {
   pillarId: 'pendidikan' | 'kesehatan' | 'bencana' | 'kemiskinan';
@@ -105,16 +106,20 @@ export const PillarKendalaList: React.FC<PillarKendalaListProps> = ({
             </div>
           </div>
 
-          {/* Search Input */}
-          <div className="relative min-w-[200px] sm:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari kendala..."
-              className="w-full h-9 pl-9 pr-3 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-slate-900 placeholder:text-slate-400 shadow-2xs"
-            />
+          {/* Search Input & Executive PDF Download */}
+          <div className="flex items-center gap-2.5">
+            <div className="relative min-w-[160px] sm:w-56">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari kendala..."
+                className="w-full h-9 pl-9 pr-3 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-slate-900 placeholder:text-slate-400 shadow-2xs"
+              />
+            </div>
+
+            <ExecutivePdfButton currentPillar={pillarId} variant="outline" />
           </div>
         </div>
       </div>
