@@ -172,7 +172,7 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
             <div className="text-xs text-slate-500 font-medium hidden md:block">
               Menampilkan seluruh indikator program prioritas <strong>PKPN</strong>
             </div>
-            <ExecutivePdfButton currentPillar={activePillar} variant="toolbar" />
+            <ExecutivePdfButton currentPillar={activePillar} />
           </div>
         </div>
       </div>

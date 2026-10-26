@@ -217,9 +217,9 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     pillarId: 'pendidikan',
     name: 'Revitalisasi Satuan Pendidikan',
     shortName: 'Revitalisasi Satdik',
-    unit: 'satuan pendidikan',
-    nationalValue: '36.669 satuan pendidikan (45,7%)',
-    target2026: '80.282 satuan pendidikan',
+    unit: 'Satuan Pendidikan',
+    nationalValue: '36.669 Satuan Pendidikan (45,7%)',
+    target2026: '80.282 Satuan Pendidikan',
     description:
       'Program peningkatan kualitas dan kelayakan sarana-prasarana sekolah melalui rehabilitasi dan pembangunan fasilitas pendidikan untuk mendukung pemerataan akses dan mutu pembelajaran.',
     minVal: 30.0,
@@ -231,7 +231,7 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       if (w.level === 'nasional') {
         return {
           num: 45.7,
-          display: '36.669 satuan pendidikan (45,7%)',
+          display: '36.669 Satuan Pendidikan (45,7%)',
           label: 'Realisasi Revitalisasi',
           subtext: 'Capaian 2026',
           statusLabel: 'On Track 2026',
@@ -242,9 +242,9 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       const satdikVal = match ? match[1] : Math.round((num / 100) * 80282).toLocaleString('id-ID');
       return {
         num,
-        display: `${satdikVal} satuan pendidikan (${heroVal})`,
+        display: `${satdikVal} Satuan Pendidikan (${heroVal})`,
         label: 'Realisasi Revitalisasi',
-        subtext: 'Target 2026: 80.282 satuan pendidikan',
+        subtext: 'Target 2026: 80.282 Satuan Pendidikan',
         statusLabel: num >= 60 ? 'Realisasi Cepat' : num >= 45 ? 'On Track 2026' : 'Perlu Percepatan Pemda',
         statusType: num >= 60 ? 'success' : num >= 45 ? 'normal' : 'warning',
       };
@@ -280,9 +280,9 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     pillarId: 'pendidikan',
     name: 'Sekolah Unggul Garuda Baru',
     shortName: 'SUG Baru',
-    unit: 'satuan pendidikan',
-    nationalValue: '3 satuan pendidikan (75%)',
-    target2026: '4 satuan pendidikan',
+    unit: 'Satuan Pendidikan',
+    nationalValue: '3 Satuan Pendidikan (75%)',
+    target2026: '4 Satuan Pendidikan',
     description:
       'Pembangunan unit baru Sekolah Unggul Garuda berasrama dengan kurikulum sains & teknologi global di daerah prioritas.',
     minVal: 1,
@@ -293,7 +293,7 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       if (w.level === 'nasional') {
         return {
           num: 75,
-          display: '3 satuan pendidikan (75%)',
+          display: '3 Satuan Pendidikan (75%)',
           label: 'Capaian SUG Baru',
           subtext: 'Capaian 2026',
           statusLabel: '3 dari 4 Satdik',
@@ -306,18 +306,18 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       if (sugbLoc) {
         return {
           num: sugbLoc.count,
-          display: `${sugbLoc.count} satuan pendidikan`,
+          display: `${sugbLoc.count} Satuan Pendidikan`,
           label: 'Alokasi SUG Baru',
-          subtext: 'Target 2026: 4 satuan pendidikan',
+          subtext: 'Target 2026: 4 Satuan Pendidikan',
           statusLabel: `${sugbLoc.count} Satdik`,
           statusType: 'success',
         };
       }
       return {
         num: 0,
-        display: '0 satuan pendidikan',
+        display: '0 Satuan Pendidikan',
         label: 'SUG Baru',
-        subtext: 'Target 2026: 4 satuan pendidikan',
+        subtext: 'Target 2026: 4 Satuan Pendidikan',
         statusLabel: '0 Satdik',
         statusType: 'normal',
       };
@@ -328,9 +328,9 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     pillarId: 'pendidikan',
     name: 'Sekolah Unggul Garuda Transformasi',
     shortName: 'SUG Transformasi',
-    unit: 'satuan pendidikan',
-    nationalValue: '42 satuan pendidikan',
-    target2026: '30 satuan pendidikan',
+    unit: 'Satuan Pendidikan',
+    nationalValue: '42 Satuan Pendidikan',
+    target2026: '30 Satuan Pendidikan',
     description:
       'Transformasi dan peningkatan mutu SMA unggulan eksisting menjadi Sekolah Unggul Garuda Transformasi dengan penguatan sains dan teknologi global.',
     minVal: 1,
@@ -341,9 +341,9 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       if (w.level === 'nasional') {
         return {
           num: 100,
-          display: '42 satuan pendidikan',
+          display: '42 Satuan Pendidikan',
           label: 'Alokasi SUG Transformasi',
-          subtext: 'Capaian 2025 :12 satuan pendidikan; Capaian 2026: 30 satuan pendidikan',
+          subtext: 'Capaian 2025 :12 Satuan Pendidikan; Capaian 2026: 30 Satuan Pendidikan',
           statusLabel: '42 Satuan Pendidikan',
           statusType: 'success',
         };
@@ -354,18 +354,18 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       if (sugtLoc) {
         return {
           num: sugtLoc.count,
-          display: `${sugtLoc.count} satuan pendidikan`,
+          display: `${sugtLoc.count} Satuan Pendidikan`,
           label: 'Alokasi SUG Transformasi',
-          subtext: 'Target 2026: 30 satuan pendidikan',
+          subtext: 'Target 2026: 30 Satuan Pendidikan',
           statusLabel: `${sugtLoc.count} Satdik`,
           statusType: 'success',
         };
       }
       return {
         num: 0,
-        display: '0 satuan pendidikan',
+        display: '0 Satuan Pendidikan',
         label: 'SUG Transformasi',
-        subtext: 'Target 2026: 30 satuan pendidikan',
+        subtext: 'Target 2026: 30 Satuan Pendidikan',
         statusLabel: '0 Satdik',
         statusType: 'normal',
       };

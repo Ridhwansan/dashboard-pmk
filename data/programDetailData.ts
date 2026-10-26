@@ -342,11 +342,11 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program peningkatan kualitas dan kelayakan sarana-prasarana sekolah melalui rehabilitasi dan pembangunan fasilitas pendidikan untuk mendukung pemerataan akses dan mutu pembelajaran.',
     picKementerian: 'Kemendikdasmen, Kemenag, Kementerian PUPR, Kemendagri',
-    unit: 'satuan pendidikan',
+    unit: 'Satuan Pendidikan',
     currentValue: '36.669',
-    target2026: '80.282 satuan pendidikan',
+    target2026: '80.282 Satuan Pendidikan',
     status: 'Capaian 2026',
-    subtext: 'Realisasi 2025: 17.508 satdik (136,5% target 2025)',
+    subtext: 'Realisasi 2025: 17.508 Satdik (136,5% target 2025)',
     kendalaList: [
       {
         id: 1,
@@ -374,12 +374,12 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
       },
     ],
     monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '80.282 satuan pendidikan',
-      capaian2026OktFormatted: '36.669 satuan pendidikan',
+      target2026Formatted: '80.282 Satuan Pendidikan',
+      capaian2026OktFormatted: '36.669 Satuan Pendidikan',
       percentage2026OktFormatted: '45,7 %',
       target2026Numeric: 80282,
       capaian2026OktNumeric: 36669,
-      unit: 'satuan pendidikan',
+      unit: 'Satuan Pendidikan',
     }),
   },
 
@@ -476,11 +476,11 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program peningkatan mutu SMA unggulan eksisting menjadi Sekolah Unggul Garuda Transformasi dengan penguatan kurikulum sains, teknologi, dan penyiapan talenta berprestasi global.',
     picKementerian: 'Kemendikdasmen, Bappenas, Kemenkeu',
-    unit: 'satuan pendidikan',
+    unit: 'Satuan Pendidikan',
     currentValue: '42',
-    target2026: '30 satuan pendidikan',
-    status: 'Capaian 2025 :12 satuan pendidikan; Capaian 2026: 30 satuan pendidikan',
-    subtext: 'Capaian 2025 :12 satuan pendidikan; Capaian 2026: 30 satuan pendidikan · Target 2026: 30 satuan pendidikan',
+    target2026: '30 Satuan Pendidikan',
+    status: 'Capaian 2025 :12 Satuan Pendidikan; Capaian 2026: 30 Satuan Pendidikan',
+    subtext: 'Capaian 2025 :12 Satuan Pendidikan; Capaian 2026: 30 Satuan Pendidikan · Target 2026: 30 Satuan Pendidikan',
     kendalaList: [
       {
         id: 1,
@@ -492,12 +492,12 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
       },
     ],
     monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '30 satuan pendidikan',
-      capaian2026OktFormatted: '42 satuan pendidikan',
+      target2026Formatted: '30 Satuan Pendidikan',
+      capaian2026OktFormatted: '42 Satuan Pendidikan',
       percentage2026OktFormatted: '100 %',
       target2026Numeric: 30,
       capaian2026OktNumeric: 42,
-      unit: 'satuan pendidikan',
+      unit: 'Satuan Pendidikan',
     }),
   },
 
@@ -510,11 +510,11 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program pengembangan sekolah menengah atas unggulan melalui pembangunan unit baru Sekolah Unggul Garuda berasrama dengan kurikulum sains & teknologi global di daerah prioritas.',
     picKementerian: 'Kemendikdasmen, Kemenkeu, Kementerian PUPR, Setneg',
-    unit: 'satuan pendidikan',
+    unit: 'Satuan Pendidikan',
     currentValue: '3',
-    target2026: '4 satuan pendidikan',
+    target2026: '4 Satuan Pendidikan',
     status: 'Capaian 2026',
-    subtext: 'Target 2026: 4 satuan pendidikan · Realisasi: 3 satuan pendidikan (75%)',
+    subtext: 'Target 2026: 4 Satuan Pendidikan · Realisasi: 3 Satuan Pendidikan (75%)',
     kendalaList: [
       {
         id: 1,
@@ -526,12 +526,12 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
       },
     ],
     monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '4 satuan pendidikan',
-      capaian2026OktFormatted: '3 satuan pendidikan',
+      target2026Formatted: '4 Satuan Pendidikan',
+      capaian2026OktFormatted: '3 Satuan Pendidikan',
       percentage2026OktFormatted: '75 %',
       target2026Numeric: 4,
       capaian2026OktNumeric: 3,
-      unit: 'satuan pendidikan',
+      unit: 'Satuan Pendidikan',
     }),
   },
 
@@ -544,11 +544,11 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program transformasi pembelajaran melalui penyediaan Interactive Flat Panel (IFP), konten pembelajaran digital, dan infrastruktur penunjang di satuan pendidikan.',
     picKementerian: 'Kemendikdasmen, Kemenkomdigi, Kemenkeu, Kemenag',
-    unit: 'unit',
+    unit: 'Unit',
     currentValue: '727.436',
-    target2026: '727.436 unit',
-    status: 'Capaian 2026 (Berproses disalurkan ke 316.535 sekolah)',
-    subtext: 'Posisi per 18 Oktober 2026 (Berproses disalurkan ke 316.535 sekolah) · Realisasi 2025: 288.865 unit (100%)',
+    target2026: '727.436 Unit',
+    status: 'Capaian 2026 (Berproses Disalurkan ke 316.535 Sekolah)',
+    subtext: 'Posisi per 18 Oktober 2026 (Berproses Disalurkan ke 316.535 Sekolah) · Realisasi 2025: 288.865 Unit (100%)',
     kendalaList: [
       {
         id: 1,
@@ -1339,6 +1339,17 @@ export function getKendalaListByPillar(
   const list: PillarKendalaItem[] = [];
   const seenKeys = new Set<string>();
 
+  const SAMPLE_DATES = [
+    { kendala: '12 Okt 2026', tindak: '18 Okt 2026' },
+    { kendala: '10 Okt 2026', tindak: '16 Okt 2026' },
+    { kendala: '08 Okt 2026', tindak: '15 Okt 2026' },
+    { kendala: '05 Okt 2026', tindak: '14 Okt 2026' },
+    { kendala: '03 Okt 2026', tindak: '11 Okt 2026' },
+    { kendala: '28 Sep 2026', tindak: '08 Okt 2026' },
+    { kendala: '25 Sep 2026', tindak: '05 Okt 2026' },
+    { kendala: '20 Sep 2026', tindak: '02 Okt 2026' },
+  ];
+
   for (const [key, prog] of Object.entries(PROGRAM_DETAILS_DATA)) {
     if (prog.pillarId !== pillarId) continue;
 
@@ -1352,13 +1363,14 @@ export function getKendalaListByPillar(
         const uniqueKey = `${prog.id}-${k.title}`;
         if (!seenKeys.has(uniqueKey)) {
           seenKeys.add(uniqueKey);
+          const datePair = SAMPLE_DATES[list.length % SAMPLE_DATES.length];
           list.push({
             ...k,
             programId: prog.id,
             programTitle: prog.title,
             pillarId: prog.pillarId,
-            tanggalKendala: k.tanggalKendala || '05 Okt 2026',
-            tanggalTindakLanjut: k.tanggalTindakLanjut || '14 Okt 2026',
+            tanggalKendala: k.tanggalKendala || datePair.kendala,
+            tanggalTindakLanjut: k.tanggalTindakLanjut || datePair.tindak,
           });
         }
       }
@@ -1366,6 +1378,7 @@ export function getKendalaListByPillar(
       const uniqueKey = `${prog.id}-${prog.kendala.slice(0, 30)}`;
       if (!seenKeys.has(uniqueKey)) {
         seenKeys.add(uniqueKey);
+        const datePair = SAMPLE_DATES[list.length % SAMPLE_DATES.length];
         list.push({
           id: `${prog.id}-1`,
           title: `Isu Operasional: ${prog.title}`,
@@ -1375,8 +1388,8 @@ export function getKendalaListByPillar(
             'Koordinasi berkala lintas kementerian/lembaga untuk penanganan hambatan dan percepatan realisasi.',
           klTerkait: prog.picKementerian,
           urgensi: 'Sedang',
-          tanggalKendala: '10 Okt 2026',
-          tanggalTindakLanjut: '18 Okt 2026',
+          tanggalKendala: datePair.kendala,
+          tanggalTindakLanjut: datePair.tindak,
           programId: prog.id,
           programTitle: prog.title,
           pillarId: prog.pillarId,

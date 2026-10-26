@@ -36,8 +36,8 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
       {
         id: 'revitalisasi_satdik',
         mapIndicatorId: 'revitalisasi_satdik',
-        name: 'Revitalisasi satuan pendidikan',
-        unit: 'satdik',
+        name: 'Revitalisasi Satuan Pendidikan',
+        unit: 'Satuan Pendidikan',
         years: {
           2025: { target: '12.825', capaian: '17.508', percent: '136,5%', statusType: 'success' },
           2026: { target: '80.282', capaian: '36.669', percent: '45,7%', statusType: 'warning' },
@@ -49,8 +49,8 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
       {
         id: 'snt_operasional',
         mapIndicatorId: 'snt_operasional',
-        name: 'SNT operasional',
-        unit: 'unit sekolah kumulatif',
+        name: 'SNT Operasional',
+        unit: 'Sekolah Operasional',
         years: {
           2025: { target: '—', capaian: '—' },
           2026: { target: '35', capaian: '17', percent: '45,9%', statusType: 'warning' },
@@ -62,8 +62,8 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
       {
         id: 'digitalisasi_pembelajaran',
         mapIndicatorId: 'ifp_digitalisasi',
-        name: 'IFP diproduksi dan disalurkan',
-        unit: 'perangkat & satdik',
+        name: 'IFP Diproduksi dan Disalurkan',
+        unit: 'Perangkat & Satdik',
         years: {
           2025: { target: '288.865', capaian: '288.865 (100%)', percent: '100%', statusType: 'success' },
           2026: { target: '727.436', capaian: '727.436 (100%) (Berproses disalurkan)', percent: '100%', statusType: 'success' },
@@ -76,7 +76,7 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
         id: 'sug_transformasi',
         mapIndicatorId: 'sug_transformasi',
         name: 'SUG Transformasi',
-        unit: 'unit',
+        unit: 'Unit',
         years: {
           2025: { target: '12', capaian: '12', percent: '100%', statusType: 'success' },
           2026: { target: '30', capaian: '30', percent: '100%', statusType: 'success' },
@@ -88,8 +88,8 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
       {
         id: 'sug_baru',
         mapIndicatorId: 'sug_baru',
-        name: 'SUG baru',
-        unit: 'unit',
+        name: 'SUG Baru',
+        unit: 'Unit',
         years: {
           2025: { target: '4', capaian: '—' },
           2026: { target: '4', capaian: '3 (75%)', percent: '75%', statusType: 'warning' },

@@ -187,98 +187,98 @@ function drawExecutiveCoverPage(
   doc.setFillColor(217, 119, 6); // gold amber
   doc.rect(0, 5, pageWidth, 1.5, 'F');
 
-  // 2. Official Header with Logo
+  // 2. Official Header with Transparent Logo (Gambar 2, No Background)
+  const logoSize = 20;
   if (logoImg) {
     try {
-      doc.addImage(logoImg, 'PNG', marginX, currentY, 18, 18);
+      doc.addImage(logoImg, 'PNG', marginX, currentY, logoSize, logoSize);
     } catch {
-      // Fallback if addImage fails
       drawLogoBadgeFallback(doc, marginX, currentY);
     }
   } else {
     drawLogoBadgeFallback(doc, marginX, currentY);
   }
 
-  const textStartX = marginX + 22;
+  const textStartX = marginX + logoSize + 4;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9.5);
-  doc.setTextColor(30, 41, 59); // slate-800
-  doc.text('KEMENTERIAN KOORDINATOR BIDANG', textStartX, currentY + 4);
-  doc.text('PEMBANGUNAN MANUSIA DAN KEBUDAYAAN', textStartX, currentY + 8.5);
+  doc.setFontSize(10.5);
+  doc.setTextColor(15, 23, 42); // slate-900
+  doc.text('KEMENTERIAN KOORDINATOR BIDANG', textStartX, currentY + 5.5);
+  doc.text('PEMBANGUNAN MANUSIA DAN KEBUDAYAAN', textStartX, currentY + 10.5);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  doc.setFontSize(8);
   doc.setTextColor(100, 116, 139); // slate-500
-  doc.text('REPUBLIK INDONESIA', textStartX, currentY + 13);
+  doc.text('REPUBLIK INDONESIA', textStartX, currentY + 16);
 
-  currentY += 24;
+  currentY += logoSize + 6;
 
   // Divider line
   doc.setDrawColor(203, 213, 225); // slate-300
   doc.setLineWidth(0.6);
   doc.line(marginX, currentY, marginX + contentWidth, currentY);
 
-  currentY += 10;
+  currentY += 14;
 
   // 3. Document Title Block
-  doc.setFillColor(248, 250, 252); // slate-50
-  doc.roundedRect(marginX, currentY, contentWidth, 32, 3, 3, 'F');
-  doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(marginX, currentY, contentWidth, 32, 3, 3, 'S');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(217, 119, 6); // amber-600 gold
+  doc.text('LAPORAN RINGKASAN EKSEKUTIF', marginX, currentY);
 
-  // Left accent ribbon on title box
-  doc.setFillColor(15, 23, 42);
-  doc.rect(marginX, currentY, 3, 32, 'F');
+  currentY += 7;
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(15, 23, 42);
-  doc.text('RINGKASAN EKSEKUTIF LINTAS PILAR', marginX + 8, currentY + 9);
+  doc.setFontSize(16);
+  doc.setTextColor(15, 23, 42); // slate-900
+  doc.text('CAPAIAN KINERJA & TINDAK LANJUT STRATEGIS', marginX, currentY);
+
+  currentY += 6.5;
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10.5);
+  doc.setFontSize(11);
   doc.setTextColor(29, 78, 216); // blue-700
-  doc.text('Capaian Kinerja, Isu Kendala Strategis & Rekomendasi Tindak Lanjut PKPN 2026', marginX + 8, currentY + 16);
+  doc.text('PROGRAM PRIORITAS NASIONAL (PKPN) 4 PILAR', marginX, currentY);
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(71, 85, 105);
-  doc.text(
-    `Pusat Pemantauan Kebijakan Program Prioritas Nasional  ·  Tanggal Pemutakhiran Data: ${DASHBOARD_META.cutoffDate}`,
-    marginX + 8,
-    currentY + 24
-  );
+  currentY += 12;
 
-  currentY += 40;
+  // 4. Concise Executive Statement Box (Simple, focused on 4-pillar report per date)
+  const briefingBoxHeight = 30;
+  doc.setFillColor(248, 250, 252); // slate-50
+  doc.roundedRect(marginX, currentY, contentWidth, briefingBoxHeight, 2.5, 2.5, 'F');
+  doc.setDrawColor(226, 232, 240); // slate-200
+  doc.setLineWidth(0.4);
+  doc.roundedRect(marginX, currentY, contentWidth, briefingBoxHeight, 2.5, 2.5, 'S');
 
-  // 4. Executive Introduction Note
+  // Left accent bar
+  doc.setFillColor(15, 23, 42); // slate-900
+  doc.rect(marginX, currentY, 3, briefingBoxHeight, 'F');
+
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9.5);
+  doc.setFontSize(8.5);
   doc.setTextColor(15, 23, 42);
-  doc.text('A. PENGANTAR EKSEKUTIF KOORDINASI PMK', marginX, currentY);
-
-  currentY += 5;
+  doc.text('RINGKASAN EKSEKUTIF', marginX + 7, currentY + 7);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(51, 65, 85);
-  const introText =
-    'Laporan Ringkasan Eksekutif ini menyajikan sintesis tingkat tinggi atas capaian indikator kinerja utama, identifikasi isu kendala kritis di tingkat lapangan dan regulasi, serta rumusan rekomendasi tindak lanjut strategis lintas kementerian/lembaga di bawah koordinasi Kementerian Koordinator Bidang Pembangunan Manusia dan Kebudayaan. Pemantauan difokuskan pada 4 pilar prioritas pembangunan nasional demi memastikan akselerasi pencapaian target tahun 2026 tepat sasaran, akuntabel, dan berdaya guna bagi masyarakat.';
-  const splitIntro = doc.splitTextToSize(introText, contentWidth);
-  doc.text(splitIntro, marginX, currentY);
+  const statementText =
+    `Dokumen ini menyajikan ringkasan eksekutif capaian indikator kinerja utama serta rekomendasi tindak lanjut strategis lintas kementerian/lembaga pada 4 Pilar Program Prioritas Nasional (PKPN) per ${DASHBOARD_META.cutoffDate} di bawah koordinasi Kementerian Koordinator Bidang Pembangunan Manusia dan Kebudayaan. Rincian tabel capaian indikator dan matriks kendala disajikan secara komprehensif pada lembar halaman berikutnya untuk setiap pilar.`;
+  const splitStatement = doc.splitTextToSize(statementText, contentWidth - 14);
+  doc.text(splitStatement, marginX + 7, currentY + 13.5);
 
-  currentY += splitIntro.length * 4.2 + 8;
+  currentY += briefingBoxHeight + 12;
 
-  // 5. High-Level KPI Summary Grid (4 Pillars Cards)
+  // 5. Minimalist 4 Pillars Scope Strip (No bulky sections or long descriptions)
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9.5);
-  doc.setTextColor(15, 23, 42);
-  doc.text('B. GAMBARAN UMUM CAPAIAN 4 PILAR PRIORITAS', marginX, currentY);
+  doc.setFontSize(8.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text('CAKUPAN 4 PILAR PEMBANGUNAN PMK', marginX, currentY);
 
-  currentY += 6;
+  currentY += 5;
 
-  const cardWidth = (contentWidth - 6) / 2; // 2 columns
-  const cardHeight = 36;
+  const cardWidth = (contentWidth - 6) / 2;
+  const cardHeight = 22;
 
   PILLARS_CONFIG.forEach((pillar, i) => {
     const col = i % 2;
@@ -286,71 +286,85 @@ function drawExecutiveCoverPage(
     const cardX = marginX + col * (cardWidth + 6);
     const cardY = currentY + row * (cardHeight + 6);
 
-    // Card background
+    // Minimal card container
     doc.setFillColor(255, 255, 255);
     doc.roundedRect(cardX, cardY, cardWidth, cardHeight, 2, 2, 'F');
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.4);
     doc.roundedRect(cardX, cardY, cardWidth, cardHeight, 2, 2, 'S');
 
-    // Colored top border accent
+    // Colored accent left border
     doc.setFillColor(pillar.color[0], pillar.color[1], pillar.color[2]);
-    doc.rect(cardX + 2, cardY, cardWidth - 4, 1.8, 'F');
+    doc.rect(cardX, cardY, 2.5, cardHeight, 'F');
 
-    // Pillar Badge & Name
+    // Badge
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
+    doc.setFontSize(7);
     doc.setTextColor(pillar.color[0], pillar.color[1], pillar.color[2]);
-    doc.text(pillar.badge.toUpperCase(), cardX + 4, cardY + 6.5);
+    doc.text(pillar.badge.toUpperCase(), cardX + 6, cardY + 6.5);
 
+    // Title
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
+    doc.setFontSize(8.5);
     doc.setTextColor(15, 23, 42);
-    doc.text(pillar.title.replace('PKPN ', ''), cardX + 4, cardY + 11.5);
+    doc.text(pillar.title.replace('PKPN ', ''), cardX + 6, cardY + 11.5);
 
-    // Count of indicators and kendala
+    // Stats
     const pData = PILLAR_AGREGAT_DATA[pillar.id];
     const indCount = pData?.indicators?.length || 0;
     const kendalaList = getKendalaListByPillar(pillar.id);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
-    doc.setTextColor(71, 85, 105);
+    doc.setTextColor(100, 116, 139);
     doc.text(
-      `Cakupan: ${indCount} Indikator Kunci  |  ${kendalaList.length} Isu Kendala`,
-      cardX + 4,
+      `${indCount} Indikator Kunci  ·  ${kendalaList.length} Isu Kendala Strategis`,
+      cardX + 6,
       cardY + 16.5
     );
-
-    // Description text (wrap inside card)
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(100, 116, 139);
-    const splitDesc = doc.splitTextToSize(pillar.description, cardWidth - 8);
-    doc.text(splitDesc, cardX + 4, cardY + 21.5);
   });
 
-  currentY += 2 * (cardHeight + 6) + 6;
+  currentY += 2 * (cardHeight + 6) + 10;
 
-  // 6. Executive Callout Box at Bottom of Cover Page
-  doc.setFillColor(254, 243, 199); // amber-100
-  doc.roundedRect(marginX, currentY, contentWidth, 22, 2.5, 2.5, 'F');
-  doc.setDrawColor(245, 158, 11); // amber-500
-  doc.setLineWidth(0.5);
-  doc.roundedRect(marginX, currentY, contentWidth, 22, 2.5, 2.5, 'S');
+  // 6. Metadata Footer Card
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(marginX, currentY, contentWidth, 22, 2, 2, 'F');
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(marginX, currentY, contentWidth, 22, 2, 2, 'S');
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(146, 64, 14); // amber-900
-  doc.text('PETUNJUK MEMBACA DOKUMEN RINGKASAN EKSEKUTIF:', marginX + 5, currentY + 6);
+  const metaCols = [
+    {
+      label: 'TANGGAL DATA',
+      val: `Per ${DASHBOARD_META.cutoffDate}`,
+    },
+    {
+      label: 'UNIT KOORDINASI',
+      val: 'Kemenko Bidang PMK',
+    },
+    {
+      label: 'SIFAT DOKUMEN',
+      val: 'Resmi Terbatas (Eksekutif)',
+    },
+    {
+      label: 'SUMBER DATA',
+      val: 'Pusat Pemantauan PKPN',
+    },
+  ];
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(120, 53, 15); // amber-950
-  const guideText =
-    'Setiap lembar halaman berikutnya memuat rincian gambaran besar per pilar, mencakup: (1) Matriks tabel indikator utama dengan target, realisasi, dan persentase capaian tahun 2026; serta (2) Matriks isu kendala kritis beserta rekomendasi tindak lanjut penanganan lintas K/L.';
-  const splitGuide = doc.splitTextToSize(guideText, contentWidth - 10);
-  doc.text(splitGuide, marginX + 5, currentY + 11.5);
+  const colW = (contentWidth - 8) / 4;
+  metaCols.forEach((m, idx) => {
+    const cx = marginX + 4 + idx * colW;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(m.label, cx, currentY + 7.5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(15, 23, 42);
+    doc.text(m.val, cx, currentY + 14.5);
+  });
 }
 
 /**
@@ -538,12 +552,12 @@ function drawPillarSummaryPage(
  */
 function drawLogoBadgeFallback(doc: jsPDF, x: number, y: number) {
   doc.setFillColor(15, 23, 42);
-  doc.circle(x + 9, y + 9, 8.5, 'F');
+  doc.circle(x + 10, y + 10, 9.5, 'F');
   doc.setFillColor(217, 119, 6);
-  doc.circle(x + 9, y + 9, 7.5, 'S');
+  doc.circle(x + 10, y + 10, 8.5, 'S');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.5);
+  doc.setFontSize(7);
   doc.setTextColor(255, 255, 255);
-  doc.text('PMK', x + 9, y + 10, { align: 'center' });
+  doc.text('PMK', x + 10, y + 11.5, { align: 'center' });
 }

@@ -61,34 +61,34 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
     {
       id: 'jumlah_kejadian_bencana',
       chipLabel: 'PKPN',
-      title: 'Jumlah kejadian bencana',
+      title: 'Jumlah Kejadian Bencana',
       value: '2.100',
-      unit: 'kejadian',
+      unit: 'Kejadian',
       status: 'Tercatat s.d. Okt 2026',
-      target: '2025: 4.727 kejadian',
-      subtext: 'Pemantauan kesiapsiagaan darurat bencana nasional',
+      target: '2025: 4.727 Kejadian',
+      subtext: 'Pemantauan Kesiapsiagaan Darurat Bencana Nasional',
     },
     {
       id: 'huntara_sumatera',
       chipLabel: 'PKPN',
       title: 'Pembangunan Huntara Sumatera',
       value: '20.770',
-      unit: 'unit',
+      unit: 'Unit',
       status: 'Realisasi 2026',
-      target: 'Target 2026: 20.803 unit',
+      target: 'Target 2026: 20.803 Unit',
       percent: 99.8,
-      subtext: 'Penyediaan hunian sementara pengungsi pascabencana',
+      subtext: 'Penyediaan Hunian Sementara Pengungsi Pascabencana',
     },
     {
       id: 'huntap_sumatera',
       chipLabel: 'PKPN',
       title: 'Pembangunan Huntap Sumatera',
       value: '1.012',
-      unit: 'unit',
+      unit: 'Unit',
       status: 'Realisasi 2026',
-      target: 'Target 2026: 44.121 unit',
+      target: 'Target 2026: 44.121 Unit',
       percent: 2.3,
-      subtext: 'Pembangunan hunian tetap relokasi bencana',
+      subtext: 'Pembangunan Hunian Tetap Relokasi Bencana',
     },
     {
       id: 'provinsi_karhutla',
@@ -97,29 +97,29 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
       value: '6',
       unit: 'Provinsi',
       status: 'Data 13 Oktober 2026',
-      target: 'Fokus pengendalian & pencegahan terpadu',
-      subtext: 'Wilayah prioritas kerawanan kebakaran hutan dan lahan',
+      target: 'Fokus Pengendalian & Pencegahan Terpadu',
+      subtext: 'Wilayah Prioritas Kerawanan Kebakaran Hutan dan Lahan',
     },
     {
       id: 'luas_karhutla',
       chipLabel: 'PKPN',
-      title: 'Luas Karhutla yang sudah dipadamkan',
+      title: 'Luas Karhutla yang Sudah Dipadamkan',
       value: '129.434,18',
       unit: 'Ha',
       status: 'Jumlah Luas Karhutla: 130.097,79 Ha',
-      target: 'Dalam proses pemadaman: 663,61 Ha',
+      target: 'Dalam Proses Pemadaman: 663,61 Ha',
       percent: 99.5,
-      subtext: 'Efektivitas satgas pemadaman karhutla tuntas 99,5%',
+      subtext: 'Efektivitas Satgas Pemadaman Karhutla Tuntas 99,5%',
     },
     {
       id: 'kerugian_bencana',
       chipLabel: 'PKPN',
-      title: 'Kerugian bencana',
+      title: 'Kerugian Bencana',
       value: '—',
       unit: '% PDB',
       status: 'Realisasi 2026',
       target: 'Target 2026: 0,136% PDB',
-      subtext: 'Monitoring dampak kerugian ekonomi terhadap Produk Domestik Bruto',
+      subtext: 'Monitoring Dampak Kerugian Ekonomi terhadap Produk Domestik Bruto',
     },
   ];
 
@@ -149,7 +149,7 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Tab Navigation: Indikator vs Kendala (Consistent Segmented Button Style) */}
+      {/* 2. Tab Navigation: Indikator vs Kendala (Consistent Segmented Button Style - Numbers Removed) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
         <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/80">
           <button
@@ -162,15 +162,6 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
             }`}
           >
             <span>Indikator</span>
-            <span
-              className={`ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
-                activeTab === 'indikator'
-                  ? 'bg-slate-100 text-slate-800'
-                  : 'bg-slate-200/70 text-slate-600'
-              }`}
-            >
-              {widgetCards.length}
-            </span>
           </button>
 
           <button
@@ -183,15 +174,6 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
             }`}
           >
             <span>Kendala</span>
-            <span
-              className={`ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
-                activeTab === 'kendala'
-                  ? 'bg-amber-100 text-amber-900'
-                  : 'bg-slate-200/70 text-slate-600'
-              }`}
-            >
-              {kendalaCount}
-            </span>
           </button>
         </div>
 

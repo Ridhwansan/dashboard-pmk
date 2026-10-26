@@ -65,9 +65,9 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
       chipLabel: 'PKPN',
       title: 'Revitalisasi Satuan Pendidikan',
       value: '36.669',
-      unit: 'satuan pendidikan',
+      unit: 'Satuan Pendidikan',
       status: 'Realisasi 2026',
-      target: 'Target 2026: 80.282 satuan pendidikan',
+      target: 'Target 2026: 80.282 Satuan Pendidikan',
       percent: 45.7,
     },
     {
@@ -85,9 +85,9 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
       chipLabel: 'PKPN',
       title: 'Sekolah Unggul Garuda Baru',
       value: '3',
-      unit: 'satuan pendidikan',
+      unit: 'Satuan Pendidikan',
       status: 'Realisasi 2026',
-      target: 'Target 2026: 4 satuan pendidikan',
+      target: 'Target 2026: 4 Satuan Pendidikan',
       percent: 75,
     },
     {
@@ -95,9 +95,9 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
       chipLabel: 'PKPN',
       title: 'Sekolah Unggul Garuda Transformasi',
       value: '42',
-      unit: 'satuan pendidikan',
-      status: 'Realisasi 2025: 12 satdik; Realisasi 2026: 30 satdik',
-      target: 'Target 2026: 30 satuan pendidikan',
+      unit: 'Satuan Pendidikan',
+      status: 'Realisasi 2025: 12 Satdik; Realisasi 2026: 30 Satdik',
+      target: 'Target 2026: 30 Satuan Pendidikan',
       percent: 100,
     },
     {
@@ -105,9 +105,9 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
       chipLabel: 'PKPN',
       title: 'Digitalisasi Pendidikan',
       value: '727.436',
-      unit: 'unit',
-      status: 'Realisasi 2026 (Berproses disalurkan ke 316.535 sekolah)',
-      target: 'Target 2026: Penyaluran perangkat TIK',
+      unit: 'Unit',
+      status: 'Realisasi 2026 (Berproses Disalurkan ke 316.535 Sekolah)',
+      target: 'Target 2026: Penyaluran Perangkat TIK',
       percent: 100,
     },
     {
@@ -115,8 +115,8 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
       chipLabel: 'PKPN',
       title: 'Studio Guru',
       isMilestone: true,
-      milestoneContent: '1 studio pusat + 110 konten pembelajaran, launching 25 November 2026',
-      target: 'Target 2026: Studio Guru beroperasi penuh',
+      milestoneContent: '1 Studio Pusat + 110 Konten Pembelajaran, Launching 25 November 2026',
+      target: 'Target 2026: Studio Guru Beroperasi Penuh',
     },
   ];
 
@@ -146,7 +146,7 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Tab Navigation: Indikator vs Kendala (Consistent Segmented Button Style) */}
+      {/* 2. Tab Navigation: Indikator vs Kendala (Consistent Segmented Button Style - Numbers Removed) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
         <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/80">
           <button
@@ -159,15 +159,6 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
             }`}
           >
             <span>Indikator</span>
-            <span
-              className={`ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
-                activeTab === 'indikator'
-                  ? 'bg-slate-100 text-slate-800'
-                  : 'bg-slate-200/70 text-slate-600'
-              }`}
-            >
-              {widgetCards.length}
-            </span>
           </button>
 
           <button
@@ -180,15 +171,6 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
             }`}
           >
             <span>Kendala</span>
-            <span
-              className={`ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
-                activeTab === 'kendala'
-                  ? 'bg-amber-100 text-amber-900'
-                  : 'bg-slate-200/70 text-slate-600'
-              }`}
-            >
-              {kendalaCount}
-            </span>
           </button>
         </div>
 

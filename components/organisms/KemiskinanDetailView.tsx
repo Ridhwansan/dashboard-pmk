@@ -61,60 +61,60 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
     {
       id: 'tingkat_kemiskinan',
       chipLabel: 'PKPN',
-      title: 'Tingkat kemiskinan',
+      title: 'Tingkat Kemiskinan',
       value: '8,07',
-      status: 'Realisasi 2026 (% penduduk)',
-      target: 'Target 2026: 6,5–7,5% penduduk',
+      status: 'Realisasi 2026 (% Penduduk)',
+      target: 'Target 2026: 6,5–7,5% Penduduk',
       percent: 91.0,
-      subtext: 'Pemantauan laju penurunan kemiskinan nasional',
+      subtext: 'Pemantauan Laju Penurunan Kemiskinan Nasional',
     },
     {
       id: 'kemiskinan_ekstrem',
       chipLabel: 'PKPN',
-      title: 'Kemiskinan ekstrem',
+      title: 'Kemiskinan Ekstrem',
       value: '0,78',
-      status: 'Realisasi 2025 (% penduduk)',
-      target: 'Target 2026: 0–0,5% penduduk',
+      status: 'Realisasi 2025 (% Penduduk)',
+      target: 'Target 2026: 0–0,5% Penduduk',
       percent: 85.0,
-      subtext: 'Target penurunan kemiskinan ekstrem mendekati 0%',
+      subtext: 'Target Penurunan Kemiskinan Ekstrem Mendekati 0%',
     },
     {
       id: 'bantuan_permakanan_lansia',
       chipLabel: 'PKPN',
-      title: 'Bantuan permakanan lansia',
+      title: 'Bantuan Permakanan Lansia',
       value: '116.754',
-      unit: 'orang',
+      unit: 'Orang',
       status: 'Realisasi 2025',
-      target: 'Target 2027: ≥116.754 penerima (2026 terhenti)',
-      subtext: 'Dalam proses peralihan & sinkronisasi program',
+      target: 'Target 2027: ≥116.754 Penerima (2026 Terhenti)',
+      subtext: 'Dalam Proses Peralihan & Sinkronisasi Program',
     },
     {
       id: 'bantuan_permakanan_disabilitas',
       chipLabel: 'PKPN',
-      title: 'Bantuan permakanan disabilitas',
+      title: 'Bantuan Permakanan Disabilitas',
       value: '36.000',
-      unit: 'orang',
+      unit: 'Orang',
       status: 'Realisasi 2025',
-      target: 'Target 2027: ≥36.000 penerima (2026 terhenti)',
-      subtext: 'Dalam proses peralihan & sinkronisasi program',
+      target: 'Target 2027: ≥36.000 Penerima (2026 Terhenti)',
+      subtext: 'Dalam Proses Peralihan & Sinkronisasi Program',
     },
     {
       id: 'cakupan_lansia_desil',
       chipLabel: 'PKPN',
-      title: 'Cakupan lansia desil 1–5',
+      title: 'Cakupan Lansia Desil 1–5',
       value: '0,66',
-      status: 'Realisasi 2025 (% sasaran)',
-      target: 'Target 2026: Dalam proses pendataan',
-      subtext: 'Perlindungan sosial & jaminan kesejahteraan lanjut usia',
+      status: 'Realisasi 2025 (% Sasaran)',
+      target: 'Target 2026: Dalam Proses Pendataan',
+      subtext: 'Perlindungan Sosial & Jaminan Kesejahteraan Lanjut Usia',
     },
     {
       id: 'cakupan_disabilitas_desil',
       chipLabel: 'PKPN',
-      title: 'Cakupan disabilitas desil 1–5',
+      title: 'Cakupan Disabilitas Desil 1–5',
       value: '0,41',
-      status: 'Realisasi 2025 (% sasaran)',
-      target: 'Target 2026: Dalam proses pendataan',
-      subtext: 'Perlindungan sosial & pemenuhan hak penyandang disabilitas',
+      status: 'Realisasi 2025 (% Sasaran)',
+      target: 'Target 2026: Dalam Proses Pendataan',
+      subtext: 'Perlindungan Sosial & Pemenuhan Hak Penyandang Disabilitas',
     },
     {
       id: 'bos_reguler',
@@ -122,9 +122,9 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
       title: 'Bantuan Operasional Sekolah Reguler',
       value: '432.654 (99%)',
       status: 'Realisasi 2026',
-      target: 'Target 2026: 432.716 sekolah penerima',
+      target: 'Target 2026: 432.716 Sekolah Penerima',
       percent: 99.9,
-      subtext: 'Penyaluran dana BOS reguler sekolah dasar & menengah',
+      subtext: 'Penyaluran Dana BOS Reguler Sekolah Dasar & Menengah',
     },
     {
       id: 'bop_pendidikan',
@@ -132,20 +132,20 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
       title: 'Bantuan Operasional Pendidikan',
       value: '396.618',
       status: 'Realisasi 2026',
-      target: 'Target 2026: 406.741 lembaga',
+      target: 'Target 2026: 406.741 Lembaga',
       percent: 97.5,
-      subtext: 'Dukungan operasional PAUD & pendidikan non-formal',
+      subtext: 'Dukungan Operasional PAUD & Pendidikan Non-Formal',
     },
     {
       id: 'bos_madrasah',
       chipLabel: 'PKPN',
       title: 'Bantuan Operasional Sekolah Madrasah',
       value: '10,36',
-      unit: 'juta penerima',
+      unit: 'Juta Penerima',
       status: 'Realisasi 2026',
-      target: 'Target 2026: 10,36 juta penerima',
+      target: 'Target 2026: 10,36 Juta Penerima',
       percent: 100,
-      subtext: 'Penyaluran BOS madrasah di lingkungan Kementerian Agama',
+      subtext: 'Penyaluran BOS Madrasah di Lingkungan Kementerian Agama',
     },
   ];
 
@@ -175,7 +175,7 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Tab Navigation: Indikator vs Kendala (Consistent Segmented Button Style) */}
+      {/* 2. Tab Navigation: Indikator vs Kendala (Consistent Segmented Button Style - Numbers Removed) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
         <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/80">
           <button
@@ -188,15 +188,6 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
             }`}
           >
             <span>Indikator</span>
-            <span
-              className={`ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
-                activeTab === 'indikator'
-                  ? 'bg-slate-100 text-slate-800'
-                  : 'bg-slate-200/70 text-slate-600'
-              }`}
-            >
-              {widgetCards.length}
-            </span>
           </button>
 
           <button
@@ -209,15 +200,6 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
             }`}
           >
             <span>Kendala</span>
-            <span
-              className={`ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
-                activeTab === 'kendala'
-                  ? 'bg-amber-100 text-amber-900'
-                  : 'bg-slate-200/70 text-slate-600'
-              }`}
-            >
-              {kendalaCount}
-            </span>
           </button>
         </div>
 

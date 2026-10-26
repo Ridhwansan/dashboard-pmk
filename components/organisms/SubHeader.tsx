@@ -81,7 +81,7 @@ export const SubHeader: React.FC<SubHeaderProps> = ({
 
           <div className="h-4 w-px bg-slate-200 hidden sm:block" />
 
-          <ExecutivePdfButton currentPillar={activePillar} variant="outline" />
+          <ExecutivePdfButton currentPillar={activePillar} />
         </div>
       </div>
     </div>

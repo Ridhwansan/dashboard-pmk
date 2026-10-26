@@ -63,19 +63,19 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
       chipLabel: 'PKPN',
       title: 'Cek Kesehatan Gratis',
       value: '105,98',
-      unit: 'juta jiwa',
+      unit: 'Juta Jiwa',
       status: 'Realisasi 2026',
-      target: 'Target 2026: 130 juta jiwa',
+      target: 'Target 2026: 130 Juta Jiwa',
       percent: 81.5,
     },
     {
       id: 'tb',
       chipLabel: 'PKPN',
-      title: 'Penemuan kasus TB',
+      title: 'Penemuan Kasus TB',
       value: '663.455',
-      unit: 'kasus',
+      unit: 'Kasus',
       status: 'Realisasi 2026',
-      target: 'Target 2026: 972.000 kasus',
+      target: 'Target 2026: 972.000 Kasus',
       percent: 68.3,
     },
     {
@@ -84,7 +84,7 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
       title: 'Renovasi RSUD Tipe D ke C',
       value: '39',
       unit: 'RSUD',
-      status: 'Realisasi 2025: 21 RSUD; Realisasi 2026: 18 RSUD konstruksi',
+      status: 'Realisasi 2025: 21 RSUD; Realisasi 2026: 18 RSUD Konstruksi',
       target: 'Target 2026: 20 RSUD',
       subtext: 'Target 2027: 66 RSUD',
       percent: 90.0,
@@ -95,36 +95,36 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
       title: 'Stunting',
       value: '19,8%',
       status: 'Realisasi 2024 (Survei SKI)',
-      target: 'Target 14% pada 2029',
+      target: 'Target 14% Pada 2029',
     },
     {
       id: 'mbg_balita',
       chipLabel: 'PKPN',
-      title: 'MBG balita non-PAUD',
+      title: 'MBG Balita Non-PAUD',
       value: '4,89',
-      unit: 'juta jiwa',
-      status: 'Realisasi 2026 (29,2% dari sasaran)',
-      target: 'Target 2026: 16,7 juta jiwa',
+      unit: 'Juta Jiwa',
+      status: 'Realisasi 2026 (29,2% dari Sasaran)',
+      target: 'Target 2026: 16,7 Juta Jiwa',
       percent: 29.2,
     },
     {
       id: 'mbg_ibu_hamil',
       chipLabel: 'PKPN',
-      title: 'MBG ibu hamil',
+      title: 'MBG Ibu Hamil',
       value: '0,65',
-      unit: 'juta jiwa',
-      status: 'Realisasi 2026 (26,3% dari sasaran)',
-      target: 'Target 2026: 2,49 juta jiwa',
+      unit: 'Juta Jiwa',
+      status: 'Realisasi 2026 (26,3% dari Sasaran)',
+      target: 'Target 2026: 2,49 Juta Jiwa',
       percent: 26.3,
     },
     {
       id: 'mbg_ibu_menyusui',
       chipLabel: 'PKPN',
-      title: 'MBG ibu menyusui',
+      title: 'MBG Ibu Menyusui',
       value: '1,77',
-      unit: 'juta jiwa',
-      status: 'Realisasi 2026 (64,5% dari sasaran)',
-      target: 'Target 2026: 2,75 juta jiwa',
+      unit: 'Juta Jiwa',
+      status: 'Realisasi 2026 (64,5% dari Sasaran)',
+      target: 'Target 2026: 2,75 Juta Jiwa',
       percent: 64.5,
     },
     {
@@ -132,9 +132,9 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
       chipLabel: 'PKPN',
       title: 'Revitalisasi Puskesmas',
       value: '10.000',
-      unit: 'puskesmas',
+      unit: 'Puskesmas',
       status: 'Target 2027',
-      target: 'Target 2027: 10.000 puskesmas',
+      target: 'Target 2027: 10.000 Puskesmas',
     },
     {
       id: 'revitalisasi_rs',
@@ -173,7 +173,7 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Tab Navigation: Indikator vs Kendala (Consistent Segmented Button Style) */}
+      {/* 2. Tab Navigation: Indikator vs Kendala (Consistent Segmented Button Style - Numbers Removed) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
         <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/80">
           <button
@@ -186,15 +186,6 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
             }`}
           >
             <span>Indikator</span>
-            <span
-              className={`ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
-                activeTab === 'indikator'
-                  ? 'bg-slate-100 text-slate-800'
-                  : 'bg-slate-200/70 text-slate-600'
-              }`}
-            >
-              {widgetCards.length}
-            </span>
           </button>
 
           <button
@@ -207,15 +198,6 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
             }`}
           >
             <span>Kendala</span>
-            <span
-              className={`ml-1.5 px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
-                activeTab === 'kendala'
-                  ? 'bg-amber-100 text-amber-900'
-                  : 'bg-slate-200/70 text-slate-600'
-              }`}
-            >
-              {kendalaCount}
-            </span>
           </button>
         </div>
 
