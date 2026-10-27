@@ -50,7 +50,7 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
         id: 'snt_operasional',
         mapIndicatorId: 'snt_operasional',
         name: 'SNT Operasional',
-        unit: 'Sekolah Operasional',
+        unit: 'Sekolah',
         years: {
           2025: { target: '—', capaian: '—' },
           2026: { target: '35', capaian: '17', percent: '45,9%', statusType: 'warning' },
@@ -76,7 +76,7 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
         id: 'sug_transformasi',
         mapIndicatorId: 'sug_transformasi',
         name: 'SUG Transformasi',
-        unit: 'Unit',
+        unit: 'Sekolah',
         years: {
           2025: { target: '12', capaian: '12', percent: '100%', statusType: 'success' },
           2026: { target: '30', capaian: '30', percent: '100%', statusType: 'success' },
@@ -89,7 +89,7 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
         id: 'sug_baru',
         mapIndicatorId: 'sug_baru',
         name: 'SUG Baru',
-        unit: 'Unit',
+        unit: 'Sekolah',
         years: {
           2025: { target: '4', capaian: '—' },
           2026: { target: '4', capaian: '3 (75%)', percent: '75%', statusType: 'warning' },

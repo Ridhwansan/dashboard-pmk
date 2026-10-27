@@ -255,9 +255,9 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     pillarId: 'pendidikan',
     name: 'Sekolah Nasional Terintegrasi (SNT)',
     shortName: 'SNT Terintegrasi',
-    unit: 'Sekolah Operasional',
-    nationalValue: '17 Sekolah Operasional (48,6%)',
-    target2026: '35 SNT Operasional',
+    unit: 'Sekolah',
+    nationalValue: '17 Sekolah (48,6%)',
+    target2026: '35 Sekolah',
     description:
       'Program yang mengintegrasikan sekolah jenjang SMP dan SMA dalam satu ekosistem berkelanjutan, mulai dari pembelajaran, pengembangan guru, pembinaan karakter, hingga penjaminan mutu.',
     minVal: 35.0,
@@ -267,7 +267,7 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     getValue: () => {
       return {
         num: 48.6,
-        display: '17 Sekolah Operasional (48,6%)',
+        display: '17 Sekolah (48,6%)',
         label: 'Capaian Nasional SNT',
         subtext: 'Capaian 2026',
         statusLabel: 'Area Putih (Capaian Nasional)',
@@ -280,9 +280,9 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     pillarId: 'pendidikan',
     name: 'Sekolah Unggul Garuda Baru',
     shortName: 'SUG Baru',
-    unit: 'Satuan Pendidikan',
-    nationalValue: '3 Satuan Pendidikan (75%)',
-    target2026: '4 Satuan Pendidikan',
+    unit: 'Sekolah',
+    nationalValue: '3 Sekolah (75%)',
+    target2026: '4 Sekolah',
     description:
       'Pembangunan unit baru Sekolah Unggul Garuda berasrama dengan kurikulum sains & teknologi global di daerah prioritas.',
     minVal: 1,
@@ -293,10 +293,10 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       if (w.level === 'nasional') {
         return {
           num: 75,
-          display: '3 Satuan Pendidikan (75%)',
+          display: '3 Sekolah (75%)',
           label: 'Capaian SUG Baru',
           subtext: 'Capaian 2026',
-          statusLabel: '3 dari 4 Satdik',
+          statusLabel: '3 dari 4 Sekolah',
           statusType: 'success',
         };
       }
@@ -306,19 +306,19 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       if (sugbLoc) {
         return {
           num: sugbLoc.count,
-          display: `${sugbLoc.count} Satuan Pendidikan`,
+          display: `${sugbLoc.count} Sekolah`,
           label: 'Alokasi SUG Baru',
-          subtext: 'Target 2026: 4 Satuan Pendidikan',
-          statusLabel: `${sugbLoc.count} Satdik`,
+          subtext: 'Target 2026: 4 Sekolah',
+          statusLabel: `${sugbLoc.count} Sekolah`,
           statusType: 'success',
         };
       }
       return {
         num: 0,
-        display: '0 Satuan Pendidikan',
+        display: '0 Sekolah',
         label: 'SUG Baru',
-        subtext: 'Target 2026: 4 Satuan Pendidikan',
-        statusLabel: '0 Satdik',
+        subtext: 'Target 2026: 4 Sekolah',
+        statusLabel: '0 Sekolah',
         statusType: 'normal',
       };
     },
@@ -328,9 +328,9 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
     pillarId: 'pendidikan',
     name: 'Sekolah Unggul Garuda Transformasi',
     shortName: 'SUG Transformasi',
-    unit: 'Satuan Pendidikan',
-    nationalValue: '42 Satuan Pendidikan',
-    target2026: '30 Satuan Pendidikan',
+    unit: 'Sekolah',
+    nationalValue: '42 Sekolah',
+    target2026: '30 Sekolah',
     description:
       'Transformasi dan peningkatan mutu SMA unggulan eksisting menjadi Sekolah Unggul Garuda Transformasi dengan penguatan sains dan teknologi global.',
     minVal: 1,
@@ -341,10 +341,10 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       if (w.level === 'nasional') {
         return {
           num: 100,
-          display: '42 Satuan Pendidikan',
+          display: '42 Sekolah',
           label: 'Alokasi SUG Transformasi',
-          subtext: 'Capaian 2025 :12 Satuan Pendidikan; Capaian 2026: 30 Satuan Pendidikan',
-          statusLabel: '42 Satuan Pendidikan',
+          subtext: 'Capaian 2025 :12 Sekolah; Capaian 2026: 30 Sekolah',
+          statusLabel: '42 Sekolah',
           statusType: 'success',
         };
       }
@@ -354,19 +354,19 @@ export const MAP_INDICATORS: MapIndicatorDef[] = [
       if (sugtLoc) {
         return {
           num: sugtLoc.count,
-          display: `${sugtLoc.count} Satuan Pendidikan`,
+          display: `${sugtLoc.count} Sekolah`,
           label: 'Alokasi SUG Transformasi',
-          subtext: 'Target 2026: 30 Satuan Pendidikan',
-          statusLabel: `${sugtLoc.count} Satdik`,
+          subtext: 'Target 2026: 30 Sekolah',
+          statusLabel: `${sugtLoc.count} Sekolah`,
           statusType: 'success',
         };
       }
       return {
         num: 0,
-        display: '0 Satuan Pendidikan',
+        display: '0 Sekolah',
         label: 'SUG Transformasi',
-        subtext: 'Target 2026: 30 Satuan Pendidikan',
-        statusLabel: '0 Satdik',
+        subtext: 'Target 2026: 30 Sekolah',
+        statusLabel: '0 Sekolah',
         statusType: 'normal',
       };
     },

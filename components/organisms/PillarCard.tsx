@@ -41,9 +41,9 @@ export const PillarCard: React.FC<PillarCardProps> = ({
             realisasi: '36.669 satuan pendidikan',
           },
           secondary: [
-            { label: 'Sekolah Nasional Terintegrasi (SNT)', value: '17 (T: 35 SNT Operasional)' },
-            { label: 'Sekolah Unggul Garuda Baru', value: '3 (T: 4 satuan pendidikan)' },
-            { label: 'SUG Transformasi', value: '42 (T: 30 satuan pendidikan)' },
+            { label: 'Sekolah Nasional Terintegrasi (SNT)', value: '17 (T: 35 Sekolah)' },
+            { label: 'Sekolah Unggul Garuda Baru', value: '3 (T: 4 Sekolah)' },
+            { label: 'SUG Transformasi', value: '42 (T: 30 Sekolah)' },
           ],
         };
       case 'kesehatan':

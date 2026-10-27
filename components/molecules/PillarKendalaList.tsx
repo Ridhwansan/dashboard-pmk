@@ -7,6 +7,7 @@ import {
   Search,
   CheckCircle2,
   Check,
+  Calendar,
 } from 'lucide-react';
 import {
   PillarKendalaItem,
@@ -339,86 +340,86 @@ export const PillarKendalaList: React.FC<PillarKendalaListProps> = ({
                   type="button"
                   onClick={() => toggleExpand(cardKey)}
                   aria-expanded={isExpanded}
-                  className="w-full p-4 sm:p-5 flex items-start justify-between gap-4 text-left cursor-pointer hover:bg-slate-50/70 transition-colors"
+                  className="w-full p-4 sm:p-5 text-left cursor-pointer hover:bg-slate-50/70 transition-colors"
                 >
-                  <div className="space-y-1.5 flex-1 min-w-0">
-                    {/* Non-chip indicator context & update date */}
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                      <span className="font-semibold text-slate-500">
-                        {item.programTitle}
-                      </span>
+                  {/* Top Row: Indicator Chip (Left) & Date + Chevron (Right - Locked Position) */}
+                  <div className="flex items-center justify-between gap-3 mb-2.5">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/90 tracking-tight shrink-0">
+                      {item.programTitle}
+                    </span>
+
+                    <div className="flex items-center gap-3 shrink-0">
                       {updateDate && (
-                        <>
-                          <span className="text-slate-300">·</span>
-                          <span className="font-medium text-slate-400">
-                            Diperbarui: {updateDate}
-                          </span>
-                        </>
+                        <div
+                          className="flex items-center gap-1.5 text-xs font-medium text-slate-500 tabular-nums"
+                          title={`Diperbarui: ${updateDate}`}
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>{updateDate}</span>
+                        </div>
                       )}
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-500 transition-transform duration-200">
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform duration-200 ${
+                            isExpanded ? 'rotate-180 text-blue-600' : ''
+                          }`}
+                        />
+                      </div>
                     </div>
-
-                    {/* Issue Title */}
-                    <h4 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
-                      {item.title}
-                    </h4>
                   </div>
 
-                  {/* Accordion Chevron Indicator */}
-                  <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-500 shrink-0 mt-0.5 transition-transform duration-200">
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform duration-200 ${
-                        isExpanded ? 'rotate-180 text-blue-600' : ''
-                      }`}
-                    />
-                  </div>
+                  {/* Issue Title: Full width beneath the chip & date, clear focus & elevated typography */}
+                  <h4 className="text-base sm:text-lg md:text-[19px] font-bold text-slate-900 leading-snug tracking-tight">
+                    {item.title}
+                  </h4>
                 </button>
 
-                {/* Accordion Body: Revealed when expanded */}
+                {/* Accordion Body: Revealed when expanded with generous, breathable vertical spacing */}
                 {isExpanded && (
-                  <div className="px-4 sm:px-5 pb-5 pt-1 border-t border-slate-100 space-y-4 animate-in fade-in duration-200">
-                    {/* 2 Clean Columns with Neutral / Subtle Accent */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">
+                  <div className="px-5 sm:px-6 pt-5 sm:pt-6 pb-6 border-t border-slate-200/80 space-y-6 animate-in fade-in duration-200">
+                    {/* 2 Clean Columns with Generous Separation and Breathing Room */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                       {/* Left: Kendala Pelaksanaan */}
-                      <div className="border-l-2 border-amber-400 pl-3.5 space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      <div className="border-l-2 border-amber-500 pl-4 sm:pl-5 py-1.5 space-y-2.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-xs sm:text-[13px] font-extrabold text-amber-950 uppercase tracking-wider block">
                             Kendala Pelaksanaan
                           </span>
                           {item.tanggalKendala && (
-                            <span className="text-[11px] text-slate-400 font-medium">
+                            <span className="text-xs text-slate-500 font-medium tabular-nums">
                               {item.tanggalKendala}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs sm:text-[13px] text-slate-700 font-medium leading-relaxed whitespace-pre-line">
+                        <p className="text-sm sm:text-[14.5px] text-slate-800 font-normal leading-relaxed whitespace-pre-line">
                           {item.kendala}
                         </p>
                       </div>
 
                       {/* Right: Tindak Lanjut & Solusi */}
-                      <div className="border-l-2 border-blue-500 pl-3.5 space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      <div className="border-l-2 border-blue-600 pl-4 sm:pl-5 py-1.5 space-y-2.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-xs sm:text-[13px] font-extrabold text-blue-950 uppercase tracking-wider block">
                             Tindak Lanjut &amp; Solusi
                           </span>
                           {item.tanggalTindakLanjut && (
-                            <span className="text-[11px] text-slate-400 font-medium">
+                            <span className="text-xs text-slate-500 font-medium tabular-nums">
                               {item.tanggalTindakLanjut}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs sm:text-[13px] text-slate-700 font-medium leading-relaxed whitespace-pre-line">
+                        <p className="text-sm sm:text-[14.5px] text-slate-800 font-normal leading-relaxed whitespace-pre-line">
                           {item.tindakLanjut}
                         </p>
                       </div>
                     </div>
 
                     {/* Action Bar: Direct navigation to Indicator Detail Kendala section */}
-                    <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
+                    <div className="pt-4 sm:pt-5 border-t border-slate-100 flex items-center justify-end">
                       <button
                         type="button"
                         onClick={() => onSelectProgram(item.programId, item.id)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/80 border border-blue-200/80 transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/80 border border-blue-200/80 transition-all cursor-pointer"
                       >
                         <span>Lihat di Detail Indikator</span>
                         <ChevronRight className="w-3.5 h-3.5" />

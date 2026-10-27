@@ -142,9 +142,9 @@ export const PILLARS_DATA: Record<string, PillarData> = {
     subtitle: 'Revitalisasi Sekolah | Digitalisasi | SNT | Sekolah Garuda | Studio Guru',
     summaryIndicators: [
       { label: 'Revitalisasi Satuan Pendidikan', target: '80.282 satuan pendidikan', achievement: '36.669', percent: 45.7, statusType: 'warning', note: 'Capaian 2026' },
-      { label: 'Sekolah Nasional Terintegrasi (SNT)', target: '35 SNT Operasional', achievement: '17', percent: 48.6, statusType: 'warning', note: 'Capaian 2026' },
-      { label: 'Sekolah Unggul Garuda Baru', target: '4 satuan pendidikan', achievement: '3', percent: 75, statusType: 'normal', note: 'Capaian 2026' },
-      { label: 'Sekolah Unggul Garuda Transformasi', target: '30 satuan pendidikan', achievement: '42', percent: 100, statusType: 'success', note: 'Capaian 2025 :12; Capaian 2026: 30' },
+      { label: 'Sekolah Nasional Terintegrasi (SNT)', target: '35 Sekolah', achievement: '17', percent: 48.6, statusType: 'warning', note: 'Capaian 2026' },
+      { label: 'Sekolah Unggul Garuda Baru', target: '4 Sekolah', achievement: '3', percent: 75, statusType: 'normal', note: 'Capaian 2026' },
+      { label: 'Sekolah Unggul Garuda Transformasi', target: '30 Sekolah', achievement: '42', percent: 100, statusType: 'success', note: 'Capaian 2025 :12; Capaian 2026: 30' },
       { label: 'Digitalisasi Pendidikan', target: '727.436 unit', achievement: '727.436', percent: 100, statusType: 'success', note: 'Capaian 2026 (Berproses disalurkan ke 316.535 sekolah)' },
       { label: 'Studio Guru', target: 'Studio Guru beroperasi penuh', achievement: '1 studio pusat + 110 konten', statusType: 'normal', note: 'Launching 25 November 2026' },
     ],

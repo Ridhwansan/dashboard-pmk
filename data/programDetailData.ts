@@ -392,11 +392,11 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program yang mengintegrasikan sekolah jenjang SMP dan SMA dalam satu ekosistem berkelanjutan, mulai dari pembelajaran, pengembangan guru, pembinaan karakter, hingga penjaminan mutu.',
     picKementerian: 'Kemendikdasmen, KemenPANRB, Kemendagri, Bappenas',
-    unit: 'Sekolah Operasional',
+    unit: 'Sekolah',
     currentValue: '17',
-    target2026: '35 SNT Operasional',
+    target2026: '35 Sekolah',
     status: 'Capaian 2026',
-    subtext: 'Target Kumulatif 2027: 135 unit · 2028: 335 unit · 2029: 500 unit',
+    subtext: 'Target Kumulatif 2027: 135 Sekolah · 2028: 335 Sekolah · 2029: 500 Sekolah',
     kendalaList: [
       {
         id: 1,
@@ -424,12 +424,12 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
       },
     ],
     monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '35 SNT Operasional',
-      capaian2026OktFormatted: '17 Sekolah Operasional',
+      target2026Formatted: '35 Sekolah',
+      capaian2026OktFormatted: '17 Sekolah',
       percentage2026OktFormatted: '48,6 %',
       target2026Numeric: 35,
       capaian2026OktNumeric: 17,
-      unit: 'Sekolah Operasional',
+      unit: 'Sekolah',
     }),
   },
 
@@ -442,11 +442,11 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program pengembangan sekolah menengah atas unggulan melalui pembangunan Sekolah Garuda Baru dan transformasi SMA yang sudah ada, dengan penguatan pendidikan sains dan teknologi untuk menyiapkan talenta berprestasi dan berdaya saing global.',
     picKementerian: 'Kemendikdasmen, Kemenkeu, Kementerian PUPR, Setneg',
-    unit: 'unit',
+    unit: 'Sekolah',
     currentValue: '30',
-    target2026: '30 unit',
+    target2026: '30 Sekolah',
     status: 'Capaian 2026 (100%)',
-    subtext: 'Posisi per 18 Oktober 2026 · Terdiri dari SUG Transformasi (30 unit) dan SUG Baru (3 unit)',
+    subtext: 'Posisi per 18 Oktober 2026 · Terdiri dari SUG Transformasi (30 Sekolah) dan SUG Baru (3 Sekolah)',
     kendalaList: [
       {
         id: 1,
@@ -458,12 +458,12 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
       },
     ],
     monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '30 unit',
-      capaian2026OktFormatted: '30 unit',
+      target2026Formatted: '30 Sekolah',
+      capaian2026OktFormatted: '30 Sekolah',
       percentage2026OktFormatted: '100 %',
       target2026Numeric: 30,
       capaian2026OktNumeric: 30,
-      unit: 'unit',
+      unit: 'Sekolah',
     }),
   },
 
@@ -476,11 +476,11 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program peningkatan mutu SMA unggulan eksisting menjadi Sekolah Unggul Garuda Transformasi dengan penguatan kurikulum sains, teknologi, dan penyiapan talenta berprestasi global.',
     picKementerian: 'Kemendikdasmen, Bappenas, Kemenkeu',
-    unit: 'Satuan Pendidikan',
+    unit: 'Sekolah',
     currentValue: '42',
-    target2026: '30 Satuan Pendidikan',
-    status: 'Capaian 2025 :12 Satuan Pendidikan; Capaian 2026: 30 Satuan Pendidikan',
-    subtext: 'Capaian 2025 :12 Satuan Pendidikan; Capaian 2026: 30 Satuan Pendidikan · Target 2026: 30 Satuan Pendidikan',
+    target2026: '30 Sekolah',
+    status: 'Capaian 2025 :12 Sekolah; Capaian 2026: 30 Sekolah',
+    subtext: 'Capaian 2025 :12 Sekolah; Capaian 2026: 30 Sekolah · Target 2026: 30 Sekolah',
     kendalaList: [
       {
         id: 1,
@@ -492,12 +492,12 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
       },
     ],
     monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '30 Satuan Pendidikan',
-      capaian2026OktFormatted: '42 Satuan Pendidikan',
+      target2026Formatted: '30 Sekolah',
+      capaian2026OktFormatted: '42 Sekolah',
       percentage2026OktFormatted: '100 %',
       target2026Numeric: 30,
       capaian2026OktNumeric: 42,
-      unit: 'Satuan Pendidikan',
+      unit: 'Sekolah',
     }),
   },
 
@@ -510,11 +510,11 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program pengembangan sekolah menengah atas unggulan melalui pembangunan unit baru Sekolah Unggul Garuda berasrama dengan kurikulum sains & teknologi global di daerah prioritas.',
     picKementerian: 'Kemendikdasmen, Kemenkeu, Kementerian PUPR, Setneg',
-    unit: 'Satuan Pendidikan',
+    unit: 'Sekolah',
     currentValue: '3',
-    target2026: '4 Satuan Pendidikan',
+    target2026: '4 Sekolah',
     status: 'Capaian 2026',
-    subtext: 'Target 2026: 4 Satuan Pendidikan · Realisasi: 3 Satuan Pendidikan (75%)',
+    subtext: 'Target 2026: 4 Sekolah · Realisasi: 3 Sekolah (75%)',
     kendalaList: [
       {
         id: 1,
@@ -526,12 +526,12 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
       },
     ],
     monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '4 Satuan Pendidikan',
-      capaian2026OktFormatted: '3 Satuan Pendidikan',
+      target2026Formatted: '4 Sekolah',
+      capaian2026OktFormatted: '3 Sekolah',
       percentage2026OktFormatted: '75 %',
       target2026Numeric: 4,
       capaian2026OktNumeric: 3,
-      unit: 'Satuan Pendidikan',
+      unit: 'Sekolah',
     }),
   },
 
