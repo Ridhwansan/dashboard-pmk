@@ -698,17 +698,27 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
               <table className="w-full text-left border-collapse text-xs md:text-sm">
                 <thead>
                   <tr className="bg-slate-100/90 text-slate-900 font-bold border-b border-slate-200">
-                    <th className="py-3.5 px-4 min-w-[140px]">Bulan</th>
-                    <th className="py-3.5 px-4 text-right min-w-[140px]">Target (T)</th>
-                    <th className="py-3.5 px-4 text-right min-w-[140px] bg-blue-50/70 border-x border-blue-100 text-blue-950 font-extrabold">
-                      Capaian (C)
+                    <th className="py-3.5 px-5 min-w-[180px]">Bulan</th>
+                    <th className="py-3.5 px-5 text-right min-w-[160px]">
+                      Capaian
                     </th>
-                    <th className="py-3.5 px-4 text-center min-w-[150px]">Persentase Capaian</th>
+                    <th className="py-3.5 px-5 text-right min-w-[180px] bg-blue-50/70 border-l border-blue-100 text-blue-950 font-extrabold">
+                      Total Capaian
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {displayedMonths.map((m) => {
                     const isCutoff = selectedYear === 2026 && m.month === 10;
+                    const capaianDisplay =
+                      m.capaianFormatted === '' || m.capaianFormatted === '—' ? '—' : m.capaianFormatted;
+                    const totalCapaianDisplay =
+                      m.totalCapaianFormatted && m.totalCapaianFormatted !== ''
+                        ? m.totalCapaianFormatted
+                        : m.capaianFormatted && m.capaianFormatted !== ''
+                        ? m.capaianFormatted
+                        : '—';
+
                     return (
                       <tr
                         key={m.month}
@@ -716,33 +726,22 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                           isCutoff ? 'bg-amber-50/40 font-semibold' : ''
                         }`}
                       >
-                        <td className="py-3.5 px-4 text-slate-900 font-bold relative">
+                        <td className="py-3.5 px-5 text-slate-900 font-bold relative">
                           <div className="flex items-center gap-2">
                             <span>{m.monthName} {selectedYear}</span>
                             {/* Hover Micro Tooltip on Monthly Row */}
-                            {(m.targetFormatted !== '' || (m.capaianFormatted !== '' && m.capaianFormatted !== '—')) && (
-                              <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-150 absolute left-40 top-1/2 -translate-y-1/2 z-30 whitespace-nowrap">
+                            {(capaianDisplay !== '—' || totalCapaianDisplay !== '—') && (
+                              <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-150 absolute left-48 top-1/2 -translate-y-1/2 z-30 whitespace-nowrap">
                                 <div className="bg-slate-900/95 backdrop-blur-md text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg shadow-xl flex items-center gap-2 border border-slate-700/80">
-                                  {m.targetFormatted && (
-                                    <span>Target: <strong className="text-blue-300 font-bold">{m.targetFormatted}</strong></span>
+                                  {capaianDisplay !== '—' && (
+                                    <span>Capaian: <strong className="text-emerald-300 font-bold">{capaianDisplay}</strong></span>
                                   )}
-                                  {m.targetFormatted && m.capaianFormatted && m.capaianFormatted !== '—' && (
+                                  {capaianDisplay !== '—' && totalCapaianDisplay !== '—' && (
                                     <span className="text-slate-500">·</span>
                                   )}
-                                  {m.capaianFormatted && m.capaianFormatted !== '—' && (
-                                    <span>Capaian: <strong className="text-emerald-300 font-bold">{m.capaianFormatted}</strong></span>
+                                  {totalCapaianDisplay !== '—' && (
+                                    <span>Total Capaian: <strong className="text-blue-300 font-bold">{totalCapaianDisplay}</strong></span>
                                   )}
-                                  {m.percentageFormatted && m.percentageFormatted !== '—' && m.percentageFormatted !== '' ? (
-                                    <>
-                                      <span className="text-slate-500">·</span>
-                                      <span className="text-amber-300 font-extrabold">({m.percentageFormatted})</span>
-                                    </>
-                                  ) : m.percentage !== undefined && m.capaian !== null ? (
-                                    <>
-                                      <span className="text-slate-500">·</span>
-                                      <span className="text-amber-300 font-extrabold">({m.percentage}%)</span>
-                                    </>
-                                  ) : null}
                                 </div>
                               </div>
                             )}
@@ -753,45 +752,50 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                             </span>
                           )}
                         </td>
-                        <td className="py-3.5 px-4 text-right text-slate-700 tabular-nums">
-                          {m.targetFormatted}
-                        </td>
-                        <td className="py-3.5 px-4 text-right tabular-nums font-bold text-slate-950 bg-blue-50/30 border-x border-blue-100/70">
-                          {m.capaianFormatted === '—' ? (
+                        <td className="py-3.5 px-5 text-right text-slate-700 tabular-nums font-semibold">
+                          {capaianDisplay === '—' ? (
                             <span className="text-slate-300 font-normal">—</span>
                           ) : (
-                            m.capaianFormatted
+                            capaianDisplay
                           )}
                         </td>
-                        <td className="py-3.5 px-4 text-center tabular-nums">
-                          {m.percentageFormatted !== undefined ? (
-                            m.percentageFormatted === '—' ? (
-                              <span className="text-slate-300">—</span>
-                            ) : m.percentageFormatted === '' ? (
-                              ''
-                            ) : (
-                              <span className="font-bold text-amber-700">{m.percentageFormatted}</span>
-                            )
-                          ) : m.percentage !== undefined && m.capaian !== null ? (
-                            <span
-                              className={`font-bold ${
-                                m.percentage >= 95
-                                  ? 'text-emerald-700'
-                                  : m.percentage >= 75
-                                  ? 'text-blue-700'
-                                  : 'text-amber-700'
-                              }`}
-                            >
-                              {m.percentage}%
-                            </span>
+                        <td className="py-3.5 px-5 text-right tabular-nums font-extrabold text-slate-950 bg-blue-50/30 border-l border-blue-100/70">
+                          {totalCapaianDisplay === '—' ? (
+                            <span className="text-slate-300 font-normal">—</span>
                           ) : (
-                            <span className="text-slate-300">—</span>
+                            totalCapaianDisplay
                           )}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
+                {selectedMonth === 0 && (
+                  <tfoot className="bg-slate-50/90 border-t-2 border-slate-200 text-xs sm:text-sm font-bold text-slate-900">
+                    <tr>
+                      <td className="py-3.5 px-5 text-slate-900 font-extrabold">
+                        Total Capaian Kumulatif {selectedYear === 2026 ? '(s.d. Oktober 2026)' : `Tahun ${selectedYear}`}
+                      </td>
+                      <td className="py-3.5 px-5 text-right text-slate-500 text-xs font-semibold">
+                        Posisi Akhir
+                      </td>
+                      <td className="py-3.5 px-5 text-right tabular-nums text-blue-900 font-black bg-blue-50/60 border-l border-blue-200/70">
+                        {(() => {
+                          const validTotals = displayedMonths.filter(
+                            (m) => m.totalCapaianFormatted && m.totalCapaianFormatted !== '—' && m.totalCapaianFormatted !== ''
+                          );
+                          if (validTotals.length > 0) {
+                            return validTotals[validTotals.length - 1].totalCapaianFormatted;
+                          }
+                          const validCap = displayedMonths.filter(
+                            (m) => m.capaianFormatted && m.capaianFormatted !== '—' && m.capaianFormatted !== ''
+                          );
+                          return validCap.length > 0 ? validCap[validCap.length - 1].capaianFormatted : '—';
+                        })()}
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           </div>
@@ -813,21 +817,36 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
               <p className="text-xs sm:text-sm text-slate-500 font-medium">
                 {tableType === 'tahunan'
                   ? `Perbandingan Target (T) vs Capaian (C) RPJMN 2025–2029 · ${activeAnnualRow.name}`
-                  : `Tren Kumulatif Target (T) vs Capaian (C) 12 Bulan · ${program.title}`}
+                  : `Tren Capaian Bulanan & Total Capaian Kumulatif · ${program.title}`}
               </p>
             </div>
           </div>
 
           {/* Legend */}
           <div className="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200/80 text-xs font-bold self-start sm:self-auto shadow-2xs">
-            <span className="flex items-center gap-2 text-blue-700">
-              <span className="w-4 h-0.5 border-t-2 border-dashed border-blue-600 inline-block" />
-              <span>Target (T)</span>
-            </span>
-            <span className="flex items-center gap-2 text-emerald-700">
-              <span className="w-4 h-1 bg-emerald-600 inline-block rounded-full" />
-              <span>Capaian (C)</span>
-            </span>
+            {tableType === 'tahunan' ? (
+              <>
+                <span className="flex items-center gap-2 text-blue-700">
+                  <span className="w-4 h-0.5 border-t-2 border-dashed border-blue-600 inline-block" />
+                  <span>Target (T)</span>
+                </span>
+                <span className="flex items-center gap-2 text-emerald-700">
+                  <span className="w-4 h-1 bg-emerald-600 inline-block rounded-full" />
+                  <span>Capaian (C)</span>
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="flex items-center gap-2 text-blue-700">
+                  <span className="w-3.5 h-0.5 border-t-2 border-blue-600 inline-block" />
+                  <span>Capaian Bulanan</span>
+                </span>
+                <span className="flex items-center gap-2 text-emerald-700">
+                  <span className="w-4 h-1 bg-emerald-600 inline-block rounded-full" />
+                  <span>Total Capaian (Kumulatif)</span>
+                </span>
+              </>
+            )}
           </div>
         </div>
 
@@ -1210,22 +1229,14 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
-                          <span className="text-[10px] font-semibold text-blue-300 block">Target (T)</span>
-                          <span className="font-bold text-white">{targetText}</span>
+                          <span className="text-[10px] font-semibold text-blue-300 block">Capaian Bulanan</span>
+                          <span className="font-bold text-white">{m.capaianFormatted || '—'}</span>
                         </div>
                         <div>
-                          <span className="text-[10px] font-semibold text-emerald-300 block">Capaian (C)</span>
-                          <span className="font-bold text-emerald-400">{capaianText}</span>
+                          <span className="text-[10px] font-semibold text-emerald-300 block">Total Capaian</span>
+                          <span className="font-bold text-emerald-400">{m.totalCapaianFormatted || m.capaianFormatted || '—'}</span>
                         </div>
                       </div>
-                      {pct !== null && (
-                        <div className="pt-1 border-t border-slate-800 flex items-center justify-between text-[11px]">
-                          <span className="text-slate-400">Persentase Capaian:</span>
-                          <span className="font-extrabold text-amber-300">
-                            {pct.endsWith('%') ? pct : `${pct}%`}
-                          </span>
-                        </div>
-                      )}
                       {m.note && (
                         <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
                           {m.note}

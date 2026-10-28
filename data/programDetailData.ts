@@ -3,8 +3,10 @@ export interface MonthlyDataPoint {
   monthName: string;
   target: number;
   capaian: number | null;
+  totalCapaian?: number | null;
   targetFormatted: string;
   capaianFormatted: string;
+  totalCapaianFormatted?: string;
   percentage?: number;
   percentageFormatted?: string;
   status: 'Tercapai' | 'Sesuai Target' | 'Perlu Percepatan' | 'Terjadwal' | 'Terhenti';
@@ -114,31 +116,44 @@ function generateMonthlyData(options: {
   };
 
   // 2025: Full Year 12 Months
-  const data2025: MonthlyDataPoint[] = MONTH_NAMES.map((name, i) => {
+  const data2025: MonthlyDataPoint[] = [];
+  let prevCum2025 = 0;
+  for (let i = 0; i < MONTH_NAMES.length; i++) {
+    const name = MONTH_NAMES[i];
     const monthNum = i + 1;
     const progressRatio = monthNum / 12;
     const rawT = options.target2025 * progressRatio;
     const rawC = options.capaian2025 * (progressRatio * (0.92 + Math.sin(monthNum) * 0.08));
 
     const t = isIntegerUnit ? Math.round(rawT) : Math.round(rawT * 10) / 10;
-    const c = isIntegerUnit ? Math.round(rawC) : Math.round(rawC * 10) / 10;
-    const pct = t > 0 ? Math.round((c / t) * 100) : 100;
+    const cumC = isIntegerUnit ? Math.round(rawC) : Math.round(rawC * 10) / 10;
+    const monthlyC = isIntegerUnit
+      ? Math.max(0, cumC - prevCum2025)
+      : Math.round(Math.max(0, cumC - prevCum2025) * 10) / 10;
+    prevCum2025 = cumC;
+
+    const pct = t > 0 ? Math.round((cumC / t) * 100) : 100;
     const status: MonthlyDataPoint['status'] = pct >= 95 ? 'Tercapai' : pct >= 80 ? 'Sesuai Target' : 'Perlu Percepatan';
 
-    return {
+    data2025.push({
       month: monthNum,
       monthName: name,
       target: t,
-      capaian: c,
+      capaian: monthlyC,
+      totalCapaian: cumC,
       targetFormatted: formatVal(t),
-      capaianFormatted: formatVal(c),
+      capaianFormatted: formatVal(monthlyC),
+      totalCapaianFormatted: formatVal(cumC),
       percentage: pct,
       status,
-    };
-  });
+    });
+  }
 
   // 2026: Jan - Okt (Completed), Nov - Des (Scheduled)
-  const data2026: MonthlyDataPoint[] = MONTH_NAMES.map((name, i) => {
+  const data2026: MonthlyDataPoint[] = [];
+  let prevCum2026 = 0;
+  for (let i = 0; i < MONTH_NAMES.length; i++) {
+    const name = MONTH_NAMES[i];
     const monthNum = i + 1;
     const targetProgress = monthNum / 12;
     const rawT = monthNum === 12 ? options.target2026 : options.target2026 * targetProgress;
@@ -147,42 +162,51 @@ function generateMonthlyData(options: {
     if (monthNum <= 10) {
       // Past / Current month up to Oktober (cutoff)
       const actualProgress = monthNum / 10;
-      let c: number;
+      let cumC: number;
       if (monthNum === 10) {
-        c = options.capaian2026Okt;
+        cumC = options.capaian2026Okt;
       } else {
         const rawC = options.capaian2026Okt * actualProgress * (0.95 + (monthNum % 3) * 0.03);
-        c = isIntegerUnit ? Math.min(options.capaian2026Okt, Math.round(rawC)) : Math.round(rawC * 10) / 10;
+        cumC = isIntegerUnit ? Math.min(options.capaian2026Okt, Math.round(rawC)) : Math.round(rawC * 10) / 10;
       }
-      const pct = t > 0 ? Math.round((c / t) * 100) : 100;
+      const monthlyC = isIntegerUnit
+        ? Math.max(0, cumC - prevCum2026)
+        : Math.round(Math.max(0, cumC - prevCum2026) * 10) / 10;
+      prevCum2026 = cumC;
+
+      const pct = t > 0 ? Math.round((cumC / t) * 100) : 100;
       const status: MonthlyDataPoint['status'] =
         pct >= 95 ? 'Tercapai' : pct >= 75 ? 'Sesuai Target' : 'Perlu Percepatan';
 
-      return {
+      data2026.push({
         month: monthNum,
         monthName: name,
         target: t,
-        capaian: c,
+        capaian: monthlyC,
+        totalCapaian: cumC,
         targetFormatted: formatVal(t),
-        capaianFormatted: formatVal(c),
+        capaianFormatted: formatVal(monthlyC),
+        totalCapaianFormatted: formatVal(cumC),
         percentage: pct,
         status,
         note: monthNum === 10 ? 'Posisi per 18 Oktober 2026' : undefined,
-      };
+      });
     } else {
       // Future month Nov - Des
-      return {
+      data2026.push({
         month: monthNum,
         monthName: name,
         target: t,
         capaian: null,
+        totalCapaian: null,
         targetFormatted: formatVal(t),
         capaianFormatted: '—',
+        totalCapaianFormatted: '—',
         status: 'Terjadwal',
         note: 'Proyeksi triwulan IV',
-      };
+      });
     }
-  });
+  }
 
   // 2027: Projections
   const data2027: MonthlyDataPoint[] = MONTH_NAMES.map((name, i) => {
@@ -194,8 +218,10 @@ function generateMonthlyData(options: {
       monthName: name,
       target: t,
       capaian: null,
+      totalCapaian: null,
       targetFormatted: formatVal(t),
       capaianFormatted: '—',
+      totalCapaianFormatted: '—',
       status: 'Terjadwal',
     };
   });
@@ -209,8 +235,7 @@ function generateMonthlyData(options: {
 
 /**
  * Specialized helper for official PKPN slides (Revitalisasi Satdik & SNT)
- * where monthly progress is tracked specifically at cut-off (Oktober) and year-end target (Desember),
- * with Jan-Sep empty and Nov-Des showing official dashes.
+ * where monthly progress is tracked across 12 months with cumulative total capping at cutoff (Oktober).
  */
 function generateOfficialMonthlyData(options: {
   target2026Formatted: string;
@@ -220,58 +245,88 @@ function generateOfficialMonthlyData(options: {
   capaian2026OktNumeric: number;
   unit: string;
 }): Record<number, MonthlyDataPoint[]> {
+  const isIntegerUnit =
+    !options.unit.includes('%') &&
+    !options.unit.includes('juta') &&
+    !options.unit.includes('jt') &&
+    !options.unit.includes('poin') &&
+    !options.unit.includes('indeks') &&
+    !options.unit.includes('PDB');
+
+  const formatVal = (val: number | null) => {
+    if (val === null) return '—';
+    if (options.unit.includes('%')) {
+      return `${val.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`;
+    }
+    if (isIntegerUnit) {
+      return `${Math.round(val).toLocaleString('id-ID')} ${options.unit}`;
+    }
+    if (val >= 1000) {
+      return `${val.toLocaleString('id-ID')} ${options.unit}`;
+    }
+    return `${val.toLocaleString('id-ID', { maximumFractionDigits: 2 })} ${options.unit}`;
+  };
+
+  const totalOkt = options.capaian2026OktNumeric;
+  const weights = [0.096, 0.098, 0.102, 0.099, 0.104, 0.101, 0.106, 0.099, 0.098, 0.097];
+  let cum = 0;
+  const monthlyValues: number[] = [];
+  const cumulativeValues: number[] = [];
+
+  for (let idx = 0; idx < 10; idx++) {
+    if (idx === 9) {
+      const monthlyVal = isIntegerUnit
+        ? totalOkt - cum
+        : Math.round((totalOkt - cum) * 100) / 100;
+      monthlyValues.push(monthlyVal);
+      cum = totalOkt;
+      cumulativeValues.push(cum);
+    } else {
+      const rawMonth = totalOkt * weights[idx];
+      const monthlyVal = isIntegerUnit
+        ? Math.round(rawMonth)
+        : Math.round(rawMonth * 100) / 100;
+      monthlyValues.push(monthlyVal);
+      cum += monthlyVal;
+      cumulativeValues.push(cum);
+    }
+  }
+
   const data2026: MonthlyDataPoint[] = MONTH_NAMES.map((name, i) => {
     const monthNum = i + 1;
 
-    if (monthNum <= 9) {
-      // Jan - Sep: Empty in official report table (no target, no capaian reported)
+    if (monthNum <= 10) {
+      const monthlyC = monthlyValues[monthNum - 1];
+      const cumC = cumulativeValues[monthNum - 1];
+      const isCutoff = monthNum === 10;
+
       return {
         month: monthNum,
         monthName: name,
         target: 0,
-        capaian: null,
+        capaian: monthlyC,
+        totalCapaian: cumC,
         targetFormatted: '',
-        capaianFormatted: '',
-        percentageFormatted: '',
-        status: 'Terjadwal',
-        note: '',
-      };
-    } else if (monthNum === 10) {
-      // Oktober (Posisi Berjalan Saat Ini - capaian cut-off reported)
-      return {
-        month: monthNum,
-        monthName: name,
-        target: 0,
-        capaian: options.capaian2026OktNumeric,
-        targetFormatted: '',
-        capaianFormatted: options.capaian2026OktFormatted,
-        percentageFormatted: options.percentage2026OktFormatted,
-        percentage: parseFloat(options.percentage2026OktFormatted.replace(/[^0-9,.-]/g, '').replace(',', '.')),
+        capaianFormatted: formatVal(monthlyC),
+        totalCapaianFormatted: isCutoff ? options.capaian2026OktFormatted : formatVal(cumC),
+        percentageFormatted: isCutoff ? options.percentage2026OktFormatted : undefined,
+        percentage: isCutoff
+          ? parseFloat(options.percentage2026OktFormatted.replace(/[^0-9,.-]/g, '').replace(',', '.'))
+          : undefined,
         status: 'Sesuai Target',
-        note: 'Posisi per 18 Oktober 2026',
-      };
-    } else if (monthNum === 11) {
-      // November: In development / unrecorded
-      return {
-        month: monthNum,
-        monthName: name,
-        target: 0,
-        capaian: null,
-        targetFormatted: '',
-        capaianFormatted: '—',
-        percentageFormatted: '—',
-        status: 'Terjadwal',
-        note: '',
+        note: isCutoff ? 'Posisi per 18 Oktober 2026' : undefined,
       };
     } else {
-      // Desember (Target Akhir Tahun reported)
+      // November - Desember: Upcoming / scheduled
       return {
         month: monthNum,
         monthName: name,
-        target: options.target2026Numeric,
+        target: monthNum === 12 ? options.target2026Numeric : 0,
         capaian: null,
-        targetFormatted: options.target2026Formatted,
+        totalCapaian: null,
+        targetFormatted: monthNum === 12 ? options.target2026Formatted : '',
         capaianFormatted: '—',
+        totalCapaianFormatted: '—',
         percentageFormatted: '—',
         status: 'Terjadwal',
         note: '',
@@ -1399,4 +1454,46 @@ export function getKendalaListByPillar(
   }
 
   return list;
+}
+
+export interface IndicatorMainIssue {
+  hasIssue: boolean;
+  title?: string;
+  description: string;
+  totalCount: number;
+}
+
+/**
+ * Resolves the primary issue/obstacle for an indicator card.
+ * Handles single or multiple issues dynamically.
+ */
+export function getIndicatorMainIssue(
+  programId: string,
+  fallbackTitle?: string,
+  pillarId?: 'pendidikan' | 'kesehatan' | 'bencana' | 'kemiskinan'
+): IndicatorMainIssue {
+  const prog = getProgramDetailData(programId, fallbackTitle, pillarId);
+  if (prog.kendalaList && prog.kendalaList.length > 0) {
+    const first = prog.kendalaList[0];
+    return {
+      hasIssue: true,
+      title: first.title,
+      description: first.kendala,
+      totalCount: prog.kendalaList.length,
+    };
+  }
+  if (prog.kendala && prog.kendala.trim() !== '') {
+    return {
+      hasIssue: true,
+      title: prog.title ? `Isu Pelaksanaan: ${prog.title}` : 'Isu Pelaksanaan',
+      description: prog.kendala,
+      totalCount: 1,
+    };
+  }
+  return {
+    hasIssue: false,
+    title: 'Status Pelaksanaan Terkendali',
+    description: 'Tidak terdata kendala operasional kritis. Program berjalan sesuai target dan jadwal.',
+    totalCount: 0,
+  };
 }

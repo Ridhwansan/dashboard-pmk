@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   ChevronRight,
   BarChart3,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { PillarData } from '@/types/dashboard';
 import { ProgramDetailPageView } from './ProgramDetailPageView';
-import { getProgramDetailData, getKendalaListByPillar } from '@/data/programDetailData';
-import { PillarKendalaList } from '@/components/molecules/PillarKendalaList';
+import { getProgramDetailData, getIndicatorMainIssue } from '@/data/programDetailData';
 
 interface BencanaDetailViewProps {
   onBackToHome: () => void;
@@ -33,11 +34,6 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
 }) => {
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   const [activeKendalaId, setActiveKendalaId] = useState<string | number | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState<'indikator' | 'kendala'>('indikator');
-
-  const kendalaCount = useMemo(() => {
-    return getKendalaListByPillar('bencana').length;
-  }, []);
 
   // If a program detail is selected, render it as its own full page
   if (selectedProgramId) {
@@ -149,145 +145,171 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Tab Navigation: Indikator vs Kendala (Consistent Segmented Button Style - Numbers Removed) */}
+      {/* 2. Sub-Header: Indikator Program */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
-        <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/80">
-          <button
-            type="button"
-            onClick={() => setActiveTab('indikator')}
-            className={`h-9 px-4 rounded-lg text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
-              activeTab === 'indikator'
-                ? 'bg-white text-slate-900 shadow-2xs border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-            }`}
-          >
-            <span>Indikator</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('kendala')}
-            className={`h-9 px-4 rounded-lg text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
-              activeTab === 'kendala'
-                ? 'bg-white text-slate-900 shadow-2xs border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-            }`}
-          >
-            <span>Kendala</span>
-          </button>
+        <div className="inline-flex items-center gap-2.5">
+          <div className="inline-flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/80">
+            <div className="h-8.5 px-3.5 rounded-lg text-xs sm:text-sm font-bold bg-white text-slate-900 shadow-2xs border border-slate-200/90 flex items-center gap-1.5">
+              <span>Indikator</span>
+            </div>
+          </div>
+          <span className="text-xs font-bold text-slate-400 hidden sm:inline">·</span>
+          <span className="text-xs font-medium text-slate-500 hidden sm:inline">
+            Target, Realisasi &amp; Isu Utama Pelaksanaan
+          </span>
         </div>
 
-        <div className="text-xs font-semibold text-slate-400">
-          {activeTab === 'indikator'
-            ? `Menampilkan ${widgetCards.length} indikator program`
-            : `${kendalaCount} isu kendala terdata`}
+        <div className="text-xs font-semibold text-slate-500">
+          Menampilkan {widgetCards.length} indikator program
         </div>
       </div>
 
-      {/* 3. Tab Content */}
-      {activeTab === 'kendala' ? (
-        <PillarKendalaList
-          pillarId="bencana"
-          pillarTitle="Bencana"
-          themeColor="amber"
-          onSelectProgram={(programId, kendalaId) => {
-            setSelectedProgramId(programId);
-            setActiveKendalaId(kendalaId);
-          }}
-        />
-      ) : (
-        /* Grid of Separated Widget Cards (Dynamic spacing, zero overlapping) */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {widgetCards.map((card) => {
-            return (
-              <div
-                key={card.id}
-                onClick={() => setSelectedProgramId(card.id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setSelectedProgramId(card.id);
-                  }
-                }}
-                className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg hover:border-[#a8754b] p-6 sm:p-7 flex flex-col justify-between group transition-all duration-200 cursor-pointer select-none"
-              >
-                <div>
-                  {/* Header Widget */}
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-[#7a4b27] transition-colors leading-snug">
-                      {card.title}
-                    </h3>
-                  </div>
+      {/* 3. Grid of Widget Cards (Dynamic text accommodation, consistent rhythm) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {widgetCards.map((card) => {
+          const issueData = getIndicatorMainIssue(card.id, card.title, 'bencana');
 
-                  {/* Big Number & Unit */}
-                  <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1 mb-4 min-h-[44px]">
-                    <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tabular-nums tracking-tight">
-                      {card.value}
-                    </span>
-                    {card.unit && (
-                      <span className="text-xs sm:text-sm font-semibold text-slate-600">
-                        {card.unit}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Status, Progress Bar, & Helper Target (Clean, Non-box, High Contrast) */}
-                  <div className="pt-4 border-t border-slate-100 space-y-2 text-xs">
-                    {/* Simplified Status Label (e.g. "Realisasi 2026") */}
-                    {card.status && (
-                      <p className="text-xs font-semibold text-slate-800 leading-snug">
-                        {card.status}
-                      </p>
-                    )}
-
-                    {/* Progress Bar with Directly Aligned Percentage */}
-                    {card.percent !== undefined && (
-                      <div className="flex items-center gap-2.5 pt-0.5">
-                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-[#7a4b27] rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min(100, card.percent)}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-extrabold text-[#7a4b27] tabular-nums shrink-0">
-                          {card.percent}%
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Target as Small Helper Text Right Below Progress Bar (No Gray Box!) */}
-                    {card.target && (
-                      <p className="text-[11.5px] text-slate-600 font-medium leading-relaxed pt-0.5">
-                        {card.target}
-                      </p>
-                    )}
-
-                    {/* Subtext if present */}
-                    {card.subtext && (
-                      <p className="text-[11px] text-slate-500 font-normal leading-normal">
-                        {card.subtext}
-                      </p>
-                    )}
-                  </div>
+          return (
+            <div
+              key={card.id}
+              onClick={() => setSelectedProgramId(card.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelectedProgramId(card.id);
+                }
+              }}
+              className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg hover:border-[#a8754b] p-6 sm:p-7 flex flex-col justify-between h-full group transition-all duration-200 cursor-pointer select-none"
+            >
+              <div className="flex-1 flex flex-col">
+                {/* Header Widget */}
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-[#7a4b27] transition-colors leading-snug">
+                    {card.title}
+                  </h3>
                 </div>
 
-                {/* Action: Detail Program Button Affordance */}
-                <div className="mt-5 pt-3.5 border-t border-slate-100">
-                  <div className="w-full py-2.5 px-3 rounded-xl bg-slate-50 group-hover:bg-[#fcf8f4] text-slate-700 group-hover:text-[#7a4b27] border border-slate-200/80 group-hover:border-[#a8754b]/40 text-xs font-bold transition-all duration-150 flex items-center justify-between pointer-events-none">
-                    <span className="flex items-center gap-2">
-                      <BarChart3 className="w-4 h-4 text-[#7a4b27]" />
-                      <span>Lihat Detail Program</span>
+                {/* Big Number & Unit */}
+                <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1 mb-4 min-h-[44px]">
+                  <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tabular-nums tracking-tight">
+                    {card.value}
+                  </span>
+                  {card.unit && (
+                    <span className="text-xs sm:text-sm font-semibold text-slate-600">
+                      {card.unit}
                     </span>
-                    <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  )}
+                </div>
+
+                {/* Status, Progress Bar, & Helper Target */}
+                <div className="pt-4 border-t border-slate-100 space-y-2 text-xs">
+                  {/* Simplified Status Label (e.g. "Realisasi 2026") */}
+                  {card.status && (
+                    <p className="text-xs font-semibold text-slate-800 leading-snug">
+                      {card.status}
+                    </p>
+                  )}
+
+                  {/* Progress Bar with Directly Aligned Percentage */}
+                  {card.percent !== undefined && (
+                    <div className="flex items-center gap-2.5 pt-0.5">
+                      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#7a4b27] rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(100, card.percent)}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-extrabold text-[#7a4b27] tabular-nums shrink-0">
+                        {card.percent}%
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Target as Small Helper Text Right Below Progress Bar */}
+                  {card.target && (
+                    <p className="text-[11.5px] text-slate-600 font-medium leading-relaxed pt-0.5">
+                      {card.target}
+                    </p>
+                  )}
+
+                  {/* Subtext if present */}
+                  {card.subtext && (
+                    <p className="text-[11px] text-slate-500 font-normal leading-normal">
+                      {card.subtext}
+                    </p>
+                  )}
+                </div>
+
+                {/* Isu Utama Section (Accommodates Dynamic Free Text, Keeps Cards Uniform) */}
+                <div className="mt-4 pt-3.5 border-t border-slate-100 flex-1 flex flex-col justify-start">
+                  <div
+                    className={`rounded-2xl p-3.5 border transition-all ${
+                      issueData.hasIssue
+                        ? 'bg-amber-50/70 border-amber-200/80 group-hover:border-amber-300'
+                        : 'bg-slate-50/70 border-slate-200/80'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        {issueData.hasIssue ? (
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        )}
+                        <span
+                          className={`text-[11px] font-bold uppercase tracking-wider ${
+                            issueData.hasIssue ? 'text-amber-900' : 'text-slate-700'
+                          }`}
+                        >
+                          Isu Utama
+                        </span>
+                      </div>
+                      {issueData.totalCount > 1 ? (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100/90 text-amber-800 border border-amber-200/70">
+                          +{issueData.totalCount - 1} isu lain
+                        </span>
+                      ) : issueData.hasIssue ? (
+                        <span className="text-[10px] font-semibold text-amber-700">
+                          Prioritas
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-1">
+                      {issueData.title && (
+                        <h4 className="text-xs font-bold text-slate-900 leading-snug line-clamp-2">
+                          {issueData.title}
+                        </h4>
+                      )}
+                      <p
+                        title={issueData.description}
+                        className="text-[11.5px] text-slate-600 font-normal leading-relaxed line-clamp-3 group-hover:line-clamp-6 transition-all duration-200"
+                      >
+                        {issueData.description}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+
+              {/* Action: Detail Program Button Affordance (Always pinned at bottom) */}
+              <div className="mt-4 pt-3.5 border-t border-slate-100">
+                <div className="w-full py-2.5 px-3 rounded-xl bg-slate-50 group-hover:bg-[#fcf8f4] text-slate-700 group-hover:text-[#7a4b27] border border-slate-200/80 group-hover:border-[#a8754b]/40 text-xs font-bold transition-all duration-150 flex items-center justify-between pointer-events-none">
+                  <span className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-[#7a4b27]" />
+                    <span>Lihat Detail Program</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
+
+
