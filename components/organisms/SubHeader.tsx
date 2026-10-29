@@ -42,7 +42,7 @@ export const SubHeader: React.FC<SubHeaderProps> = ({
       case 'kesehatan':
         return 'Kesehatan';
       case 'bencana':
-        return 'Bencana';
+        return 'Kebencanaan';
       case 'kemiskinan':
         return 'Penurunan Kemiskinan';
       default:

@@ -48,7 +48,7 @@ const PILLAR_TABS: PillarTabItem[] = [
   },
   {
     id: 'bencana',
-    label: 'Bencana',
+    label: 'Kebencanaan',
     icon: ShieldAlert,
     activeBg: 'bg-[#7a4b27] text-white shadow-sm',
     inactiveIconColor: 'text-[#7a4b27]',
@@ -62,19 +62,19 @@ const PILLAR_TABS: PillarTabItem[] = [
   },
 ];
 
-const CATEGORY_OPTIONS: Array<'PKPN' | 'Isu Strategis' | 'RPJMN'> = [
-  'PKPN',
-  'Isu Strategis',
-  'RPJMN',
-];
-
 export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
   initialPillar = 'pendidikan',
   onBackToLanding,
   onPillarChange,
 }) => {
   const [activePillar, setActivePillar] = useState<PillarId>(initialPillar);
-  const [activeCategory, setActiveCategory] = useState<'PKPN' | 'Isu Strategis' | 'RPJMN'>('PKPN');
+  const [selectedCategory, setSelectedCategory] = useState<string>('PKPN');
+
+  const CATEGORY_OPTIONS = [
+    { id: 'PKPN', label: 'PKPN', disabled: false },
+    { id: 'Isu Strategis', label: 'Isu Strategis', disabled: true },
+    { id: 'RPJMN', label: 'RPJMN', disabled: true },
+  ];
 
   const handleTabChange = (pillarId: PillarId) => {
     setActivePillar(pillarId);
@@ -85,10 +85,10 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
-      {/* 1. TOP HEADER: Clean Context Indicator, 4 Pillar Tabs, and Category Sub-Filter */}
+      {/* 1. TOP HEADER: Single Card containing Context, Download PDF, 4 Pillar Tabs, and Sub-filters Underneath */}
       <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Left: Section Context */}
+        {/* Top Row: Title on Left, Unduh Ringkasan PDF on Right */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200/90 flex items-center justify-center text-blue-700 shrink-0">
               <BarChart3 className="w-5 h-5" />
@@ -103,10 +103,17 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
             </div>
           </div>
 
-          {/* Right: Clean, Well-Spaced 4 Pillar Tabs (No ugly scrollbar, pure theme colors) */}
+          {/* Unduh Ringkasan PDF stays at the top right of this card */}
+          <div className="self-end sm:self-auto shrink-0">
+            <ExecutivePdfButton currentPillar={activePillar} />
+          </div>
+        </div>
+
+        {/* Bottom Row: Menu pilihan pilar di bawah judul ikhtisar sebagai tombol rapi tanpa card abu-abu */}
+        <div className="border-t border-slate-100 pt-3.5">
           <nav
             aria-label="Pilih Tab Pilar"
-            className="h-[48px] flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden self-start md:self-auto max-w-full shadow-2xs"
+            className="flex items-center gap-2.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden max-w-full"
           >
             {PILLAR_TABS.map((tab) => {
               const isActive = activePillar === tab.id;
@@ -116,10 +123,10 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => handleTabChange(tab.id)}
-                  className={`h-[40px] inline-flex items-center gap-2 px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
+                  className={`h-[40px] sm:h-[42px] inline-flex items-center gap-2 px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
                     isActive
                       ? `${tab.activeBg} font-extrabold`
-                      : 'text-slate-700 hover:text-slate-900 hover:bg-white/70'
+                      : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50 border border-slate-200/90 shadow-2xs'
                   }`}
                 >
                   <Icon
@@ -135,46 +142,34 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
             })}
           </nav>
         </div>
+      </div>
 
-        {/* Category Sub-Filter: PKPN, Isu Strategis, RPJMN (Below the Pillar Filter) */}
-        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Kategori:
-            </span>
-            <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl border border-slate-200/80">
-              <button
-                type="button"
-                className="h-8 px-3.5 rounded-lg text-xs font-extrabold bg-white text-slate-900 shadow-2xs border border-slate-200 cursor-default"
-              >
-                PKPN
-              </button>
-
-              <button
-                type="button"
-                disabled
-                className="h-8 px-3.5 rounded-lg text-xs font-medium text-slate-400 cursor-not-allowed opacity-60"
-              >
-                Isu Strategis
-              </button>
-
-              <button
-                type="button"
-                disabled
-                className="h-8 px-3.5 rounded-lg text-xs font-medium text-slate-400 cursor-not-allowed opacity-60"
-              >
-                RPJMN
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="text-xs text-slate-500 font-medium hidden md:block">
-              Menampilkan seluruh indikator program prioritas <strong>PKPN</strong>
-            </div>
-            <ExecutivePdfButton currentPillar={activePillar} />
-          </div>
-        </div>
+      {/* 2. SUB-FILTER KATEGORI: Tombol mandiri rapi tanpa bungkus card abu-abu */}
+      <div className="flex items-center gap-2 pt-0.5">
+        {CATEGORY_OPTIONS.map((cat) => {
+          const isCatActive = selectedCategory === cat.id;
+          const isDisabled = cat.disabled;
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              disabled={isDisabled}
+              onClick={() => {
+                if (!isDisabled) setSelectedCategory(cat.id);
+              }}
+              title={isDisabled ? `${cat.label} (Belum Tersedia / Segera Hadir)` : cat.label}
+              className={`h-[38px] inline-flex items-center gap-1.5 px-4.5 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 whitespace-nowrap shrink-0 ${
+                isDisabled
+                  ? 'bg-slate-100/70 text-slate-400 border border-slate-200/60 cursor-not-allowed opacity-60 select-none'
+                  : isCatActive
+                  ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-300 cursor-pointer'
+                  : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200/80 cursor-pointer'
+              }`}
+            >
+              <span>{cat.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* 2. TAB CONTENT: Render each pillar page as-is */}
@@ -183,28 +178,28 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
           <PendidikanDetailView
             onBackToHome={onBackToLanding}
             pillar={currentPillarData}
-            category={activeCategory}
+            category={selectedCategory}
           />
         )}
         {activePillar === 'kesehatan' && (
           <KesehatanDetailView
             onBackToHome={onBackToLanding}
             pillar={currentPillarData}
-            category={activeCategory}
+            category={selectedCategory}
           />
         )}
         {activePillar === 'bencana' && (
           <BencanaDetailView
             onBackToHome={onBackToLanding}
             pillar={currentPillarData}
-            category={activeCategory}
+            category={selectedCategory}
           />
         )}
         {activePillar === 'kemiskinan' && (
           <KemiskinanDetailView
             onBackToHome={onBackToLanding}
             pillar={currentPillarData}
-            category={activeCategory}
+            category={selectedCategory}
           />
         )}
       </div>

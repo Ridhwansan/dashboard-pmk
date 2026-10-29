@@ -397,7 +397,7 @@ export const WilayahInfoSection: React.FC<WilayahInfoSectionProps> = ({
                     <div className="w-8 h-8 rounded-xl bg-[#f5e8dd] border border-[#a8754b]/30 flex items-center justify-center text-[#7a4b27] shrink-0">
                       <ShieldAlert className="h-4.5 w-4.5" />
                     </div>
-                    <h4 className="text-sm font-extrabold text-slate-900">Bencana</h4>
+                    <h4 className="text-sm font-extrabold text-slate-900">Kebencanaan</h4>
                   </div>
                   {activeTab === 'bencana' && (
                     <span className="text-[10.5px] font-bold text-[#7a4b27] bg-[#f5e8dd] px-2 py-0.5 rounded-full">

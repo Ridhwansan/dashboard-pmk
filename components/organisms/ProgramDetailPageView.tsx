@@ -12,8 +12,12 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
+  ArrowUpRight,
+  ArrowDownRight,
+  Activity,
+  RefreshCw,
 } from 'lucide-react';
-import { ProgramDetailData, KendalaDetailItem } from '@/data/programDetailData';
+import { ProgramDetailData, KendalaDetailItem, getProgramDetailData } from '@/data/programDetailData';
 import {
   PILLAR_AGREGAT_DATA,
   AgregatIndicatorRow,
@@ -128,7 +132,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   initialSection,
   highlightKendalaId,
 }) => {
-  // Auto-scroll to kendala section if requested from Kendala list tab
+  // Always scroll to top when entering program detail unless kendala is targeted
   useEffect(() => {
     if (initialSection === 'kendala') {
       const timer = setTimeout(() => {
@@ -138,47 +142,155 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         }
       }, 150);
       return () => clearTimeout(timer);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
   }, [initialSection]);
 
-  // Default view is 'tahunan' (2025–2029) as requested
-  const [tableType, setTableType] = useState<'tahunan' | 'bulanan'>('tahunan');
+  // Check if current indicator is MBG 3B
+  const isMbg3b =
+    program.id === 'mbg_3b' ||
+    program.id === 'mbg_balita' ||
+    program.id === 'mbg_ibu_hamil' ||
+    program.id === 'mbg_ibu_menyusui';
+
+  const [activeMbgTab, setActiveMbgTab] = useState<'balita' | 'ibu_hamil' | 'ibu_menyusui'>('balita');
+
+  // Resolves active program data dynamically (especially when switching tabs under MBG 3B)
+  const effectiveProgram: ProgramDetailData = useMemo(() => {
+    if (isMbg3b) {
+      if (activeMbgTab === 'ibu_hamil') {
+        return getProgramDetailData('mbg_ibu_hamil', 'MBG Ibu Hamil', 'kesehatan');
+      }
+      if (activeMbgTab === 'ibu_menyusui') {
+        return getProgramDetailData('mbg_ibu_menyusui', 'MBG Ibu Menyusui', 'kesehatan');
+      }
+      return getProgramDetailData('mbg_balita', 'MBG Balita Non-PAUD', 'kesehatan');
+    }
+    return program;
+  }, [isMbg3b, activeMbgTab, program]);
+
+  // Default view is 'bulanan' or 'timeseries' or 'tahunan'
+  const [tableType, setTableType] = useState<'tahunan' | 'bulanan' | 'timeseries'>('tahunan');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedMonth, setSelectedMonth] = useState<number>(0); // 0 = Semua Bulan
+  const [spotlightMonth, setSpotlightMonth] = useState<number>(10); // default to Oktober 2026 (current month)
+  const [timeseriesQuarter, setTimeseriesQuarter] = useState<'all' | 'q1' | 'q2' | 'q3' | 'q4'>('all');
+  const [selectedProvinsiFilter, setSelectedProvinsiFilter] = useState<string>('all');
   const [hoveredAnnualIdx, setHoveredAnnualIdx] = useState<number | null>(null);
   const [hoveredMonthlyIdx, setHoveredMonthlyIdx] = useState<number | null>(null);
 
   // Resolve annual row for this specific program (only this indicator appears in the annual table)
   const annualRowForProgram = useMemo(() => {
-    return getIndicatorAnnualRow(program.id, program.pillarId);
-  }, [program.id, program.pillarId]);
+    return getIndicatorAnnualRow(effectiveProgram.id, effectiveProgram.pillarId);
+  }, [effectiveProgram.id, effectiveProgram.pillarId]);
 
   // Fallback annual row if program is not hardcoded in agregat data
   const activeAnnualRow: AgregatIndicatorRow = useMemo(() => {
     if (annualRowForProgram) return annualRowForProgram;
+    const pctMatch = effectiveProgram.status?.match(/(\d+(?:[.,]\d+)?)\s*%/);
     return {
-      id: program.id,
-      name: program.title,
-      unit: program.unit,
+      id: effectiveProgram.id,
+      name: effectiveProgram.title,
+      unit: effectiveProgram.unit,
       years: {
         2025: { target: '—', capaian: '—' },
-        2026: { target: program.target2026, capaian: program.currentValue, percent: '75%' },
+        2026: {
+          target: effectiveProgram.target2026 || '—',
+          capaian: effectiveProgram.currentValue || '—',
+          percent: pctMatch ? `${pctMatch[1]}%` : undefined,
+        },
         2027: { target: '—', capaian: '—' },
         2028: { target: '—', capaian: '—' },
         2029: { target: '—', capaian: '—' },
       },
     };
-  }, [annualRowForProgram, program]);
+  }, [annualRowForProgram, effectiveProgram]);
 
   // Filtered monthly data
   const rawMonths = useMemo(() => {
-    return program.monthlyData[selectedYear] || program.monthlyData[2026] || [];
-  }, [program, selectedYear]);
+    return effectiveProgram.monthlyData[selectedYear] || effectiveProgram.monthlyData[2026] || [];
+  }, [effectiveProgram, selectedYear]);
+
+  // Enriched monthly data with Delta MoM calculation for time-series updates
+  const enrichedMonths = useMemo(() => {
+    return rawMonths.map((m, idx) => {
+      const prevMonth = idx > 0 ? rawMonths[idx - 1] : null;
+      let deltaMoM: number | null = null;
+      let deltaMoMPct: number | null = null;
+      let deltaFormatted = '—';
+
+      const currentVal = m.capaian;
+      const prevVal = prevMonth?.capaian;
+
+      if (currentVal !== null && currentVal !== undefined && m.capaianFormatted !== '—' && m.capaianFormatted !== '') {
+        if (idx === 0) {
+          deltaFormatted = 'Basis Awal';
+        } else if (prevVal !== null && prevVal !== undefined && prevMonth?.capaianFormatted !== '—' && prevMonth?.capaianFormatted !== '') {
+          deltaMoM = currentVal - prevVal;
+          if (prevVal > 0) {
+            deltaMoMPct = Math.round(((currentVal - prevVal) / prevVal) * 1000) / 10;
+          }
+          const sign = deltaMoM > 0 ? '+' : '';
+          const pctText = deltaMoMPct !== null ? ` (${deltaMoMPct > 0 ? '+' : ''}${deltaMoMPct}%)` : '';
+          deltaFormatted = `${sign}${deltaMoM.toLocaleString('id-ID')}${pctText}`;
+        }
+      }
+
+      return {
+        ...m,
+        deltaMoM,
+        deltaMoMPct,
+        deltaFormatted,
+        isCutoff: selectedYear === 2026 && m.month === 10,
+        isPending: (m.capaianFormatted === '—' || m.capaianFormatted === '') && selectedYear === 2026 && m.month > 10,
+      };
+    });
+  }, [rawMonths, selectedYear]);
+
+  // Quarterly metrics for time-series view
+  const quarterlyMetrics = useMemo(() => {
+    const quarters = [
+      { name: 'Triwulan I (Q1)', months: [1, 2, 3], range: 'Januari – Maret 2026' },
+      { name: 'Triwulan II (Q2)', months: [4, 5, 6], range: 'April – Juni 2026' },
+      { name: 'Triwulan III (Q3)', months: [7, 8, 9], range: 'Juli – September 2026' },
+      { name: 'Triwulan IV (Q4)', months: [10, 11, 12], range: 'Oktober – Desember 2026' },
+    ];
+
+    return quarters.map((q) => {
+      const qMonths = enrichedMonths.filter((m) => q.months.includes(m.month));
+      const validCapaian = qMonths.filter(
+        (m) => m.capaian !== null && m.capaianFormatted !== '' && m.capaianFormatted !== '—'
+      );
+      const totalQ = validCapaian.reduce((acc, curr) => acc + (curr.capaian || 0), 0);
+      const hasData = validCapaian.length > 0;
+      const isComplete = validCapaian.length === 3;
+      const isOngoing = q.name.includes('Q4');
+
+      return {
+        ...q,
+        totalQ,
+        totalQFormatted: totalQ > 0 ? totalQ.toLocaleString('id-ID') : '—',
+        hasData,
+        isComplete,
+        isOngoing,
+        reportedCount: validCapaian.length,
+      };
+    });
+  }, [enrichedMonths]);
 
   const displayedMonths = useMemo(() => {
-    if (selectedMonth === 0) return rawMonths;
-    return rawMonths.filter((m) => m.month === selectedMonth);
-  }, [rawMonths, selectedMonth]);
+    if (selectedMonth === 0) return enrichedMonths;
+    return enrichedMonths.filter((m) => m.month === selectedMonth);
+  }, [enrichedMonths, selectedMonth]);
+
+  const filteredTimeseriesMonths = useMemo(() => {
+    if (timeseriesQuarter === 'q1') return enrichedMonths.filter((m) => [1, 2, 3].includes(m.month));
+    if (timeseriesQuarter === 'q2') return enrichedMonths.filter((m) => [4, 5, 6].includes(m.month));
+    if (timeseriesQuarter === 'q3') return enrichedMonths.filter((m) => [7, 8, 9].includes(m.month));
+    if (timeseriesQuarter === 'q4') return enrichedMonths.filter((m) => [10, 11, 12].includes(m.month));
+    return enrichedMonths;
+  }, [enrichedMonths, timeseriesQuarter]);
 
   // Aggregate metrics
   const summaryMetrics = useMemo(() => {
@@ -213,13 +325,13 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
 
   // Dynamic resolution of kendala list
   const resolvedKendalaList: KendalaDetailItem[] = useMemo(() => {
-    if (program.kendalaList !== undefined) {
-      return program.kendalaList;
+    if (effectiveProgram.kendalaList !== undefined) {
+      return effectiveProgram.kendalaList;
     }
-    if (program.kendala || program.tindakLanjut) {
-      const rawKendala = program.kendala || 'Tidak terdapat kendala operasional yang kritis saat ini.';
+    if (effectiveProgram.kendala || effectiveProgram.tindakLanjut) {
+      const rawKendala = effectiveProgram.kendala || 'Tidak terdapat kendala operasional yang kritis saat ini.';
       const rawTindakLanjut =
-        program.tindakLanjut ||
+        effectiveProgram.tindakLanjut ||
         'Koordinasi teknis rutin antar kementerian/lembaga terkait pengawasan realisasi program.';
 
       if (rawKendala.includes(';') && !rawKendala.includes('\n')) {
@@ -231,7 +343,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
             title: `Isu Lapangan #${idx + 1}`,
             kendala: kText,
             tindakLanjut: tParts[idx] || tParts[0] || 'Koordinasi teknis lintas K/L untuk penanganan kendala.',
-            klTerkait: program.picKementerian,
+            klTerkait: effectiveProgram.picKementerian,
           }));
         }
       }
@@ -239,15 +351,15 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       return [
         {
           id: 1,
-          title: `Isu Prioritas: ${program.title}`,
+          title: `Isu Prioritas: ${effectiveProgram.title}`,
           kendala: rawKendala,
           tindakLanjut: rawTindakLanjut,
-          klTerkait: program.picKementerian,
+          klTerkait: effectiveProgram.picKementerian,
         },
       ];
     }
     return [];
-  }, [program]);
+  }, [effectiveProgram]);
 
   // =========================================================================
   // ANNUAL CHART CALCULATIONS (2025–2029)
@@ -334,13 +446,24 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   }, [capaianAnnualPoints, capaianAnnualPath, annualPoints]);
 
   // =========================================================================
-  // MONTHLY CHART CALCULATIONS (Jan - Des)
+  // MONTHLY CHART CALCULATIONS (Jan - Des) & TRAJECTORY TO ANNUAL TARGET
   // =========================================================================
+  const annualTargetPoint = useMemo(() => {
+    return rawMonths.find((m) => m.month === 12 && m.target > 0) || rawMonths.find((m) => m.target > 0);
+  }, [rawMonths]);
+
+  const annualTargetNum = useMemo(() => {
+    if (annualTargetPoint && annualTargetPoint.target > 0) return annualTargetPoint.target;
+    return parseMetricValue(effectiveProgram.target2026);
+  }, [annualTargetPoint, effectiveProgram.target2026]);
+
   const validMonthlyTargets = useMemo(() => {
-    return rawMonths
+    const list = rawMonths
       .filter((m) => m.target > 0 && m.targetFormatted !== '' && m.targetFormatted !== '—')
       .map((m) => m.target);
-  }, [rawMonths]);
+    if (annualTargetNum && annualTargetNum > 0) list.push(annualTargetNum);
+    return list;
+  }, [rawMonths, annualTargetNum]);
 
   const validMonthlyCapaian = useMemo(() => {
     return rawMonths
@@ -349,7 +472,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   }, [rawMonths]);
 
   const maxValMonthly = Math.max(...validMonthlyTargets, ...validMonthlyCapaian, 10);
-  const yMaxMonthly = maxValMonthly * 1.15;
+  const yMaxMonthly = maxValMonthly * 1.18;
 
   const getXMonthly = (index: number) => padL + (index / (rawMonths.length - 1)) * plotW;
   const getYMonthly = (val: number | null) => {
@@ -364,14 +487,25 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
     );
   }, [rawMonths]);
 
+  // Target trajectory curve / reference line towards December target
   const targetMonthlyPath = useMemo(() => {
-    if (targetMonthlyList.length < 2) return '';
-    const pts = targetMonthlyList.map((m) => {
-      const idx = rawMonths.findIndex((rm) => rm.month === m.month);
-      return { x: getXMonthly(idx), y: getYMonthly(m.target) };
-    });
-    return buildSmoothPath(pts);
-  }, [targetMonthlyList, rawMonths, yMaxMonthly]);
+    if (targetMonthlyList.length >= 2) {
+      const pts = targetMonthlyList.map((m) => {
+        const idx = rawMonths.findIndex((rm) => rm.month === m.month);
+        return { x: getXMonthly(idx), y: getYMonthly(m.target) };
+      });
+      return buildSmoothPath(pts);
+    }
+    if (annualTargetNum && annualTargetNum > 0) {
+      // Connect January to December annual target
+      const pts = [
+        { x: getXMonthly(0), y: getYMonthly(0) },
+        { x: getXMonthly(11), y: getYMonthly(annualTargetNum) },
+      ];
+      return buildSmoothPath(pts);
+    }
+    return '';
+  }, [targetMonthlyList, annualTargetNum, rawMonths, yMaxMonthly]);
 
   const capaianMonthlyList = useMemo(() => {
     return rawMonths.filter(
@@ -379,25 +513,51 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
     );
   }, [rawMonths]);
 
-  const capaianMonthlyPath = useMemo(() => {
-    if (capaianMonthlyList.length < 2) return '';
-    const pts = capaianMonthlyList.map((m) => {
-      const idx = rawMonths.findIndex((rm) => rm.month === m.month);
-      return { x: getXMonthly(idx), y: getYMonthly(m.capaian) };
-    });
-    return buildSmoothPath(pts);
-  }, [capaianMonthlyList, rawMonths, yMaxMonthly]);
+  const latestCapaianPoint = useMemo(() => {
+    return capaianMonthlyList.length > 0 ? capaianMonthlyList[capaianMonthlyList.length - 1] : null;
+  }, [capaianMonthlyList]);
 
+  // Actual realized path (solid curve)
+  const capaianMonthlyPath = useMemo(() => {
+    if (capaianMonthlyList.length >= 2) {
+      const pts = capaianMonthlyList.map((m) => {
+        const idx = rawMonths.findIndex((rm) => rm.month === m.month);
+        return { x: getXMonthly(idx), y: getYMonthly(m.capaian) };
+      });
+      return buildSmoothPath(pts);
+    }
+    if (latestCapaianPoint) {
+      const latestIdx = rawMonths.findIndex((rm) => rm.month === latestCapaianPoint.month);
+      const pts = [
+        { x: getXMonthly(0), y: getYMonthly(0) },
+        { x: getXMonthly(latestIdx), y: getYMonthly(latestCapaianPoint.capaian) },
+      ];
+      return buildSmoothPath(pts);
+    }
+    return '';
+  }, [capaianMonthlyList, latestCapaianPoint, rawMonths, yMaxMonthly]);
+
+  // Gradient area under realized progress
   const capaianMonthlyArea = useMemo(() => {
-    if (capaianMonthlyList.length < 2 || !capaianMonthlyPath) return '';
-    const firstIdx = rawMonths.findIndex((m) => m.month === capaianMonthlyList[0].month);
-    const lastIdx = rawMonths.findIndex(
-      (m) => m.month === capaianMonthlyList[capaianMonthlyList.length - 1].month
-    );
+    if (!capaianMonthlyPath || !latestCapaianPoint) return '';
+    const firstIdx = capaianMonthlyList.length >= 2 ? rawMonths.findIndex((m) => m.month === capaianMonthlyList[0].month) : 0;
+    const lastIdx = rawMonths.findIndex((m) => m.month === latestCapaianPoint.month);
     const xStart = getXMonthly(firstIdx);
     const xEnd = getXMonthly(lastIdx);
     return `${capaianMonthlyPath} L ${xEnd} ${padT + plotH} L ${xStart} ${padT + plotH} Z`;
-  }, [capaianMonthlyList, capaianMonthlyPath, rawMonths]);
+  }, [capaianMonthlyList, capaianMonthlyPath, latestCapaianPoint, rawMonths]);
+
+  // Trajectory projection path (dashed line from latest capaian to December annual target)
+  const trajectoryProjectionPath = useMemo(() => {
+    if (!latestCapaianPoint || !annualTargetNum || latestCapaianPoint.month >= 12) return '';
+    const startIdx = rawMonths.findIndex((rm) => rm.month === latestCapaianPoint.month);
+    const endIdx = 11; // Desember
+    const pts = [
+      { x: getXMonthly(startIdx), y: getYMonthly(latestCapaianPoint.capaian) },
+      { x: getXMonthly(endIdx), y: getYMonthly(annualTargetNum) },
+    ];
+    return buildSmoothPath(pts);
+  }, [latestCapaianPoint, annualTargetNum, rawMonths, yMaxMonthly]);
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
@@ -416,14 +576,64 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500 bg-white px-4 py-2.5 rounded-2xl border border-slate-200/80 shadow-2xs">
           <span>Ikhtisar</span>
           <span className="text-slate-300">/</span>
-          <span>Pilar {category === 'PKPN' ? `PKPN ${program.pillarTitle}` : program.pillarTitle}</span>
+          <span>Pilar {category === 'PKPN' ? `PKPN ${effectiveProgram.pillarTitle}` : effectiveProgram.pillarTitle}</span>
           <span className="text-slate-300">/</span>
-          <span className="text-slate-900 font-bold truncate max-w-[280px]">{program.title}</span>
+          <span className="text-slate-900 font-bold truncate max-w-[280px]">{effectiveProgram.title}</span>
         </div>
       </div>
 
-      {/* 2. PROGRAM OVERVIEW & 3 FOCUSED KPI STAT CARDS (Gambar 4) */}
+      {/* 2. PROGRAM OVERVIEW & 3 FOCUSED KPI STAT CARDS */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
+        {/* MBG 3B SUB-INDICATOR SELECTOR TABS (Gambar 5) */}
+        {isMbg3b && (
+          <div className="bg-slate-50/90 p-4 sm:p-5 rounded-2xl border border-slate-200/90 space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Rincian Indikator Sasaran MBG 3B
+                </span>
+              </div>
+              <span className="text-xs text-slate-500 font-medium">
+                Pilih tab kelompok sasaran untuk melihat capaian &amp; rincian berkala
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { id: 'balita', label: 'Balita Non-PAUD', val: '4,89 Juta Jiwa', target: 'Target: 16,7 Jt (29,2%)' },
+                { id: 'ibu_hamil', label: 'Ibu Hamil', val: '0,65 Juta Jiwa', target: 'Target: 2,49 Jt (26,3%)' },
+                { id: 'ibu_menyusui', label: 'Ibu Menyusui', val: '1,77 Juta Jiwa', target: 'Target: 2,75 Jt (64,5%)' },
+              ].map((tab) => {
+                const isTabActive = activeMbgTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveMbgTab(tab.id as any)}
+                    className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      isTabActive
+                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
+                        : 'bg-white hover:bg-slate-100 text-slate-800 border-slate-200/90'
+                    }`}
+                  >
+                    <span className={`text-xs font-extrabold ${isTabActive ? 'text-white' : 'text-slate-900'}`}>
+                      {tab.label}
+                    </span>
+                    <div className="flex items-baseline justify-between gap-1 pt-1.5">
+                      <span className={`text-base font-black tabular-nums ${isTabActive ? 'text-emerald-100' : 'text-emerald-700'}`}>
+                        {tab.val}
+                      </span>
+                      <span className={`text-[11px] font-medium ${isTabActive ? 'text-emerald-200' : 'text-slate-500'}`}>
+                        {tab.target}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200/90 shadow-2xs">
@@ -431,11 +641,11 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
-            {program.title}
+            {effectiveProgram.title}
           </h1>
           {/* Program explanation directly below the title, without gray box or "Deskripsi Program" label */}
           <p className="text-sm sm:text-base text-slate-600 font-normal leading-relaxed max-w-4xl">
-            {program.description}
+            {effectiveProgram.description}
           </p>
         </div>
 
@@ -447,7 +657,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
               Target 2026
             </span>
             <span className="text-xl sm:text-2xl font-black text-slate-900 block tracking-tight">
-              {program.target2026}
+              {effectiveProgram.target2026}
             </span>
           </div>
 
@@ -457,9 +667,14 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
               Realisasi Berjalan
             </span>
             <span className="text-xl sm:text-2xl font-black text-blue-900 block tracking-tight">
-              {program.currentValue === '—' || !program.currentValue
-                ? '—'
-                : `${program.currentValue} ${program.unit}`}
+              {(() => {
+                const val = effectiveProgram.currentValue;
+                if (!val || val === '—') return '—';
+                if (val.toLowerCase() === 'terhenti') return 'Terhenti';
+                if (effectiveProgram.unit && val.includes(effectiveProgram.unit)) return val;
+                if (val.includes('%')) return val;
+                return effectiveProgram.unit ? `${val} ${effectiveProgram.unit}` : val;
+              })()}
             </span>
           </div>
 
@@ -469,28 +684,34 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
               Persentase Capaian
             </span>
             <span className="text-xl sm:text-2xl font-black text-emerald-700 block tracking-tight">
-              {summaryMetrics.avgPct > 0
-                ? `${summaryMetrics.avgPct}%`
-                : program.status.includes('%')
-                ? program.status
-                : '—'}
+              {(() => {
+                if (effectiveProgram.currentValue?.toLowerCase() === 'terhenti') return '0% (Terhenti)';
+                if (summaryMetrics.avgPct > 0) return `${summaryMetrics.avgPct}%`;
+                const pctMatch = effectiveProgram.status?.match(/(\d+(?:[.,]\d+)?)\s*%/);
+                if (pctMatch) return `${pctMatch[1]}%`;
+                return '—';
+              })()}
             </span>
           </div>
         </div>
       </div>
 
-      {/* 3. SECTION TABEL: DEFAULT TAHUNAN (2025–2029) DENGAN SEGMENTED CONTROL KE BULANAN */}
+      {/* 3. SECTION TABEL & TREN BERKALA */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
         {/* Controls Toolbar: Title on Left, Segmented Control on Right */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
           {/* Left: Dynamic Title based on active table mode */}
           <div className="flex items-center gap-4 flex-wrap">
             <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
-              {tableType === 'tahunan' ? 'Tabel Tahunan' : 'Tabel Bulanan'}
+              {tableType === 'tahunan'
+                ? 'Tabel Tahunan'
+                : tableType === 'bulanan'
+                ? 'Tabel Bulanan'
+                : 'Tren Berkala'}
             </h3>
 
-            {/* When bulanan, show year & month filters */}
-            {tableType === 'bulanan' && (
+            {/* When bulanan or timeseries, show year/month filters */}
+            {(tableType === 'bulanan' || tableType === 'timeseries') && (
               <div className="flex items-center gap-2.5 flex-wrap">
                 {/* Filter Tahun */}
                 <div className="relative">
@@ -508,78 +729,112 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 </div>
 
-                {/* Filter Bulan */}
-                <div className="relative">
-                  <select
-                    id="filter-bulan-page"
-                    aria-label="Pilih Bulan"
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                    className="h-[38px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
-                  >
-                    <option value={0}>Semua Bulan (12 Bulan)</option>
-                    <option value={1}>Januari</option>
-                    <option value={2}>Februari</option>
-                    <option value={3}>Maret</option>
-                    <option value={4}>April</option>
-                    <option value={5}>Mei</option>
-                    <option value={6}>Juni</option>
-                    <option value={7}>Juli</option>
-                    <option value={8}>Agustus</option>
-                    <option value={9}>September</option>
-                    <option value={10}>Oktober</option>
-                    <option value={11}>November</option>
-                    <option value={12}>Desember</option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                </div>
+                {/* Filter Bulan (khusus Tabel Bulanan) */}
+                {tableType === 'bulanan' && (
+                  <div className="relative">
+                    <select
+                      id="filter-bulan-page"
+                      aria-label="Pilih Bulan"
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                      className="h-[38px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                    >
+                      <option value={0}>Semua Bulan (12 Bulan)</option>
+                      <option value={1}>Januari</option>
+                      <option value={2}>Februari</option>
+                      <option value={3}>Maret</option>
+                      <option value={4}>April</option>
+                      <option value={5}>Mei</option>
+                      <option value={6}>Juni</option>
+                      <option value={7}>Juli</option>
+                      <option value={8}>Agustus</option>
+                      <option value={9}>September</option>
+                      <option value={10}>Oktober</option>
+                      <option value={11}>November</option>
+                      <option value={12}>Desember</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* Right: Segmented Control switching between Tabel Tahunan (Default) and Tabel Bulanan */}
-          <div className="h-[44px] p-1 bg-slate-100 rounded-xl border border-slate-200/90 inline-flex items-center gap-1.5 self-start lg:self-auto shrink-0 shadow-2xs">
+          {/* Right: Segmented Control switching between Tabel Tahunan, Tabel Bulanan, Hirarki Wilayah, and Tren Berkala */}
+          <div
+            role="tablist"
+            aria-label="Pilihan Jenis Tampilan Tabel"
+            className="p-1 bg-slate-100 rounded-xl border border-slate-200/90 inline-flex items-center gap-1 self-start lg:self-auto shrink-0 shadow-2xs overflow-x-auto max-w-full"
+          >
             <button
               type="button"
+              role="tab"
+              aria-selected={tableType === 'tahunan'}
               onClick={() => setTableType('tahunan')}
-              className={`h-[36px] inline-flex items-center gap-2 px-4 sm:px-5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`h-[36px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
                 tableType === 'tahunan'
                   ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
-              <CalendarRange className="w-4.5 h-4.5 text-blue-600" />
+              <CalendarRange className="w-4 h-4 text-slate-500" />
               <span>Tabel Tahunan</span>
             </button>
 
             <button
               type="button"
+              role="tab"
+              aria-selected={tableType === 'bulanan'}
               onClick={() => setTableType('bulanan')}
-              className={`h-[36px] inline-flex items-center gap-2 px-4 sm:px-5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`h-[36px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
                 tableType === 'bulanan'
                   ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
-              <TableProperties className="w-4.5 h-4.5 text-blue-600" />
+              <TableProperties className="w-4 h-4 text-slate-500" />
               <span>Tabel Bulanan</span>
+            </button>
+
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tableType === 'timeseries'}
+              onClick={() => setTableType('timeseries')}
+              className={`h-[36px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                tableType === 'timeseries'
+                  ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4 text-slate-500" />
+              <span>Tren Berkala</span>
             </button>
           </div>
         </div>
 
-        {/* VIEW A: TABEL TAHUNAN (2025–2029) - 1 Indikator Terpilih dengan Kolom Target & Capaian Mandiri */}
+        {/* VIEW A: TABEL TAHUNAN (2025–2029) - TARGET & CAPAIAN RPJMN */}
         {tableType === 'tahunan' && (
           <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse text-xs md:text-sm">
                 <thead>
                   <tr className="bg-slate-100/90 text-slate-900 font-bold border-b border-slate-200">
-                    <th className="py-3.5 px-4 min-w-[160px]">Tahun</th>
-                    <th className="py-3.5 px-4 text-right min-w-[140px]">Target (T)</th>
-                    <th className="py-3.5 px-4 text-right min-w-[140px] bg-blue-50/70 border-x border-blue-100 text-blue-950 font-extrabold">
+                    <th className="py-3.5 px-4 min-w-[140px] border-r border-slate-200">
+                      Periode / Tahun
+                    </th>
+                    <th className="py-3.5 px-4 text-right min-w-[140px] border-r border-slate-200 font-bold text-slate-900">
+                      Target (T)
+                    </th>
+                    <th className="py-3.5 px-4 text-right min-w-[140px] border-r border-slate-200 font-bold text-slate-900">
                       Capaian (C)
                     </th>
-                    <th className="py-3.5 px-4 text-center min-w-[150px]">Persentase Capaian</th>
+                    <th className="py-3.5 px-4 text-center min-w-[110px] border-r border-slate-200 font-bold text-slate-900">
+                      % Capaian
+                    </th>
+                    <th className="py-3.5 px-4 min-w-[150px] font-bold text-slate-700">
+                      Status Pelaksanaan
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
@@ -603,76 +858,53 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                       }
                     }
 
-                    // Execution note
-                    let note = '';
-                    if (isPast) {
-                      note = hasCapaian
-                        ? `Laporan tahunan terverifikasi${metric.percent ? ' (' + metric.percent + ')' : ''}`
-                        : 'Realisasi tercatat';
-                    } else if (isCutoff) {
-                      note = 'Posisi per 18 Oktober 2026 (Sedang berjalan)';
-                    } else {
-                      note = yr === 2029 ? 'Target akhir periode RPJMN 2025–2029' : `Proyeksi target RPJMN tahun ${yr}`;
-                    }
-
                     return (
                       <tr
                         key={yr}
-                        className={`group relative hover:bg-blue-50/50 transition-colors ${
-                          isCutoff ? 'bg-amber-50/40 font-semibold' : ''
+                        className={`group relative hover:bg-slate-50/80 transition-colors ${
+                          isCutoff ? 'bg-blue-50/30 font-semibold' : ''
                         }`}
                       >
-                        <td className="py-3.5 px-4 text-slate-900 font-bold relative">
+                        <td className="py-3.5 px-4 text-slate-900 font-bold border-r border-slate-100">
                           <div className="flex items-center gap-2">
                             <span>Tahun {yr}</span>
-                            {/* Hover Micro Tooltip on Row */}
-                            <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-150 absolute left-36 top-1/2 -translate-y-1/2 z-30 whitespace-nowrap">
-                              <div className="bg-slate-900/95 backdrop-blur-md text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg shadow-xl flex items-center gap-2 border border-slate-700/80">
-                                <span>Target: <strong className="text-blue-300 font-bold">{formatMetricWithUnit(metric.target, activeAnnualRow.unit)}</strong></span>
-                                <span className="text-slate-500">·</span>
-                                <span>Capaian: <strong className="text-emerald-300 font-bold">{formatMetricWithUnit(metric.capaian, activeAnnualRow.unit)}</strong></span>
-                                {pctVal !== null && (
-                                  <>
-                                    <span className="text-slate-500">·</span>
-                                    <span className="text-amber-300 font-extrabold">({pctVal}%)</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
+                            {isCutoff && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                                Berjalan
+                              </span>
+                            )}
+                            {isPast && (
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                                Historis
+                              </span>
+                            )}
+                            {isFuture && (
+                              <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-slate-50 text-slate-400">
+                                Rencana
+                              </span>
+                            )}
                           </div>
-                          {isCutoff && (
-                            <span className="block text-[11px] text-amber-700 font-normal">
-                              (Posisi Berjalan Saat Ini)
-                            </span>
-                          )}
-                          {isPast && (
-                            <span className="block text-[11px] text-slate-500 font-normal">
-                              (Historis)
-                            </span>
-                          )}
-                          {isFuture && (
-                            <span className="block text-[11px] text-slate-400 font-normal">
-                              (Target Rencana)
-                            </span>
-                          )}
                         </td>
 
-                        <td className="py-3.5 px-4 text-right text-slate-700 tabular-nums">
+                        {/* Target */}
+                        <td className="py-3.5 px-4 text-right text-slate-800 tabular-nums font-semibold border-r border-slate-100">
                           {formatMetricWithUnit(metric.target, activeAnnualRow.unit)}
                         </td>
 
-                        <td className="py-3.5 px-4 text-right tabular-nums font-bold text-slate-950 bg-blue-50/30 border-x border-blue-100/70">
+                        {/* Capaian */}
+                        <td className="py-3.5 px-4 text-right tabular-nums font-bold text-slate-900 border-r border-slate-100">
                           {formatMetricWithUnit(metric.capaian, activeAnnualRow.unit)}
                         </td>
 
-                        <td className="py-3.5 px-4 text-center tabular-nums">
+                        {/* % Capaian */}
+                        <td className="py-3.5 px-4 text-center tabular-nums border-r border-slate-100">
                           {hasCapaian && pctVal !== null ? (
                             <span
                               className={`font-bold ${
                                 pctVal >= 95
                                   ? 'text-emerald-700'
                                   : pctVal >= 75
-                                  ? 'text-blue-700'
+                                  ? 'text-slate-800'
                                   : 'text-amber-700'
                               }`}
                             >
@@ -680,6 +912,23 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                             </span>
                           ) : (
                             <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+
+                        {/* Status Pelaksanaan */}
+                        <td className="py-3.5 px-4 text-slate-600">
+                          {isCutoff && hasCapaian ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                              Posisi Berjalan (Okt 2026)
+                            </span>
+                          ) : isPast && hasCapaian ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Terealisasi Penuh
+                            </span>
+                          ) : isFuture ? (
+                            <span className="text-slate-400 text-xs">Target RPJMN</span>
+                          ) : (
+                            <span className="text-slate-300 text-xs">—</span>
                           )}
                         </td>
                       </tr>
@@ -691,113 +940,321 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           </div>
         )}
 
-        {/* VIEW B: TABEL BULANAN */}
+        {/* VIEW B: TABEL BULANAN (VERBATIM CAPAIAN BULANAN DARI DOKUMEN RESMI) */}
         {tableType === 'bulanan' && (
           <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse text-xs md:text-sm">
                 <thead>
                   <tr className="bg-slate-100/90 text-slate-900 font-bold border-b border-slate-200">
-                    <th className="py-3.5 px-5 min-w-[180px]">Bulan</th>
-                    <th className="py-3.5 px-5 text-right min-w-[160px]">
-                      Capaian
+                    <th className="py-3 px-4 min-w-[160px] border-r border-slate-200">
+                      Bulan
                     </th>
-                    <th className="py-3.5 px-5 text-right min-w-[180px] bg-blue-50/70 border-l border-blue-100 text-blue-950 font-extrabold">
-                      Total Capaian
+                    <th className="py-3 px-4 text-right min-w-[140px] border-r border-slate-200 font-bold text-slate-900">
+                      Target (T)
+                    </th>
+                    <th className="py-3 px-4 text-right min-w-[150px] border-r border-slate-200 font-bold text-slate-900">
+                      Capaian (C)
+                    </th>
+                    <th className="py-3 px-4 text-center min-w-[140px] border-r border-slate-200 font-bold text-slate-900">
+                      Persentase Capaian
+                    </th>
+                    <th className="py-3 px-4 min-w-[200px] font-bold text-slate-700">
+                      Catatan Pelaksanaan
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {displayedMonths.map((m) => {
                     const isCutoff = selectedYear === 2026 && m.month === 10;
-                    const capaianDisplay =
-                      m.capaianFormatted === '' || m.capaianFormatted === '—' ? '—' : m.capaianFormatted;
-                    const totalCapaianDisplay =
-                      m.totalCapaianFormatted && m.totalCapaianFormatted !== ''
-                        ? m.totalCapaianFormatted
-                        : m.capaianFormatted && m.capaianFormatted !== ''
-                        ? m.capaianFormatted
-                        : '—';
+                    const targetDisplay = m.targetFormatted || '';
+                    const capaianDisplay = m.capaianFormatted || '';
+                    const pctDisplay = m.percentageFormatted || '';
+                    const noteDisplay = m.note || '';
 
                     return (
                       <tr
                         key={m.month}
-                        className={`group relative hover:bg-blue-50/50 transition-colors ${
-                          isCutoff ? 'bg-amber-50/40 font-semibold' : ''
+                        className={`group relative hover:bg-slate-50/80 transition-colors ${
+                          isCutoff ? 'bg-blue-50/30 font-semibold' : ''
                         }`}
                       >
-                        <td className="py-3.5 px-5 text-slate-900 font-bold relative">
+                        {/* Bulan */}
+                        <td className="py-3.5 px-4 text-slate-900 font-bold border-r border-slate-100">
                           <div className="flex items-center gap-2">
                             <span>{m.monthName} {selectedYear}</span>
-                            {/* Hover Micro Tooltip on Monthly Row */}
-                            {(capaianDisplay !== '—' || totalCapaianDisplay !== '—') && (
-                              <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-150 absolute left-48 top-1/2 -translate-y-1/2 z-30 whitespace-nowrap">
-                                <div className="bg-slate-900/95 backdrop-blur-md text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg shadow-xl flex items-center gap-2 border border-slate-700/80">
-                                  {capaianDisplay !== '—' && (
-                                    <span>Capaian: <strong className="text-emerald-300 font-bold">{capaianDisplay}</strong></span>
-                                  )}
-                                  {capaianDisplay !== '—' && totalCapaianDisplay !== '—' && (
-                                    <span className="text-slate-500">·</span>
-                                  )}
-                                  {totalCapaianDisplay !== '—' && (
-                                    <span>Total Capaian: <strong className="text-blue-300 font-bold">{totalCapaianDisplay}</strong></span>
-                                  )}
-                                </div>
-                              </div>
+                            {isCutoff && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                                Posisi Berjalan Saat Ini
+                              </span>
                             )}
                           </div>
-                          {isCutoff && (
-                            <span className="block text-[11px] text-amber-700 font-normal">
-                              (Posisi Berjalan Saat Ini)
-                            </span>
+                        </td>
+
+                        {/* Target (T) */}
+                        <td className="py-3.5 px-4 text-right text-slate-800 tabular-nums font-semibold border-r border-slate-100">
+                          {targetDisplay === '—' ? (
+                            <span className="text-slate-400 font-normal">—</span>
+                          ) : targetDisplay !== '' ? (
+                            targetDisplay
+                          ) : (
+                            ''
                           )}
                         </td>
-                        <td className="py-3.5 px-5 text-right text-slate-700 tabular-nums font-semibold">
+
+                        {/* Capaian (C) */}
+                        <td className={`py-3.5 px-4 text-right tabular-nums border-r border-slate-100 ${
+                          isCutoff ? 'font-black text-slate-900' : 'font-bold text-slate-800'
+                        }`}>
                           {capaianDisplay === '—' ? (
-                            <span className="text-slate-300 font-normal">—</span>
-                          ) : (
+                            <span className="text-slate-400 font-normal">—</span>
+                          ) : capaianDisplay !== '' ? (
                             capaianDisplay
+                          ) : (
+                            ''
                           )}
                         </td>
-                        <td className="py-3.5 px-5 text-right tabular-nums font-extrabold text-slate-950 bg-blue-50/30 border-l border-blue-100/70">
-                          {totalCapaianDisplay === '—' ? (
-                            <span className="text-slate-300 font-normal">—</span>
+
+                        {/* Persentase Capaian */}
+                        <td className="py-3.5 px-4 text-center tabular-nums font-bold text-slate-900 border-r border-slate-100">
+                          {pctDisplay === '—' ? (
+                            <span className="text-slate-400 font-normal">—</span>
+                          ) : pctDisplay !== '' ? (
+                            pctDisplay
                           ) : (
-                            totalCapaianDisplay
+                            ''
                           )}
+                        </td>
+
+                        {/* Catatan Pelaksanaan */}
+                        <td className="py-3.5 px-4 text-slate-700 text-xs sm:text-sm">
+                          {noteDisplay}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
-                {selectedMonth === 0 && (
-                  <tfoot className="bg-slate-50/90 border-t-2 border-slate-200 text-xs sm:text-sm font-bold text-slate-900">
-                    <tr>
-                      <td className="py-3.5 px-5 text-slate-900 font-extrabold">
-                        Total Capaian Kumulatif {selectedYear === 2026 ? '(s.d. Oktober 2026)' : `Tahun ${selectedYear}`}
-                      </td>
-                      <td className="py-3.5 px-5 text-right text-slate-500 text-xs font-semibold">
-                        Posisi Akhir
-                      </td>
-                      <td className="py-3.5 px-5 text-right tabular-nums text-blue-900 font-black bg-blue-50/60 border-l border-blue-200/70">
-                        {(() => {
-                          const validTotals = displayedMonths.filter(
-                            (m) => m.totalCapaianFormatted && m.totalCapaianFormatted !== '—' && m.totalCapaianFormatted !== ''
-                          );
-                          if (validTotals.length > 0) {
-                            return validTotals[validTotals.length - 1].totalCapaianFormatted;
-                          }
-                          const validCap = displayedMonths.filter(
-                            (m) => m.capaianFormatted && m.capaianFormatted !== '—' && m.capaianFormatted !== ''
-                          );
-                          return validCap.length > 0 ? validCap[validCap.length - 1].capaianFormatted : '—';
-                        })()}
-                      </td>
-                    </tr>
-                  </tfoot>
-                )}
               </table>
             </div>
+          </div>
+        )}
+
+        {/* VIEW C: TREN BERKALA (DINAMIS & TABULAR - TANPA WIDGET SUMMARY TAMBAHAN) */}
+        {tableType === 'timeseries' && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            {/* Dinamis & Tabular: Rangkaian Perkembangan Waktu Capaian Bulanan */}
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+              {/* Header Toolbar: Judul & Subtitle di Kiri, Filter Tombol Triwulan di Kanan */}
+              <div className="p-4 sm:p-5 bg-white border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <h4 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                      Rangkaian Waktu Capaian Bulanan
+                    </h4>
+                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                      Tahun {selectedYear}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-normal mt-1">
+                    Runtut waktu realisasi capaian, pergerakan MoM, akumulasi progres, dan target tahunan ({effectiveProgram.target2026 || '80.282 Satuan Pendidikan'}).
+                  </p>
+                </div>
+
+                {/* Filter Periode / Triwulan: Dropdown Biasa */}
+                <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+                  <label
+                    htmlFor="filter-periode-timeseries"
+                    className="text-xs font-semibold text-slate-500 whitespace-nowrap hidden sm:inline"
+                  >
+                    Filter Periode:
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="filter-periode-timeseries"
+                      aria-label="Pilih Periode Capaian"
+                      value={timeseriesQuarter}
+                      onChange={(e) => setTimeseriesQuarter(e.target.value as any)}
+                      className="h-[38px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                    >
+                      <option value="all">Semua Bulan (12 Bulan)</option>
+                      <option value="q1">Triwulan I (Q1: Jan–Mar)</option>
+                      <option value="q2">Triwulan II (Q2: Apr–Jun)</option>
+                      <option value="q3">Triwulan III (Q3: Jul–Sep)</option>
+                      <option value="q4">Triwulan IV (Q4: Okt–Des)</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Dynamic Tabular Table */}
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse text-xs md:text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 text-slate-700 font-bold uppercase text-[11px] tracking-wider border-b border-slate-200">
+                      <th className="py-3.5 px-4 min-w-[150px]">Bulan</th>
+                      <th className="py-3.5 px-4 text-right min-w-[150px]">Realisasi Bulanan</th>
+                      <th className="py-3.5 px-4 text-right min-w-[130px]">Perubahan (Δ MoM)</th>
+                      <th className="py-3.5 px-4 text-right min-w-[150px]">Akumulasi Capaian</th>
+                      <th className="py-3.5 px-4 text-center min-w-[130px]">% Target Tahunan</th>
+                      <th className="py-3.5 px-4 min-w-[140px]">Status Pelaporan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {filteredTimeseriesMonths.map((m) => {
+                      const isCutoff = selectedYear === 2026 && m.month === 10;
+                      const hasData = m.capaianFormatted !== '' && m.capaianFormatted !== '—';
+
+                      // Annual target calculation
+                      const targetStr = String(effectiveProgram.target2026 || '');
+                      const rawTargetNum = parseFloat(targetStr.replace(/[^0-9]/g, ''));
+                      const accumNum =
+                        m.totalCapaian ||
+                        (m.totalCapaianFormatted ? parseFloat(String(m.totalCapaianFormatted).replace(/[^0-9]/g, '')) : null);
+                      let pctAnnual = '—';
+                      if (rawTargetNum && accumNum && rawTargetNum > 0) {
+                        pctAnnual = `${((accumNum / rawTargetNum) * 100).toFixed(1)}%`;
+                      } else if (hasData && m.percentage) {
+                        pctAnnual = `${m.percentage}%`;
+                      }
+
+                      // Clean values without double unit
+                      const cleanDisplay = (val: string | null | undefined) => {
+                        if (!val || val === '—' || val === '') return '—';
+                        const trimmed = val.trim();
+                        if (/[a-zA-Z%]/.test(trimmed)) return trimmed;
+                        return `${trimmed} ${effectiveProgram.unit}`;
+                      };
+
+                      const realisasiDisplay = hasData ? cleanDisplay(m.capaianFormatted) : '—';
+                      const totalDisplay = hasData ? cleanDisplay(m.totalCapaianFormatted || m.capaianFormatted) : '—';
+
+                      return (
+                        <tr
+                          key={m.month}
+                          className={`hover:bg-slate-50/80 transition-colors ${
+                            isCutoff ? 'bg-blue-50/25 font-semibold' : ''
+                          }`}
+                        >
+                          <td className="py-3.5 px-4 text-slate-900 font-bold">
+                            <div className="flex items-center gap-2">
+                              <span>{m.monthName} {selectedYear}</span>
+                              {isCutoff && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                  Berjalan
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-right tabular-nums text-slate-800">
+                            {realisasiDisplay}
+                          </td>
+                          <td className="py-3.5 px-4 text-right tabular-nums">
+                            {m.deltaFormatted === '—' ? (
+                              <span className="text-slate-300">—</span>
+                            ) : m.deltaFormatted === 'Basis Awal' ? (
+                              <span className="text-slate-400 font-normal">Basis Awal</span>
+                            ) : (
+                              <span
+                                className={`font-semibold ${
+                                  (m.deltaMoM ?? 0) >= 0 ? 'text-emerald-700' : 'text-slate-700'
+                                }`}
+                              >
+                                {m.deltaFormatted}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-right tabular-nums font-bold text-slate-900">
+                            {totalDisplay}
+                          </td>
+                          <td className="py-3.5 px-4 text-center tabular-nums text-slate-800 font-semibold">
+                            {hasData ? pctAnnual : '—'}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            {isCutoff && hasData ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                Posisi Berjalan
+                              </span>
+                            ) : hasData ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Terverifikasi
+                              </span>
+                            ) : (
+                              <span className="text-slate-300 font-normal text-xs">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+
+                  {/* Dynamic Summary Footer Row */}
+                  <tfoot className="bg-slate-50/90 border-t-2 border-slate-200 text-xs md:text-sm font-bold text-slate-900">
+                    {(() => {
+                      const reportedMonths = filteredTimeseriesMonths.filter(
+                        (m) => m.capaianFormatted !== '' && m.capaianFormatted !== '—'
+                      );
+                      const sumMonthly = reportedMonths.reduce((acc, curr) => acc + (curr.capaian || 0), 0);
+                      const lastReported = reportedMonths.length > 0 ? reportedMonths[reportedMonths.length - 1] : null;
+                      const lastAccum = lastReported?.totalCapaian || sumMonthly;
+
+                      const targetStr = String(effectiveProgram.target2026 || '');
+                      const rawTargetNum = parseFloat(targetStr.replace(/[^0-9]/g, ''));
+                      const pctFoot =
+                        rawTargetNum && lastAccum && rawTargetNum > 0
+                          ? `${((lastAccum / rawTargetNum) * 100).toFixed(1)}%`
+                          : '—';
+
+                      const formatNum = (num: number) => {
+                        return `${Math.round(num).toLocaleString('id-ID')} ${effectiveProgram.unit}`;
+                      };
+
+                      return (
+                        <tr>
+                          <td className="py-3.5 px-4 text-slate-900 font-extrabold">
+                            {timeseriesQuarter === 'all'
+                              ? `Total Realisasi (s.d. Oktober ${selectedYear})`
+                              : timeseriesQuarter === 'q1'
+                              ? `Total Capaian Triwulan I (${selectedYear})`
+                              : timeseriesQuarter === 'q2'
+                              ? `Total Capaian Triwulan II (${selectedYear})`
+                              : timeseriesQuarter === 'q3'
+                              ? `Total Capaian Triwulan III (${selectedYear})`
+                              : `Total Capaian Triwulan IV (Berjalan)`}
+                          </td>
+                          <td className="py-3.5 px-4 text-right tabular-nums text-slate-900 font-extrabold">
+                            {sumMonthly > 0 ? formatNum(sumMonthly) : '—'}
+                          </td>
+                          <td className="py-3.5 px-4 text-right text-slate-300 font-normal">
+                            —
+                          </td>
+                          <td className="py-3.5 px-4 text-right tabular-nums text-slate-900 font-extrabold">
+                            {lastAccum > 0 ? formatNum(lastAccum) : '—'}
+                          </td>
+                          <td className="py-3.5 px-4 text-center tabular-nums text-emerald-800 font-extrabold">
+                            {pctFoot}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-500 font-medium text-xs">
+                            {reportedMonths.length === 0
+                              ? 'Belum Ada Data'
+                              : timeseriesQuarter === 'all'
+                              ? `${reportedMonths.length} / 12 Bulan Terlapor`
+                              : timeseriesQuarter === 'q4'
+                              ? '1 Bulan Berjalan'
+                              : `${reportedMonths.length} Bulan Terverifikasi`}
+                          </td>
+                        </tr>
+                      );
+                    })()}
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
+            {/* Catatan Ringkas */}
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Catatan: Data capaian dihimpun secara berkala setiap bulan dari unit kerja teknis K/L pengampu program untuk monitoring dan evaluasi terpadu.
+            </p>
           </div>
         )}
       </div>
@@ -817,7 +1274,9 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
               <p className="text-xs sm:text-sm text-slate-500 font-medium">
                 {tableType === 'tahunan'
                   ? `Perbandingan Target (T) vs Capaian (C) RPJMN 2025–2029 · ${activeAnnualRow.name}`
-                  : `Tren Capaian Bulanan & Total Capaian Kumulatif · ${program.title}`}
+                  : tableType === 'timeseries'
+                  ? `Visualisasi Tren Runtut Waktu Capaian & Pembaruan Berkala · ${effectiveProgram.title}`
+                  : `Tren Capaian Bulanan & Total Capaian Kumulatif · ${effectiveProgram.title}`}
               </p>
             </div>
           </div>
@@ -838,12 +1297,16 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
             ) : (
               <>
                 <span className="flex items-center gap-2 text-blue-700">
-                  <span className="w-3.5 h-0.5 border-t-2 border-blue-600 inline-block" />
-                  <span>Capaian Bulanan</span>
+                  <span className="w-3.5 h-0.5 border-t-2 border-dashed border-blue-600 inline-block" />
+                  <span>Target Tahunan (Des 2026)</span>
+                </span>
+                <span className="flex items-center gap-2 text-emerald-800">
+                  <span className="w-4 h-1 bg-emerald-600 inline-block rounded-full" />
+                  <span>Realisasi Berjalan (s.d. Okt 2026)</span>
                 </span>
                 <span className="flex items-center gap-2 text-emerald-700">
-                  <span className="w-4 h-1 bg-emerald-600 inline-block rounded-full" />
-                  <span>Total Capaian (Kumulatif)</span>
+                  <span className="w-4 h-0.5 border-t-2 border-dashed border-emerald-600 inline-block" />
+                  <span>Proyeksi ke Target</span>
                 </span>
               </>
             )}
@@ -866,37 +1329,37 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                       className="pointer-events-none absolute z-20 top-3 -translate-x-1/2 transition-all duration-150 ease-out"
                       style={{ left: `${Math.max(16, Math.min(84, leftPct))}%` }}
                     >
-                      <div className="bg-slate-900/95 backdrop-blur-md text-white rounded-xl px-3.5 py-2.5 shadow-xl border border-slate-700/80 min-w-[210px] space-y-1.5">
-                        <div className="flex items-center justify-between gap-3 border-b border-slate-700/70 pb-1.5">
-                          <span className="font-bold text-white text-xs">
+                      <div className="bg-slate-100/95 backdrop-blur-md text-slate-800 rounded-2xl px-4 py-3 shadow-xl border border-slate-300/90 min-w-[220px] space-y-2">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2">
+                          <span className="font-extrabold text-slate-900 text-sm">
                             Tahun {pt.year}
                           </span>
                           <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
                               pt.year === 2026
-                                ? 'bg-blue-600 text-white'
+                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
                                 : pt.year === 2025
-                                ? 'bg-slate-700 text-slate-200'
-                                : 'bg-slate-800 text-slate-400'
+                                ? 'bg-slate-200 text-slate-700 border border-slate-300'
+                                : 'bg-slate-100 text-slate-500 border border-slate-200'
                             }`}
                           >
                             {pt.year === 2026 ? 'Berjalan' : pt.year === 2025 ? 'Historis' : 'Rencana'}
                           </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
                           <div>
-                            <span className="text-[10px] font-semibold text-blue-300 block">Target (T)</span>
-                            <span className="font-bold text-white">{pt.targetFormatted}</span>
+                            <span className="text-[11px] font-bold text-blue-700 block">Target (T)</span>
+                            <span className="font-extrabold text-slate-900">{pt.targetFormatted}</span>
                           </div>
                           <div>
-                            <span className="text-[10px] font-semibold text-emerald-300 block">Capaian (C)</span>
-                            <span className="font-bold text-emerald-400">{pt.capaianFormatted}</span>
+                            <span className="text-[11px] font-bold text-emerald-700 block">Capaian (C)</span>
+                            <span className="font-extrabold text-emerald-800">{pt.capaianFormatted}</span>
                           </div>
                         </div>
                         {pt.percent && (
-                          <div className="pt-1 border-t border-slate-800 flex items-center justify-between text-[11px]">
-                            <span className="text-slate-400">Persentase Capaian:</span>
-                            <span className="font-extrabold text-amber-300">{pt.percent}</span>
+                          <div className="pt-1.5 border-t border-slate-200 flex items-center justify-between text-xs">
+                            <span className="text-slate-600 font-medium">Persentase:</span>
+                            <span className="font-extrabold text-slate-900">{pt.percent}</span>
                           </div>
                         )}
                       </div>
@@ -1175,8 +1638,8 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         </div>
       )}
 
-        {/* GRAPH VIEW 2: MONTHLY TRAJECTORY (Jan - Des) */}
-        {tableType === 'bulanan' && (
+        {/* GRAPH VIEW 2: MONTHLY & TIME-SERIES TRAJECTORY (Jan - Des) */}
+        {(tableType === 'bulanan' || tableType === 'timeseries') && (
           <div className="space-y-4">
             {validMonthlyCapaian.length > 0 || validMonthlyTargets.length > 0 ? (
               <div className="relative w-full overflow-x-auto custom-scrollbar border border-slate-200/90 rounded-2xl p-4 sm:p-5 bg-gradient-to-b from-white to-slate-50/50 shadow-2xs">
@@ -1210,35 +1673,40 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     className="pointer-events-none absolute z-20 top-3 -translate-x-1/2 transition-all duration-150 ease-out"
                     style={{ left: `${Math.max(16, Math.min(84, leftPct))}%` }}
                   >
-                    <div className="bg-slate-900/95 backdrop-blur-md text-white rounded-xl px-3.5 py-2.5 shadow-xl border border-slate-700/80 min-w-[210px] space-y-1.5">
-                      <div className="flex items-center justify-between gap-3 border-b border-slate-700/70 pb-1.5">
-                        <span className="font-bold text-white text-xs">
-                          {MONTH_SHORT[hoveredMonthlyIdx]} {selectedYear}
+                    <div className="bg-slate-100/95 backdrop-blur-md text-slate-800 rounded-2xl px-4 py-3 shadow-xl border border-slate-300/90 min-w-[220px] space-y-2">
+                      <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2">
+                        <span className="font-extrabold text-slate-900 text-sm">
+                          {m.monthName} {selectedYear}
                         </span>
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
                             hasCapaian
-                              ? 'bg-emerald-600 text-white'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                               : hasTarget
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-slate-800 text-slate-400'
+                              ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                              : 'bg-slate-200 text-slate-600 border border-slate-300'
                           }`}
                         >
-                          {hasCapaian ? 'Terealisasi' : hasTarget ? 'Target Akhir Tahun' : 'Belum Ada Data'}
+                          {hasCapaian ? 'Posisi Berjalan' : hasTarget ? 'Target Tahunan' : 'Belum Ada Data'}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
                         <div>
-                          <span className="text-[10px] font-semibold text-blue-300 block">Capaian Bulanan</span>
-                          <span className="font-bold text-white">{m.capaianFormatted || '—'}</span>
+                          <span className="text-[11px] font-bold text-blue-700 block">Target (T)</span>
+                          <span className="font-extrabold text-slate-900">{m.targetFormatted || '—'}</span>
                         </div>
                         <div>
-                          <span className="text-[10px] font-semibold text-emerald-300 block">Total Capaian</span>
-                          <span className="font-bold text-emerald-400">{m.totalCapaianFormatted || m.capaianFormatted || '—'}</span>
+                          <span className="text-[11px] font-bold text-emerald-700 block">Capaian (C)</span>
+                          <span className="font-extrabold text-emerald-800">{m.capaianFormatted || '—'}</span>
                         </div>
                       </div>
+                      {m.percentageFormatted && m.percentageFormatted !== '' && (
+                        <div className="text-xs text-slate-600 pt-1.5 border-t border-slate-200">
+                          Persentase: <span className="font-extrabold text-slate-900">{m.percentageFormatted}</span>
+                        </div>
+                      )}
                       {m.note && (
-                        <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
+                        <div className="text-xs text-slate-500 pt-1 border-t border-slate-200">
                           {m.note}
                         </div>
                       )}
@@ -1315,7 +1783,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   />
                 )}
 
-                {/* Capaian Solid Line (only if >= 2 points) */}
+                {/* Capaian Solid Line (Realisasi Berjalan s.d. Oktober) */}
                 {capaianMonthlyPath && (
                   <path
                     d={capaianMonthlyPath}
@@ -1323,6 +1791,18 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     stroke="#059669"
                     strokeWidth="3.5"
                     filter="url(#capaianGlowMonthly)"
+                  />
+                )}
+
+                {/* Trajectory Projection Line (Mengarah ke Target Tahunan Desember) */}
+                {trajectoryProjectionPath && (
+                  <path
+                    d={trajectoryProjectionPath}
+                    fill="none"
+                    stroke="#059669"
+                    strokeWidth="3"
+                    strokeDasharray="6 6"
+                    opacity="0.85"
                   />
                 )}
 
@@ -1448,7 +1928,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                 })}
               </svg>
             </div>
-            ) : (
+            ) : effectiveProgram.id === 'studio_guru' ? (
               <div className="p-6 sm:p-7 rounded-2xl border border-blue-200/80 bg-gradient-to-r from-blue-50/80 via-slate-50/70 to-indigo-50/60 shadow-2xs space-y-4">
                 <div className="flex items-center gap-3.5">
                   <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
@@ -1477,6 +1957,16 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     <span className="font-bold text-slate-900 text-sm">Tahun 2027</span>
                   </div>
                 </div>
+              </div>
+            ) : (
+              <div className="py-12 px-6 rounded-2xl border border-slate-200/90 bg-slate-50/60 text-center space-y-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-white border border-slate-200 flex items-center justify-center mx-auto text-slate-400 shadow-2xs">
+                  <Clock className="w-5 h-5 text-slate-400" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-700">Rangkaian Data Bulanan Belum Tersedia</h4>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  Rincian capaian berkala per bulan untuk indikator ini belum dihimpun atau belum dipublikasikan oleh K/L pengampu program.
+                </p>
               </div>
             )}
           </div>
@@ -1575,6 +2065,26 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
             })}
           </div>
         )}
+      </div>
+
+      {/* 5. BOTTOM BAR: Convenient Return Action at the End of Detail View */}
+      <div className="flex items-center justify-between pt-2 pb-6">
+        <button
+          type="button"
+          onClick={onBack}
+          className="h-[44px] inline-flex items-center gap-2.5 px-6 rounded-2xl text-xs sm:text-sm font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs transition-all cursor-pointer"
+        >
+          <ArrowLeft className="w-4.5 h-4.5 text-slate-500" />
+          <span>Kembali ke Daftar Program</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="h-[44px] inline-flex items-center gap-2 px-4 rounded-2xl text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs transition-all cursor-pointer"
+        >
+          <span>Ke Atas Halaman ↑</span>
+        </button>
       </div>
     </div>
   );

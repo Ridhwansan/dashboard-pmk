@@ -67,7 +67,7 @@ export const PillarCard: React.FC<PillarCardProps> = ({
         return {
           icon: ShieldAlert,
           iconBg: 'bg-amber-50 text-amber-600 border-amber-100',
-          title: 'Bencana',
+          title: 'Kebencanaan',
           lead: {
             label: 'Hunian Sementara (Huntara)',
             value: '99,0%',

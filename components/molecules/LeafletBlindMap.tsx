@@ -21,7 +21,7 @@ import {
   SUMATERA_REHAB_PROVINCES,
   SUMATERA_REHAB_KODE_BPS,
 } from '@/data/mapIndicators';
-import { RotateCcw, Plus, Minus, Info } from 'lucide-react';
+import { Plus, Minus, Info } from 'lucide-react';
 
 interface LeafletBlindMapProps {
   selectedWilayah: WilayahData;
@@ -693,23 +693,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
       {/* 1. Map Canvas */}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-      {/* 2. Top-Right: Reset Tampilan Peta Pill Button (only when not in fullscreen overlay) */}
-      {!isFullscreen && (
-        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onResetNasional}
-            aria-label="Kembali ke tampilan seluruh Indonesia"
-            title="Reset Tampilan Peta"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/95 hover:bg-white text-slate-800 hover:text-slate-950 border border-slate-200/90 rounded-full shadow-xs text-xs font-semibold cursor-pointer transition-colors backdrop-blur-xs select-none"
-          >
-            <RotateCcw className="h-3.5 w-3.5 text-slate-600" />
-            <span>Reset Tampilan Peta</span>
-          </button>
-        </div>
-      )}
-
-      {/* 3. Bottom-Left: Dynamic Thematic Choropleth Pill Legend or Initial Guide */}
+      {/* 2. Bottom-Left: Dynamic Thematic Choropleth Pill Legend or Initial Guide */}
       {isPillarActive && indicatorDef && legendStops && activeWilayahIndVal ? (
         <div className="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-2xl px-4 py-3 shadow-md text-xs select-none min-w-[260px] sm:min-w-[300px] max-w-[360px]">
           <div className="flex items-center justify-between text-xs font-bold text-slate-900 mb-1.5 tracking-tight gap-2">
@@ -847,7 +831,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
               }`}
             >
               {activePillarId === 'bencana'
-                ? 'Bencana'
+                ? 'Kebencanaan'
                 : activePillarId === 'kemiskinan'
                 ? 'Penurunan Kemiskinan'
                 : activePillarId === 'kesehatan'
@@ -858,20 +842,9 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
         </div>
       ) : (
         <div className="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-2xl p-3.5 shadow-md text-xs select-none max-w-xs">
-          <div className="font-extrabold text-slate-900 mb-1 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
-              <span className="truncate">{selectedWilayah.level === 'nasional' ? 'Agregat Nasional' : selectedWilayah.name}</span>
-            </div>
-            {selectedWilayah.level !== 'nasional' && (
-              <button
-                type="button"
-                onClick={onResetNasional}
-                className="text-[10px] text-blue-600 font-bold hover:underline shrink-0 cursor-pointer"
-              >
-                Reset
-              </button>
-            )}
+          <div className="font-extrabold text-slate-900 mb-1 flex items-center gap-1.5 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
+            <span className="truncate">{selectedWilayah.level === 'nasional' ? 'Agregat Nasional' : selectedWilayah.name}</span>
           </div>
           <p className="text-[11px] text-slate-600 leading-relaxed">
             {selectedWilayah.level === 'nasional'

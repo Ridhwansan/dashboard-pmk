@@ -49,7 +49,7 @@ const PILLAR_ITEMS = [
   },
   {
     id: 'bencana' as const,
-    name: 'Bencana',
+    name: 'Kebencanaan',
     count: '4 Indikator Utama',
     icon: ShieldAlert,
     iconColor: 'text-[#7a4b27]',

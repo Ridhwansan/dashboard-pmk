@@ -38,7 +38,7 @@ export const ExecutivePdfButton: React.FC<ExecutivePdfButtonProps> = ({
       case 'kesehatan':
         return 'Pilar Kesehatan';
       case 'bencana':
-        return 'Pilar Bencana';
+        return 'Pilar Kebencanaan';
       case 'kemiskinan':
         return 'Pilar Penurunan Kemiskinan';
       default:

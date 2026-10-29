@@ -60,7 +60,7 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
         },
       },
       {
-        id: 'digitalisasi_pembelajaran',
+        id: 'digitalisasi_pendidikan',
         mapIndicatorId: 'ifp_digitalisasi',
         name: 'IFP Diproduksi dan Disalurkan',
         unit: 'Perangkat & Satdik',
@@ -261,7 +261,7 @@ export const PILLAR_AGREGAT_DATA: Record<Exclude<MapPillarId, 'all'>, PillarAgre
 
   bencana: {
     pillarId: 'bencana',
-    pillarName: 'Bencana',
+    pillarName: 'Kebencanaan',
     badge: 'Pilar 3',
     description: 'Target & Capaian Tahunan Kesiapsiagaan & Pemulihan Pascabencana',
     indicators: [

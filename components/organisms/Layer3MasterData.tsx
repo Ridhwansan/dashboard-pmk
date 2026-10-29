@@ -25,6 +25,42 @@ export const Layer3MasterData: React.FC<Layer3MasterDataProps> = ({ onBackToHome
     return matchesSearch && matchesCategory;
   });
 
+  const handleExportCsv = () => {
+    const headers = [
+      'No',
+      'ID Sasaran',
+      'Wilayah',
+      'Provinsi',
+      'Kategori Sasaran',
+      'Desil',
+      'Jumlah Sasaran',
+      'Status MBG',
+      'Uraian Tindak Lanjut Orkestrasi',
+    ];
+    const rows = filteredRecords.map((item, idx) => [
+      idx + 1,
+      `"${item.id}"`,
+      `"${item.wilayah.replace(/"/g, '""')}"`,
+      `"${item.provinsi.replace(/"/g, '""')}"`,
+      `"${item.kategoriSasaran.replace(/"/g, '""')}"`,
+      item.desil,
+      item.jumlahSasaran,
+      `"${item.statusMBG}"`,
+      `"${item.keterangan.replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent =
+      'data:text/csv;charset=utf-8,\uFEFF' +
+      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `DTSEN_Data_Sasaran_PMK_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="w-full space-y-6">
       {/* Top Header Card */}
@@ -33,29 +69,22 @@ export const Layer3MasterData: React.FC<Layer3MasterDataProps> = ({ onBackToHome
           <div className="flex items-center gap-3">
             <button
               onClick={onBackToHome}
-              aria-label="Kembali ke Ringkasan Nasional"
-              className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-              title="Kembali ke Ringkasan Nasional"
+              aria-label="Kembali ke Dashboard Eksekutif"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-bold border border-slate-200/80 transition-colors cursor-pointer"
+              title="Kembali ke Dashboard Eksekutif"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4 text-slate-600" />
+              <span>Kembali ke Dashboard</span>
             </button>
+            <div className="h-6 w-px bg-slate-200 hidden sm:block" />
             <div>
               <h2 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
                 Data Terpadu Sasaran (Data DTSEN)
               </h2>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Master Data & Analisis Sasaran Terpadu (Asisten Deputi)
+                Master Data &amp; Analisis Sasaran Terpadu (Asisten Deputi)
               </p>
             </div>
-          </div>
-
-          <div>
-            <button
-              onClick={onBackToHome}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-            >
-              ← Ringkasan Eksekutif
-            </button>
           </div>
         </div>
 
@@ -152,10 +181,11 @@ export const Layer3MasterData: React.FC<Layer3MasterDataProps> = ({ onBackToHome
           </div>
 
           <button
-            onClick={() => alert('Ekspor data DTSEN CSV siap diunduh.')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors cursor-pointer"
+            onClick={handleExportCsv}
+            title="Unduh data sasaran sebagai file CSV"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors cursor-pointer border border-slate-200/80 shadow-2xs"
           >
-            <Download className="h-3.5 w-3.5" />
+            <Download className="h-3.5 w-3.5 text-slate-600" />
             <span>Ekspor CSV</span>
           </button>
         </div>

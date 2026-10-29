@@ -44,7 +44,7 @@ const PILLARS_NAV: PillarNavItem[] = [
   },
   {
     id: 'bencana',
-    label: 'Bencana',
+    label: 'Kebencanaan',
     icon: <ShieldAlert className="h-4 w-4 text-[#7a4b27]" />,
   },
   {

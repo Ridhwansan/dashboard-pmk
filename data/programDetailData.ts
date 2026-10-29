@@ -80,278 +80,160 @@ const MONTH_SHORT = [
 ];
 
 /**
- * Helper to generate cumulative or stepped monthly data points for a given annual target & actual
+ * Official Monthly Data Generator for programs in the official presentation slides
+ * Verbatim from official documents:
+ * - Months 1 - 9 (Jan - Sep): blank / not yet reported individually
+ * - Month 10 (Oktober): Posisi Berjalan Saat Ini (per 18 Oktober 2026)
+ * - Month 11 (November): Capaian —, Persentase —
+ * - Month 12 (Desember): Target 2026 (T), Capaian —, Persentase —
  */
-function generateMonthlyData(options: {
-  target2025: number;
-  capaian2025: number;
-  target2026: number;
-  capaian2026Okt: number;
-  target2027: number;
-  unit: string;
-  isCumulative?: boolean;
-  isPercentage?: boolean;
+export function generateOfficialProgramMonthlyData(config: {
+  targetDesember: number;
+  targetDesemberFormatted: string;
+  capaianOktober: number;
+  capaianOktoberFormatted: string;
+  percentageOktober: number;
+  percentageOktoberFormatted: string;
+  noteOktober?: string;
 }): Record<number, MonthlyDataPoint[]> {
-  const isIntegerUnit =
-    !options.isPercentage &&
-    !options.unit.includes('%') &&
-    !options.unit.includes('juta') &&
-    !options.unit.includes('jt') &&
-    !options.unit.includes('poin') &&
-    !options.unit.includes('indeks') &&
-    !options.unit.includes('PDB');
-
-  const formatVal = (val: number | null) => {
-    if (val === null) return '—';
-    if (options.isPercentage) {
-      return `${val.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`;
-    }
-    if (isIntegerUnit) {
-      return `${Math.round(val).toLocaleString('id-ID')} ${options.unit}`;
-    }
-    if (val >= 1000) {
-      return `${val.toLocaleString('id-ID')} ${options.unit}`;
-    }
-    return `${val.toLocaleString('id-ID', { maximumFractionDigits: 2 })} ${options.unit}`;
-  };
-
-  // 2025: Full Year 12 Months
-  const data2025: MonthlyDataPoint[] = [];
-  let prevCum2025 = 0;
-  for (let i = 0; i < MONTH_NAMES.length; i++) {
-    const name = MONTH_NAMES[i];
-    const monthNum = i + 1;
-    const progressRatio = monthNum / 12;
-    const rawT = options.target2025 * progressRatio;
-    const rawC = options.capaian2025 * (progressRatio * (0.92 + Math.sin(monthNum) * 0.08));
-
-    const t = isIntegerUnit ? Math.round(rawT) : Math.round(rawT * 10) / 10;
-    const cumC = isIntegerUnit ? Math.round(rawC) : Math.round(rawC * 10) / 10;
-    const monthlyC = isIntegerUnit
-      ? Math.max(0, cumC - prevCum2025)
-      : Math.round(Math.max(0, cumC - prevCum2025) * 10) / 10;
-    prevCum2025 = cumC;
-
-    const pct = t > 0 ? Math.round((cumC / t) * 100) : 100;
-    const status: MonthlyDataPoint['status'] = pct >= 95 ? 'Tercapai' : pct >= 80 ? 'Sesuai Target' : 'Perlu Percepatan';
-
-    data2025.push({
-      month: monthNum,
+  const makeEmptyYear = () =>
+    MONTH_NAMES.map((name, i) => ({
+      month: i + 1,
       monthName: name,
-      target: t,
-      capaian: monthlyC,
-      totalCapaian: cumC,
-      targetFormatted: formatVal(t),
-      capaianFormatted: formatVal(monthlyC),
-      totalCapaianFormatted: formatVal(cumC),
-      percentage: pct,
-      status,
-    });
-  }
-
-  // 2026: Jan - Okt (Completed), Nov - Des (Scheduled)
-  const data2026: MonthlyDataPoint[] = [];
-  let prevCum2026 = 0;
-  for (let i = 0; i < MONTH_NAMES.length; i++) {
-    const name = MONTH_NAMES[i];
-    const monthNum = i + 1;
-    const targetProgress = monthNum / 12;
-    const rawT = monthNum === 12 ? options.target2026 : options.target2026 * targetProgress;
-    const t = isIntegerUnit ? Math.round(rawT) : Math.round(rawT * 10) / 10;
-
-    if (monthNum <= 10) {
-      // Past / Current month up to Oktober (cutoff)
-      const actualProgress = monthNum / 10;
-      let cumC: number;
-      if (monthNum === 10) {
-        cumC = options.capaian2026Okt;
-      } else {
-        const rawC = options.capaian2026Okt * actualProgress * (0.95 + (monthNum % 3) * 0.03);
-        cumC = isIntegerUnit ? Math.min(options.capaian2026Okt, Math.round(rawC)) : Math.round(rawC * 10) / 10;
-      }
-      const monthlyC = isIntegerUnit
-        ? Math.max(0, cumC - prevCum2026)
-        : Math.round(Math.max(0, cumC - prevCum2026) * 10) / 10;
-      prevCum2026 = cumC;
-
-      const pct = t > 0 ? Math.round((cumC / t) * 100) : 100;
-      const status: MonthlyDataPoint['status'] =
-        pct >= 95 ? 'Tercapai' : pct >= 75 ? 'Sesuai Target' : 'Perlu Percepatan';
-
-      data2026.push({
-        month: monthNum,
-        monthName: name,
-        target: t,
-        capaian: monthlyC,
-        totalCapaian: cumC,
-        targetFormatted: formatVal(t),
-        capaianFormatted: formatVal(monthlyC),
-        totalCapaianFormatted: formatVal(cumC),
-        percentage: pct,
-        status,
-        note: monthNum === 10 ? 'Posisi per 18 Oktober 2026' : undefined,
-      });
-    } else {
-      // Future month Nov - Des
-      data2026.push({
-        month: monthNum,
-        monthName: name,
-        target: t,
-        capaian: null,
-        totalCapaian: null,
-        targetFormatted: formatVal(t),
-        capaianFormatted: '—',
-        totalCapaianFormatted: '—',
-        status: 'Terjadwal',
-        note: 'Proyeksi triwulan IV',
-      });
-    }
-  }
-
-  // 2027: Projections
-  const data2027: MonthlyDataPoint[] = MONTH_NAMES.map((name, i) => {
-    const monthNum = i + 1;
-    const rawT = options.target2027 * (monthNum / 12);
-    const t = isIntegerUnit ? Math.round(rawT) : Math.round(rawT * 10) / 10;
-    return {
-      month: monthNum,
-      monthName: name,
-      target: t,
+      target: 0,
       capaian: null,
       totalCapaian: null,
-      targetFormatted: formatVal(t),
+      targetFormatted: '—',
       capaianFormatted: '—',
       totalCapaianFormatted: '—',
-      status: 'Terjadwal',
-    };
-  });
-
-  return {
-    2025: data2025,
-    2026: data2026,
-    2027: data2027,
-  };
-}
-
-/**
- * Specialized helper for official PKPN slides (Revitalisasi Satdik & SNT)
- * where monthly progress is tracked across 12 months with cumulative total capping at cutoff (Oktober).
- */
-function generateOfficialMonthlyData(options: {
-  target2026Formatted: string;
-  capaian2026OktFormatted: string;
-  percentage2026OktFormatted: string;
-  target2026Numeric: number;
-  capaian2026OktNumeric: number;
-  unit: string;
-}): Record<number, MonthlyDataPoint[]> {
-  const isIntegerUnit =
-    !options.unit.includes('%') &&
-    !options.unit.includes('juta') &&
-    !options.unit.includes('jt') &&
-    !options.unit.includes('poin') &&
-    !options.unit.includes('indeks') &&
-    !options.unit.includes('PDB');
-
-  const formatVal = (val: number | null) => {
-    if (val === null) return '—';
-    if (options.unit.includes('%')) {
-      return `${val.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`;
-    }
-    if (isIntegerUnit) {
-      return `${Math.round(val).toLocaleString('id-ID')} ${options.unit}`;
-    }
-    if (val >= 1000) {
-      return `${val.toLocaleString('id-ID')} ${options.unit}`;
-    }
-    return `${val.toLocaleString('id-ID', { maximumFractionDigits: 2 })} ${options.unit}`;
-  };
-
-  const totalOkt = options.capaian2026OktNumeric;
-  const weights = [0.096, 0.098, 0.102, 0.099, 0.104, 0.101, 0.106, 0.099, 0.098, 0.097];
-  let cum = 0;
-  const monthlyValues: number[] = [];
-  const cumulativeValues: number[] = [];
-
-  for (let idx = 0; idx < 10; idx++) {
-    if (idx === 9) {
-      const monthlyVal = isIntegerUnit
-        ? totalOkt - cum
-        : Math.round((totalOkt - cum) * 100) / 100;
-      monthlyValues.push(monthlyVal);
-      cum = totalOkt;
-      cumulativeValues.push(cum);
-    } else {
-      const rawMonth = totalOkt * weights[idx];
-      const monthlyVal = isIntegerUnit
-        ? Math.round(rawMonth)
-        : Math.round(rawMonth * 100) / 100;
-      monthlyValues.push(monthlyVal);
-      cum += monthlyVal;
-      cumulativeValues.push(cum);
-    }
-  }
+      percentageFormatted: '—',
+      status: 'Terjadwal' as const,
+      note: '',
+    }));
 
   const data2026: MonthlyDataPoint[] = MONTH_NAMES.map((name, i) => {
     const monthNum = i + 1;
-
-    if (monthNum <= 10) {
-      const monthlyC = monthlyValues[monthNum - 1];
-      const cumC = cumulativeValues[monthNum - 1];
-      const isCutoff = monthNum === 10;
-
+    // Bulan 1 - 9 (Januari - September): belum ada rincian bulanan
+    if (monthNum < 10) {
       return {
         month: monthNum,
         monthName: name,
         target: 0,
-        capaian: monthlyC,
-        totalCapaian: cumC,
-        targetFormatted: '',
-        capaianFormatted: formatVal(monthlyC),
-        totalCapaianFormatted: isCutoff ? options.capaian2026OktFormatted : formatVal(cumC),
-        percentageFormatted: isCutoff ? options.percentage2026OktFormatted : undefined,
-        percentage: isCutoff
-          ? parseFloat(options.percentage2026OktFormatted.replace(/[^0-9,.-]/g, '').replace(',', '.'))
-          : undefined,
-        status: 'Sesuai Target',
-        note: isCutoff ? 'Posisi per 18 Oktober 2026' : undefined,
-      };
-    } else {
-      // November - Desember: Upcoming / scheduled
-      return {
-        month: monthNum,
-        monthName: name,
-        target: monthNum === 12 ? options.target2026Numeric : 0,
         capaian: null,
         totalCapaian: null,
-        targetFormatted: monthNum === 12 ? options.target2026Formatted : '',
-        capaianFormatted: '—',
-        totalCapaianFormatted: '—',
-        percentageFormatted: '—',
-        status: 'Terjadwal',
+        targetFormatted: '',
+        capaianFormatted: '',
+        totalCapaianFormatted: '',
+        percentageFormatted: '',
+        status: 'Terjadwal' as const,
         note: '',
       };
     }
+    // Bulan 10 (Oktober - Posisi Berjalan Saat Ini)
+    if (monthNum === 10) {
+      return {
+        month: 10,
+        monthName: 'Oktober',
+        target: 0,
+        capaian: config.capaianOktober,
+        totalCapaian: config.capaianOktober,
+        targetFormatted: '',
+        capaianFormatted: config.capaianOktoberFormatted,
+        totalCapaianFormatted: config.capaianOktoberFormatted,
+        percentage: config.percentageOktober,
+        percentageFormatted: config.percentageOktoberFormatted,
+        status: config.percentageOktober >= 100 ? ('Tercapai' as const) : ('Sesuai Target' as const),
+        note: config.noteOktober || 'Posisi per 18 Oktober 2026',
+      };
+    }
+    // Bulan 11 (November)
+    if (monthNum === 11) {
+      return {
+        month: 11,
+        monthName: 'November',
+        target: 0,
+        capaian: null,
+        totalCapaian: null,
+        targetFormatted: '',
+        capaianFormatted: '—',
+        totalCapaianFormatted: '—',
+        percentageFormatted: '—',
+        status: 'Terjadwal' as const,
+        note: '',
+      };
+    }
+    // Bulan 12 (Desember)
+    return {
+      month: 12,
+      monthName: 'Desember',
+      target: config.targetDesember,
+      capaian: null,
+      totalCapaian: null,
+      targetFormatted: config.targetDesemberFormatted,
+      capaianFormatted: '—',
+      totalCapaianFormatted: '—',
+      percentageFormatted: '—',
+      status: 'Terjadwal' as const,
+      note: '',
+    };
   });
 
   return {
-    2025: data2026,
+    2025: makeEmptyYear(),
     2026: data2026,
-    2027: data2026,
+    2027: makeEmptyYear(),
   };
 }
 
 /**
+ * Clean empty monthly dataset for indicators where monthly breakdown data
+ * has not been provided by user / official sources.
+ */
+export function generateEmptyMonthlyData(): Record<number, MonthlyDataPoint[]> {
+  const makeEmptyYear = () =>
+    MONTH_NAMES.map((name, i) => ({
+      month: i + 1,
+      monthName: name,
+      target: 0,
+      capaian: null,
+      totalCapaian: null,
+      targetFormatted: '—',
+      capaianFormatted: '—',
+      totalCapaianFormatted: '—',
+      percentageFormatted: '—',
+      status: 'Terjadwal' as const,
+      note: '',
+    }));
+
+  return {
+    2025: makeEmptyYear(),
+    2026: makeEmptyYear(),
+    2027: makeEmptyYear(),
+  };
+}
+
+/**
+ * Compatibility wrapper - returns empty monthly data for unprovided metrics
+ */
+function generateMonthlyData(): Record<number, MonthlyDataPoint[]> {
+  return generateEmptyMonthlyData();
+}
+
+/**
+ * Compatibility wrapper - returns empty monthly data for unprovided metrics
+ */
+function generateOfficialMonthlyData(): Record<number, MonthlyDataPoint[]> {
+  return generateEmptyMonthlyData();
+}
+
+/**
  * Specialized helper for Studio Guru monthly data matching official presentation slide
- * where November 2026 has the specific target:
- * "Peluncuran 1 Studio pusat dengan minimal 100 Konten Pembelajaran"
- * and other months are blank without kendala.
+ * where November 2026 has the specific milestone target
  */
 function generateStudioGuruMonthlyData(): Record<number, MonthlyDataPoint[]> {
   const data2026: MonthlyDataPoint[] = MONTH_NAMES.map((name, i) => {
     const monthNum = i + 1;
     if (monthNum === 11) {
-      // November 2026: Target in official slide
       return {
         month: monthNum,
         monthName: name,
@@ -360,7 +242,7 @@ function generateStudioGuruMonthlyData(): Record<number, MonthlyDataPoint[]> {
         targetFormatted: 'Peluncuran 1 Studio pusat dengan minimal 100 Konten Pembelajaran',
         capaianFormatted: '',
         percentageFormatted: '',
-        status: 'Terjadwal',
+        status: 'Terjadwal' as const,
         note: '',
       };
     }
@@ -372,15 +254,16 @@ function generateStudioGuruMonthlyData(): Record<number, MonthlyDataPoint[]> {
       targetFormatted: '',
       capaianFormatted: '',
       percentageFormatted: '',
-      status: 'Terjadwal',
+      status: 'Terjadwal' as const,
       note: '',
     };
   });
 
+  const emptyYear = generateEmptyMonthlyData()[2025];
   return {
-    2025: data2026,
+    2025: emptyYear,
     2026: data2026,
-    2027: data2026,
+    2027: emptyYear,
   };
 }
 
@@ -428,13 +311,14 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
           'Koordinasi BPKP dan Kemendikdasmen memberikan pendampingan teknis dan probity audit di 50 kabupaten prioritas percepatan.',
       },
     ],
-    monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '80.282 Satuan Pendidikan',
-      capaian2026OktFormatted: '36.669 Satuan Pendidikan',
-      percentage2026OktFormatted: '45,7 %',
-      target2026Numeric: 80282,
-      capaian2026OktNumeric: 36669,
-      unit: 'Satuan Pendidikan',
+    monthlyData: generateOfficialProgramMonthlyData({
+      targetDesember: 80282,
+      targetDesemberFormatted: '80.282 satdik',
+      capaianOktober: 36669,
+      capaianOktoberFormatted: '36.669 satdik',
+      percentageOktober: 45.7,
+      percentageOktoberFormatted: '45,7 %',
+      noteOktober: 'Posisi per 18 Oktober 2026',
     }),
   },
 
@@ -447,11 +331,11 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program yang mengintegrasikan sekolah jenjang SMP dan SMA dalam satu ekosistem berkelanjutan, mulai dari pembelajaran, pengembangan guru, pembinaan karakter, hingga penjaminan mutu.',
     picKementerian: 'Kemendikdasmen, KemenPANRB, Kemendagri, Bappenas',
-    unit: 'Sekolah',
+    unit: 'unit',
     currentValue: '17',
-    target2026: '35 Sekolah',
-    status: 'Capaian 2026',
-    subtext: 'Target Kumulatif 2027: 135 Sekolah · 2028: 335 Sekolah · 2029: 500 Sekolah',
+    target2026: '35 unit',
+    status: 'Capaian 2026 (45,9%)',
+    subtext: 'Target 2026: 35 unit · Realisasi: 17 unit (45,9%) · Posisi per 18 Oktober 2026',
     kendalaList: [
       {
         id: 1,
@@ -478,13 +362,14 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
           'Koordinasi Kemendikdasmen, KemenPANRB, dan BKN untuk pemetaan kebutuhan serta pemenuhan tenaga pendidik.',
       },
     ],
-    monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '35 Sekolah',
-      capaian2026OktFormatted: '17 Sekolah',
-      percentage2026OktFormatted: '48,6 %',
-      target2026Numeric: 35,
-      capaian2026OktNumeric: 17,
-      unit: 'Sekolah',
+    monthlyData: generateOfficialProgramMonthlyData({
+      targetDesember: 35,
+      targetDesemberFormatted: '35 unit',
+      capaianOktober: 17,
+      capaianOktoberFormatted: '17 unit',
+      percentageOktober: 45.9,
+      percentageOktoberFormatted: '45,9%',
+      noteOktober: 'Posisi per 18 Oktober 2026',
     }),
   },
 
@@ -497,11 +382,11 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program pengembangan sekolah menengah atas unggulan melalui pembangunan Sekolah Garuda Baru dan transformasi SMA yang sudah ada, dengan penguatan pendidikan sains dan teknologi untuk menyiapkan talenta berprestasi dan berdaya saing global.',
     picKementerian: 'Kemendikdasmen, Kemenkeu, Kementerian PUPR, Setneg',
-    unit: 'Sekolah',
+    unit: 'unit',
     currentValue: '30',
-    target2026: '30 Sekolah',
+    target2026: '30 unit',
     status: 'Capaian 2026 (100%)',
-    subtext: 'Posisi per 18 Oktober 2026 · Terdiri dari SUG Transformasi (30 Sekolah) dan SUG Baru (3 Sekolah)',
+    subtext: 'Posisi per 18 Oktober 2026 · Terdiri dari SUG Transformasi (30 unit) dan SUG Baru (3 unit)',
     kendalaList: [
       {
         id: 1,
@@ -512,13 +397,14 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
           'Koordinasi dengan Menkeu untuk percepat finalisasi dan penetapan RPerpres Tunjangan Lain Guru dan Tenaga Kependidikan di Sekolah Unggul Garuda.',
       },
     ],
-    monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '30 Sekolah',
-      capaian2026OktFormatted: '30 Sekolah',
-      percentage2026OktFormatted: '100 %',
-      target2026Numeric: 30,
-      capaian2026OktNumeric: 30,
-      unit: 'Sekolah',
+    monthlyData: generateOfficialProgramMonthlyData({
+      targetDesember: 30,
+      targetDesemberFormatted: '30 unit',
+      capaianOktober: 30,
+      capaianOktoberFormatted: '30 unit',
+      percentageOktober: 100,
+      percentageOktoberFormatted: '100 %',
+      noteOktober: 'Posisi per 18 Oktober 2026',
     }),
   },
 
@@ -531,11 +417,11 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program peningkatan mutu SMA unggulan eksisting menjadi Sekolah Unggul Garuda Transformasi dengan penguatan kurikulum sains, teknologi, dan penyiapan talenta berprestasi global.',
     picKementerian: 'Kemendikdasmen, Bappenas, Kemenkeu',
-    unit: 'Sekolah',
-    currentValue: '42',
-    target2026: '30 Sekolah',
-    status: 'Capaian 2025 :12 Sekolah; Capaian 2026: 30 Sekolah',
-    subtext: 'Capaian 2025 :12 Sekolah; Capaian 2026: 30 Sekolah · Target 2026: 30 Sekolah',
+    unit: 'unit',
+    currentValue: '30',
+    target2026: '30 unit',
+    status: 'Capaian 2026 (100%)',
+    subtext: 'Realisasi 2025: 12 unit · Realisasi 2026: 30 unit (100%) · Target 2026: 30 unit',
     kendalaList: [
       {
         id: 1,
@@ -546,13 +432,14 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
           'Koordinasi dengan Menkeu untuk percepat finalisasi dan penetapan RPerpres Tunjangan Lain Guru dan Tenaga Kependidikan di Sekolah Unggul Garuda.',
       },
     ],
-    monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '30 Sekolah',
-      capaian2026OktFormatted: '42 Sekolah',
-      percentage2026OktFormatted: '100 %',
-      target2026Numeric: 30,
-      capaian2026OktNumeric: 42,
-      unit: 'Sekolah',
+    monthlyData: generateOfficialProgramMonthlyData({
+      targetDesember: 30,
+      targetDesemberFormatted: '30 unit',
+      capaianOktober: 30,
+      capaianOktoberFormatted: '30 unit',
+      percentageOktober: 100,
+      percentageOktoberFormatted: '100 %',
+      noteOktober: 'Posisi per 18 Oktober 2026',
     }),
   },
 
@@ -565,11 +452,11 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program pengembangan sekolah menengah atas unggulan melalui pembangunan unit baru Sekolah Unggul Garuda berasrama dengan kurikulum sains & teknologi global di daerah prioritas.',
     picKementerian: 'Kemendikdasmen, Kemenkeu, Kementerian PUPR, Setneg',
-    unit: 'Sekolah',
+    unit: 'unit',
     currentValue: '3',
-    target2026: '4 Sekolah',
-    status: 'Capaian 2026',
-    subtext: 'Target 2026: 4 Sekolah · Realisasi: 3 Sekolah (75%)',
+    target2026: '4 unit',
+    status: 'Capaian 2026 (75%)',
+    subtext: 'Target 2026: 4 unit · Realisasi: 3 unit (75%) · Posisi per 18 Oktober 2026',
     kendalaList: [
       {
         id: 1,
@@ -580,13 +467,14 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
           'Koordinasi dengan Menkeu untuk percepat finalisasi dan penetapan RPerpres Tunjangan Lain Guru dan Tenaga Kependidikan di Sekolah Unggul Garuda.',
       },
     ],
-    monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '4 Sekolah',
-      capaian2026OktFormatted: '3 Sekolah',
-      percentage2026OktFormatted: '75 %',
-      target2026Numeric: 4,
-      capaian2026OktNumeric: 3,
-      unit: 'Sekolah',
+    monthlyData: generateOfficialProgramMonthlyData({
+      targetDesember: 4,
+      targetDesemberFormatted: '4 unit',
+      capaianOktober: 3,
+      capaianOktoberFormatted: '3 unit',
+      percentageOktober: 75,
+      percentageOktoberFormatted: '75 %',
+      noteOktober: 'Posisi per 18 Oktober 2026',
     }),
   },
 
@@ -599,11 +487,11 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     description:
       'Program transformasi pembelajaran melalui penyediaan Interactive Flat Panel (IFP), konten pembelajaran digital, dan infrastruktur penunjang di satuan pendidikan.',
     picKementerian: 'Kemendikdasmen, Kemenkomdigi, Kemenkeu, Kemenag',
-    unit: 'Unit',
+    unit: 'unit',
     currentValue: '727.436',
-    target2026: '727.436 Unit',
-    status: 'Capaian 2026 (Berproses Disalurkan ke 316.535 Sekolah)',
-    subtext: 'Posisi per 18 Oktober 2026 (Berproses Disalurkan ke 316.535 Sekolah) · Realisasi 2025: 288.865 Unit (100%)',
+    target2026: '727.436 unit',
+    status: 'Capaian 2026 (100%)',
+    subtext: 'Posisi per 18 Oktober 2026 (Berproses Disalurkan ke 316.535 Sekolah) · Realisasi 2025: 288.865 unit (100%)',
     kendalaList: [
       {
         id: 1,
@@ -614,13 +502,14 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
           'Perlu percepatan Koordinasi dengan Kemenkeu dan Kemenag',
       },
     ],
-    monthlyData: generateOfficialMonthlyData({
-      target2026Formatted: '727.436 unit',
-      capaian2026OktFormatted: '727.436 unit',
-      percentage2026OktFormatted: '100 %',
-      target2026Numeric: 727436,
-      capaian2026OktNumeric: 727436,
-      unit: 'unit',
+    monthlyData: generateOfficialProgramMonthlyData({
+      targetDesember: 727436,
+      targetDesemberFormatted: '727.436 unit',
+      capaianOktober: 727436,
+      capaianOktoberFormatted: '727.436 unit',
+      percentageOktober: 100,
+      percentageOktoberFormatted: '100 %',
+      noteOktober: 'Posisi per 18 Oktober 2026',
     }),
   },
 
@@ -634,10 +523,10 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
       'Program penyediaan pusat produksi dan penyebarluasan konten pembelajaran digital berkualitas dari guru untuk meningkatkan pemerataan mutu pembelajaran di Indonesia.',
     picKementerian: 'Kemendikdasmen, Kemenkomdigi, Bappenas',
     unit: 'studio',
-    currentValue: '1 studio pusat + 110 konten',
-    target2026: 'Studio Guru beroperasi penuh',
-    status: '1 studio pusat + 110 konten pembelajaran, launching 25 November 2026',
-    subtext: 'Target 2026: Studio Guru beroperasi penuh',
+    currentValue: '—',
+    target2026: 'Peluncuran Nov 2027',
+    status: 'Peluncuran 1 Studio pusat dengan minimal 100 Konten Pembelajaran (Nov 2026)',
+    subtext: 'Target 2026: Peluncuran Nov 2027 · Target 2027: Operasional',
     kendalaList: [],
     monthlyData: generateStudioGuruMonthlyData(),
   },
@@ -656,14 +545,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '0,57 poin',
     status: 'Capaian 2025: 0,562',
     subtext: 'Target 2027: 0,575 · Target 2029: 0,59 poin',
-    monthlyData: generateMonthlyData({
-      target2025: 0.56,
-      capaian2025: 0.562,
-      target2026: 0.57,
-      capaian2026Okt: 0.566,
-      target2027: 0.575,
-      unit: 'poin',
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   // =========================================================================
@@ -686,15 +568,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Keterbatasan ketersediaan Bahan Medis Habis Pakai (BMHP) dan kesiapan fasilitas rujukan di daerah terpencil.',
     tindakLanjut:
       'Pelibatan fasilitas kesehatan TNI/Polri untuk menjangkau Indonesia bagian Timur dan percepatan rantai pasok reagen laboratorium puskesmas.',
-    monthlyData: generateMonthlyData({
-      target2025: 102,
-      capaian2025: 70.3,
-      target2026: 130,
-      capaian2026Okt: 105.98,
-      target2027: 157,
-      unit: 'jt jiwa',
-      isCumulative: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'tb': {
@@ -714,15 +588,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Dukungan nutrisi dan isolasi bagi penderita tidak mampu serta keterbatasan anggaran penelusuran kontak erat.',
     tindakLanjut:
       'Pengajuan peningkatan alokasi anggaran penuntasan TB dari Kemenkeu serta integrasi bantuan sosial permakanan Kemensos.',
-    monthlyData: generateMonthlyData({
-      target2025: 981000,
-      capaian2025: 867480,
-      target2026: 972000,
-      capaian2026Okt: 656517,
-      target2027: 963014,
-      unit: 'kasus',
-      isCumulative: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'rsud': {
@@ -742,15 +608,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Kekurangan 7 dokter spesialis dasar (Penyakit Dalam, Anak, Obsgyn, Bedah, Anestesi, Patologi Klinik, Radiologi).',
     tindakLanjut:
       'Akselerasi program dokter spesialis berbasis rumah sakit pendidikan (hospital-based) oleh Kemendiktisaintek dan Kemenkes.',
-    monthlyData: generateMonthlyData({
-      target2025: 21,
-      capaian2025: 21,
-      target2026: 20,
-      capaian2026Okt: 18,
-      target2027: 66,
-      unit: 'RSUD',
-      isCumulative: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'mbg_3b': {
@@ -770,15 +628,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Kepatuhan konsumsi rutin, pendataan door-to-door ibu hamil & balita di kepulauan terpencil.',
     tindakLanjut:
       'Integrasi kartu kontrol posyandu dengan layanan dapur Satuan Pelayanan Gizi BGN dan kader PKK desa.',
-    monthlyData: generateMonthlyData({
-      target2025: 35,
-      capaian2025: 32,
-      target2026: 50,
-      capaian2026Okt: 54.5,
-      target2027: 70,
-      unit: '%',
-      isPercentage: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'stunting': {
@@ -798,15 +648,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Revisi Perpres 72/2021 tentang Penurunan Stunting belum rampung disahkan.',
     tindakLanjut:
       'Percepatan harmonisasi dan pengesahan revisi Perpres Stunting dengan penguatan komando Bappenas dan sinergi MBG.',
-    monthlyData: generateMonthlyData({
-      target2025: 20.5,
-      capaian2025: 19.8,
-      target2026: 18.2,
-      capaian2026Okt: 17.6,
-      target2027: 16.5,
-      unit: '%',
-      isPercentage: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'mbg_balita': {
@@ -826,15 +668,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Pendataan balita luar PAUD secara door-to-door dan koordinasi rantai pasok dapur SP Gizi.',
     tindakLanjut:
       'Refocusing intervensi pada desa rawan pangan dan penguatan peran posyandu serta kader PKK.',
-    monthlyData: generateMonthlyData({
-      target2025: 10,
-      capaian2025: 8,
-      target2026: 16.7,
-      capaian2026Okt: 4.89,
-      target2027: 25,
-      unit: 'jt jiwa',
-      isCumulative: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'mbg_ibu_hamil': {
@@ -854,15 +688,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Kepatuhan konsumsi rutin dan pendataan ibu hamil trimester pertama di daerah 3T.',
     tindakLanjut:
       'Integrasi kartu kontrol kehamilan dengan layanan SP Gizi BGN dan bidan desa.',
-    monthlyData: generateMonthlyData({
-      target2025: 1500,
-      capaian2025: 1200,
-      target2026: 2490,
-      capaian2026Okt: 656,
-      target2027: 3500,
-      unit: 'rb jiwa',
-      isCumulative: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'mbg_ibu_menyusui': {
@@ -882,15 +708,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Keterjangkauan pasokan bahan segar harian di kepulauan terpencil.',
     tindakLanjut:
       'Pemberdayaan kelompok tani dan peternak lokal dalam rantai pasok dapur satuan pelayanan gizi.',
-    monthlyData: generateMonthlyData({
-      target2025: 1800,
-      capaian2025: 1600,
-      target2026: 2750,
-      capaian2026Okt: 1770,
-      target2027: 3500,
-      unit: 'rb jiwa',
-      isCumulative: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'puskesmas': {
@@ -910,15 +728,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Ruang fiskal APBN/APBD terbatas untuk alokasi fisik serentak.',
     tindakLanjut:
       'Inventarisasi ketat kelayakan dan prioritas puskesmas serta skema pembiayaan DAK Fisik terarah.',
-    monthlyData: generateMonthlyData({
-      target2025: 2000,
-      capaian2025: 2000,
-      target2026: 5000,
-      capaian2026Okt: 4200,
-      target2027: 10000,
-      unit: 'unit',
-      isCumulative: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'rs_revitalisasi': {
@@ -938,15 +748,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Kesiapan infrastruktur bunker radioterapi dan pengadaan alkes canggih impor.',
     tindakLanjut:
       'Pengawalan kontrak tahun jamak (multi-years) dan percepatan izin ketenaganukliran BAPETEN.',
-    monthlyData: generateMonthlyData({
-      target2025: 100,
-      capaian2025: 100,
-      target2026: 250,
-      capaian2026Okt: 210,
-      target2027: 450,
-      unit: 'RS',
-      isCumulative: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   // =========================================================================
@@ -969,15 +771,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Ketersediaan lahan relokasi clean and clear serta percepatan harmonisasi regulasi pendanaan lintas K/L.',
     tindakLanjut:
       'Penyelenggaraan RTM Satgas PRRP Sumatera untuk penetapan tapak lahan relokasi aman sesar gempa dan pengawalan kontrak multi-years.',
-    monthlyData: generateMonthlyData({
-      target2025: 7200,
-      capaian2025: 3350,
-      target2026: 60045,
-      capaian2026Okt: 21974,
-      target2027: 77500,
-      unit: 'unit',
-      isCumulative: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'huntap': {
@@ -997,15 +791,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Ketersediaan lahan relokasi clean and clear serta pembiayaan lintas kementerian/lembaga.',
     tindakLanjut:
       'RTM Satgas PRRP Sumatera untuk penetapan lokasi lahan, pembagian pendanaan, dan percepatan tender konstruksi.',
-    monthlyData: generateMonthlyData({
-      target2025: 5000,
-      capaian2025: 1200,
-      target2026: 39501,
-      capaian2026Okt: 1707,
-      target2027: 57027,
-      unit: 'unit',
-      isCumulative: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'huntara': {
@@ -1022,15 +808,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '20.544 unit',
     status: 'Capaian 2026 (99,0%)',
     subtext: 'Realisasi hampir rampung sempurna (99%) di seluruh kantong pengungsian',
-    monthlyData: generateMonthlyData({
-      target2025: 15000,
-      capaian2025: 14800,
-      target2026: 20544,
-      capaian2026Okt: 20267,
-      target2027: 21000,
-      unit: 'unit',
-      isCumulative: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'jumlah_bencana': {
@@ -1050,15 +828,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Peningkatan anomali cuaca ekstrem dan aktivitas sesar aktif darat.',
     tindakLanjut:
       'Penguatan sistem peringatan dini terintegrasi (Early Warning System for All) dan edukasi kebencanaan di sekolah.',
-    monthlyData: generateMonthlyData({
-      target2025: 3200,
-      capaian2025: 3176,
-      target2026: 2500,
-      capaian2026Okt: 2096,
-      target2027: 2400,
-      unit: 'kejadian',
-      isCumulative: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'pengungsi': {
@@ -1078,15 +848,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Pemulihan mata pencaharian pertanian yang tertutup material lahar/longsor.',
     tindakLanjut:
       'Pemberian stimulan modal usaha mikro dan bibit tanaman produktif oleh Kementan dan Kemensos.',
-    monthlyData: generateMonthlyData({
-      target2025: 100,
-      capaian2025: 100,
-      target2026: 100,
-      capaian2026Okt: 100,
-      target2027: 100,
-      unit: '%',
-      isPercentage: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'infrastruktur': {
@@ -1106,15 +868,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Kondisi cuaca curah hujan tinggi yang menghambat pengecoran struktur sungai.',
     tindakLanjut:
       'Penyelesaian tahap akhir proteksi tebing dan serah terima aset operasional kepada pemerintah daerah.',
-    monthlyData: generateMonthlyData({
-      target2025: 80,
-      capaian2025: 78,
-      target2026: 100,
-      capaian2026Okt: 99,
-      target2027: 100,
-      unit: '%',
-      isPercentage: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'kerugian': {
@@ -1134,15 +888,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Tingginya nilai aset publik yang belum terlindungi skema asuransi kebencanaan BMN.',
     tindakLanjut:
       'Perluasan cakupan Asuransi Barang Milik Negara (ABMN) dan Dana Bersama Penanggulangan Bencana (Pooling Fund).',
-    monthlyData: generateMonthlyData({
-      target2025: 0.137,
-      capaian2025: 0.137,
-      target2026: 0.137,
-      capaian2026Okt: 0.137,
-      target2027: 0.136,
-      unit: '% PDB',
-      isPercentage: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   // =========================================================================
@@ -1162,15 +908,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '6,5% – 7,5%',
     status: 'Posisi Maret 2026: 8,07%',
     subtext: 'Realisasi September 2025: 8,25% (turun 0,18% poin)',
-    monthlyData: generateMonthlyData({
-      target2025: 8.5,
-      capaian2025: 8.25,
-      target2026: 7.0,
-      capaian2026Okt: 8.07,
-      target2027: 6.2,
-      unit: '%',
-      isPercentage: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'kemiskinan_ekstrem': {
@@ -1190,15 +928,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Residu kantong kemiskinan ekstrem di wilayah terisolir Papua dan pedalaman Nusa Tenggara.',
     tindakLanjut:
       'Paket konvergensi intervensi 3 pilar: pengurangan beban pengeluaran, peningkatan pendapatan usaha mikro, dan pemukiman layak.',
-    monthlyData: generateMonthlyData({
-      target2025: 1.2,
-      capaian2025: 0.83,
-      target2026: 0.5,
-      capaian2026Okt: 0.65,
-      target2027: 0.0,
-      unit: '%',
-      isPercentage: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'permakanan_lansia': {
@@ -1218,15 +948,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Bantuan permakanan mandiri terhenti sejak awal 2026 karena proses peralihan anggaran ke Badan Gizi Nasional (BGN).',
     tindakLanjut:
       'RTM Orkestrasi Menko PMK dengan Kepala BGN dan Mensos untuk memastikan jatah alokasi makanan siap santap lansia dalam skema MBG.',
-    monthlyData: generateMonthlyData({
-      target2025: 116754,
-      capaian2025: 116754,
-      target2026: 120000,
-      capaian2026Okt: 45000,
-      target2027: 150000,
-      unit: 'orang',
-      isCumulative: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'permakanan_disabilitas': {
@@ -1246,15 +968,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     kendala: 'Skema pembiayaan khusus dan pelibatan pendamping sosial belum terintegrasi di dapur pelayanan MBG.',
     tindakLanjut:
       'Harmonisasi petunjuk teknis distribusi makanan ramah disabilitas dan validasi data P3KE desil 1.',
-    monthlyData: generateMonthlyData({
-      target2025: 36000,
-      capaian2025: 36000,
-      target2026: 40000,
-      capaian2026Okt: 12000,
-      target2027: 50000,
-      unit: 'orang',
-      isCumulative: true,
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'mobilitas_lansia': {
@@ -1271,14 +985,7 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '94,5 poin',
     status: 'Terkendali',
     subtext: 'Target 2027: 95,0 · Target 2029: 96,0 poin',
-    monthlyData: generateMonthlyData({
-      target2025: 94,
-      capaian2025: 94,
-      target2026: 94.5,
-      capaian2026Okt: 94.2,
-      target2027: 95,
-      unit: 'poin',
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   },
 
   'mobilitas_disabilitas': {
@@ -1295,14 +1002,114 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '69,5 poin',
     status: 'Sesuai Target',
     subtext: 'Target 2027: 70,0 · Target 2029: 71,0 poin',
-    monthlyData: generateMonthlyData({
-      target2025: 69,
-      capaian2025: 69,
-      target2026: 69.5,
-      capaian2026Okt: 69.2,
-      target2027: 70,
-      unit: 'poin',
-    }),
+    monthlyData: generateEmptyMonthlyData(),
+  },
+  // =========================================================================
+  // PILAR 3 (TAMBAHAN): KARHUTLA
+  // =========================================================================
+  'provinsi_karhutla': {
+    id: 'provinsi_karhutla',
+    title: 'Provinsi Prioritas Terdampak Karhutla',
+    pillarId: 'bencana',
+    pillarTitle: 'Ketahanan Bencana',
+    category: 'Pencegahan Karhutla',
+    description:
+      'Wilayah prioritas kerawanan kebakaran hutan dan lahan untuk pengendalian dan pencegahan terpadu di 6 provinsi rawan nasional.',
+    picKementerian: 'Kementerian LHK, BNPB, TNI/Polri, Pemda',
+    unit: 'Provinsi',
+    currentValue: '6',
+    target2026: '6 Provinsi Prioritas',
+    status: 'Data 13 Oktober 2026',
+    subtext: 'Fokus Pengendalian & Pencegahan Terpadu',
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'luas_karhutla': {
+    id: 'luas_karhutla',
+    title: 'Luas Karhutla yang Sudah Dipadamkan',
+    pillarId: 'bencana',
+    pillarTitle: 'Ketahanan Bencana',
+    category: 'Penanggulangan Karhutla',
+    description:
+      'Pemantauan akumulasi luas kebakaran hutan dan lahan yang telah tertangani dan berhasil dipadamkan oleh satgas darat dan udara.',
+    picKementerian: 'Kementerian LHK, BNPB, Satgas Terpadu',
+    unit: 'Ha',
+    currentValue: '129.434,18',
+    target2026: '130.097,79 Ha',
+    status: 'Capaian 2026 (99,5%)',
+    subtext: 'Jumlah Luas Karhutla: 130.097,79 Ha · Dalam Proses Pemadaman: 663,61 Ha',
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  // =========================================================================
+  // PILAR 4 (TAMBAHAN): DESIL LANSIA/DISABILITAS & BANTUAN OPERASIONAL
+  // =========================================================================
+  'cakupan_lansia_desil': {
+    id: 'cakupan_lansia_desil',
+    title: 'Cakupan Lansia Desil 1–5',
+    pillarId: 'kemiskinan',
+    pillarTitle: 'Penurunan Kemiskinan',
+    category: 'Perlindungan Sosial',
+    description:
+      'Perlindungan sosial dan jaminan pemenuhan kesejahteraan dasar bagi penduduk lanjut usia pada kelompok desil 1 sampai 5 DTSEN.',
+    picKementerian: 'Kemensos, BPS, Bappenas',
+    unit: '% sasaran',
+    currentValue: '0,66%',
+    target2026: 'Dalam Proses Pendataan',
+    status: 'Realisasi 2025: 0,66%',
+    subtext: 'Target 2026: Dalam Proses Pendataan',
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'cakupan_disabilitas_desil': {
+    id: 'cakupan_disabilitas_desil',
+    title: 'Cakupan Disabilitas Desil 1–5',
+    pillarId: 'kemiskinan',
+    pillarTitle: 'Penurunan Kemiskinan',
+    category: 'Perlindungan Sosial',
+    description:
+      'Jangkauan bantuan sosial adaptif dan pemenuhan hak penyandang disabilitas pada kelompok pengeluaran desil 1 sampai 5 DTSEN.',
+    picKementerian: 'Kemensos, BPS, Bappenas',
+    unit: '% sasaran',
+    currentValue: '0,41%',
+    target2026: 'Dalam Proses Pendataan',
+    status: 'Realisasi 2025: 0,41%',
+    subtext: 'Target 2026: Dalam Proses Pendataan',
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'bos_reguler': {
+    id: 'bos_reguler',
+    title: 'Bantuan Operasional Sekolah Reguler',
+    pillarId: 'kemiskinan',
+    pillarTitle: 'Penurunan Kemiskinan',
+    category: 'Dukungan Pendidikan',
+    description:
+      'Penyaluran dana Bantuan Operasional Sekolah (BOS) reguler bagi satuan pendidikan dasar dan menengah di seluruh Indonesia.',
+    picKementerian: 'Kemendikdasmen, Kemenkeu',
+    unit: 'Sekolah',
+    currentValue: '432.654 (99%)',
+    target2026: '432.716 Sekolah',
+    status: 'Realisasi 2026 (99,9%)',
+    subtext: 'Penyaluran Dana BOS Reguler Sekolah Dasar & Menengah',
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'bop_pendidikan': {
+    id: 'bop_pendidikan',
+    title: 'Bantuan Operasional Pendidikan',
+    pillarId: 'kemiskinan',
+    pillarTitle: 'Penurunan Kemiskinan',
+    category: 'Dukungan Pendidikan',
+    description:
+      'Penyaluran Bantuan Operasional Pendidikan bagi satuan pendidikan usia dini dan lembaga pendidikan kesetaraan.',
+    picKementerian: 'Kemendikdasmen, Kemenkeu',
+    unit: 'Lembaga',
+    currentValue: '396.618',
+    target2026: '406.741 Lembaga',
+    status: 'Realisasi 2026',
+    subtext: 'Penyaluran BOP Pendidikan Anak Usia Dini & Kesetaraan',
+    monthlyData: generateEmptyMonthlyData(),
   },
 };
 
@@ -1374,14 +1181,7 @@ export function getProgramDetailData(id: string, fallbackTitle?: string, fallbac
     currentValue: '—',
     target2026: '—',
     status: 'Capaian 2026',
-    monthlyData: generateMonthlyData({
-      target2025: 100,
-      capaian2025: 95,
-      target2026: 100,
-      capaian2026Okt: 75,
-      target2027: 120,
-      unit: 'unit',
-    }),
+    monthlyData: generateEmptyMonthlyData(),
   };
 }
 

@@ -113,8 +113,8 @@ export const ORCHESTRATION_AGENDA = [
     summary: 'Peningkatan alokasi anggaran TB dari Kemenkeu; Pelibatan Faskes TNI Polri untuk CKG di Indonesia Timur; Percepatan 7 dokter spesialis dasar RSUD (Kemenkes & Kemendikti); Percepatan revisi Perpres 72/2021 Stunting (Bappenas).',
   },
   {
-    pillar: 'Bencana',
-    topic: 'Bencana',
+    pillar: 'Kebencanaan',
+    topic: 'Kebencanaan',
     summary: 'RTM Satgas PRRP Sumatera (kebutuhan huntap & lahan); Inpres pelaksanaan kegiatan strategis kewenangan daerah oleh pusat; Percepatan regulasi bantuan stimulan rumah rusak berat Rp70 juta secara nasional.',
   },
   {
@@ -142,11 +142,11 @@ export const PILLARS_DATA: Record<string, PillarData> = {
     subtitle: 'Revitalisasi Sekolah | Digitalisasi | SNT | Sekolah Garuda | Studio Guru',
     summaryIndicators: [
       { label: 'Revitalisasi Satuan Pendidikan', target: '80.282 satuan pendidikan', achievement: '36.669', percent: 45.7, statusType: 'warning', note: 'Capaian 2026' },
-      { label: 'Sekolah Nasional Terintegrasi (SNT)', target: '35 Sekolah', achievement: '17', percent: 48.6, statusType: 'warning', note: 'Capaian 2026' },
+      { label: 'Sekolah Nasional Terintegrasi (SNT)', target: '35 Sekolah', achievement: '17', percent: 45.9, statusType: 'warning', note: 'Capaian 2026' },
       { label: 'Sekolah Unggul Garuda Baru', target: '4 Sekolah', achievement: '3', percent: 75, statusType: 'normal', note: 'Capaian 2026' },
-      { label: 'Sekolah Unggul Garuda Transformasi', target: '30 Sekolah', achievement: '42', percent: 100, statusType: 'success', note: 'Capaian 2025 :12; Capaian 2026: 30' },
+      { label: 'Sekolah Unggul Garuda Transformasi', target: '30 Sekolah', achievement: '30', percent: 100, statusType: 'success', note: 'Capaian 2025: 12; Capaian 2026: 30 (100%)' },
       { label: 'Digitalisasi Pendidikan', target: '727.436 unit', achievement: '727.436', percent: 100, statusType: 'success', note: 'Capaian 2026 (Berproses disalurkan ke 316.535 sekolah)' },
-      { label: 'Studio Guru', target: 'Studio Guru beroperasi penuh', achievement: '1 studio pusat + 110 konten', statusType: 'normal', note: 'Launching 25 November 2026' },
+      { label: 'Studio Guru', target: 'Peluncuran Nov 2027', achievement: '1 Studio Pusat + 100 Konten', statusType: 'normal', note: 'Target Nov 2026: Peluncuran 1 Studio Pusat (Min. 100 Konten)' },
     ],
     kendalaHighlights: [
       'Pendidikan Gratis (kepastian postur anggaran, skema pembiayaan & regulasi).',
@@ -273,8 +273,8 @@ export const PILLARS_DATA: Record<string, PillarData> = {
   bencana: {
     id: 'bencana',
     number: 3,
-    name: '3. Pilar Bencana',
-    title: 'Pilar Bencana',
+    name: '3. Pilar Kebencanaan',
+    title: 'Pilar Kebencanaan',
     subtitle: 'Kesiapsiagaan · Penyelamatan · Pemulihan Pascabencana · KITA TANGGUH',
     summaryIndicators: [
       { label: 'Jumlah Bencana (tahun)', target: '—', achievement: '2.096 kejadian (Okt’26)', note: '2025: 3.176 kejadian bencana' },

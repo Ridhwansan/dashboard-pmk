@@ -97,8 +97,8 @@ export const MAP_PILLARS: PillarOption[] = [
   },
   {
     id: 'bencana',
-    name: 'Bencana',
-    shortName: 'Bencana',
+    name: 'Kebencanaan',
+    shortName: 'Kebencanaan',
     badge: 'Pilar 3',
     iconName: 'bencana',
   },
