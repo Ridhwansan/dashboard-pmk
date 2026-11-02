@@ -18,12 +18,12 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
       {/* 1. Header with Official Kemenko PMK Emblem (Navbar is removed on landing) */}
       <div className="text-center space-y-4 max-w-2xl mx-auto flex flex-col items-center">
         <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg mb-1">
-          <div className="relative h-7 w-7 sm:h-8 sm:w-8 shrink-0 overflow-hidden rounded-full shadow-2xs">
+          <div className="relative h-7 w-7 sm:h-8 sm:w-8 shrink-0 overflow-hidden rounded-full shadow-xs ring-1 ring-white/30">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/images/logo-kemenko-pmk-official.png"
+              src="/images/logo-kemenko-pmk-baru.png"
               alt="Logo Kemenko PMK"
-              className="h-full w-full object-cover scale-105"
+              className="h-full w-full object-contain"
             />
           </div>
           <span className="text-xs sm:text-sm font-extrabold text-white tracking-wider uppercase">

@@ -16,8 +16,17 @@ import {
   ArrowDownRight,
   Activity,
   RefreshCw,
+  History,
+  ArrowRight,
+  Search,
+  Flame,
+  MapPin,
+  Megaphone,
+  FileText,
+  AlertTriangle,
 } from 'lucide-react';
 import { ProgramDetailData, KendalaDetailItem, getProgramDetailData } from '@/data/programDetailData';
+import { PENGKINIAN_BENCANA_DATA, BENCANA_RINGKASAN_UTAMA } from '@/data/bencanaPengkinianData';
 import {
   PILLAR_AGREGAT_DATA,
   AgregatIndicatorRow,
@@ -154,18 +163,29 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
     program.id === 'mbg_ibu_hamil' ||
     program.id === 'mbg_ibu_menyusui';
 
-  const [activeMbgTab, setActiveMbgTab] = useState<'balita' | 'ibu_hamil' | 'ibu_menyusui'>('balita');
+  const [activeMbgTab, setActiveMbgTab] = useState<'semua' | 'balita' | 'ibu_hamil' | 'ibu_menyusui'>(
+    program.id === 'mbg_balita'
+      ? 'balita'
+      : program.id === 'mbg_ibu_hamil'
+      ? 'ibu_hamil'
+      : program.id === 'mbg_ibu_menyusui'
+      ? 'ibu_menyusui'
+      : 'semua'
+  );
 
-  // Resolves active program data dynamically (especially when switching tabs under MBG 3B)
+  // Resolves active program data dynamically based on active segmented control tab
   const effectiveProgram: ProgramDetailData = useMemo(() => {
     if (isMbg3b) {
+      if (activeMbgTab === 'balita') {
+        return getProgramDetailData('mbg_balita', 'MBG Balita Non-PAUD', 'kesehatan');
+      }
       if (activeMbgTab === 'ibu_hamil') {
         return getProgramDetailData('mbg_ibu_hamil', 'MBG Ibu Hamil', 'kesehatan');
       }
       if (activeMbgTab === 'ibu_menyusui') {
         return getProgramDetailData('mbg_ibu_menyusui', 'MBG Ibu Menyusui', 'kesehatan');
       }
-      return getProgramDetailData('mbg_balita', 'MBG Balita Non-PAUD', 'kesehatan');
+      return getProgramDetailData('mbg_3b', 'MBG Ibu Hamil, Ibu Menyusui, dan Balita (3B)', 'kesehatan');
     }
     return program;
   }, [isMbg3b, activeMbgTab, program]);
@@ -179,6 +199,13 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   const [selectedProvinsiFilter, setSelectedProvinsiFilter] = useState<string>('all');
   const [hoveredAnnualIdx, setHoveredAnnualIdx] = useState<number | null>(null);
   const [hoveredMonthlyIdx, setHoveredMonthlyIdx] = useState<number | null>(null);
+  const isJumlahBencana = effectiveProgram.id === 'jumlah_bencana';
+
+  useEffect(() => {
+    if (!isJumlahBencana && tableType === 'timeseries') {
+      setTableType('tahunan');
+    }
+  }, [isJumlahBencana, tableType]);
 
   // Resolve annual row for this specific program (only this indicator appears in the annual table)
   const annualRowForProgram = useMemo(() => {
@@ -584,52 +611,74 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
 
       {/* 2. PROGRAM OVERVIEW & 3 FOCUSED KPI STAT CARDS */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
-        {/* MBG 3B SUB-INDICATOR SELECTOR TABS (Gambar 5) */}
+        {/* MBG 3B SUB-INDICATOR SEGMENTED CONTROL */}
         {isMbg3b && (
-          <div className="bg-slate-50/90 p-4 sm:p-5 rounded-2xl border border-slate-200/90 space-y-3">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
-                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Rincian Indikator Sasaran MBG 3B
-                </span>
-              </div>
-              <span className="text-xs text-slate-500 font-medium">
-                Pilih tab kelompok sasaran untuk melihat capaian &amp; rincian berkala
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+            <div>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                Kelompok Sasaran MBG 3B
               </span>
+              <p className="text-xs text-slate-500 font-normal mt-0.5">
+                Pilih sasaran untuk melihat data capaian, target, dan rincian berkala
+              </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                { id: 'balita', label: 'Balita Non-PAUD', val: '4,89 Juta Jiwa', target: 'Target: 16,7 Jt (29,2%)' },
-                { id: 'ibu_hamil', label: 'Ibu Hamil', val: '0,65 Juta Jiwa', target: 'Target: 2,49 Jt (26,3%)' },
-                { id: 'ibu_menyusui', label: 'Ibu Menyusui', val: '1,77 Juta Jiwa', target: 'Target: 2,75 Jt (64,5%)' },
-              ].map((tab) => {
-                const isTabActive = activeMbgTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveMbgTab(tab.id as any)}
-                    className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                      isTabActive
-                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
-                        : 'bg-white hover:bg-slate-100 text-slate-800 border-slate-200/90'
-                    }`}
-                  >
-                    <span className={`text-xs font-extrabold ${isTabActive ? 'text-white' : 'text-slate-900'}`}>
-                      {tab.label}
-                    </span>
-                    <div className="flex items-baseline justify-between gap-1 pt-1.5">
-                      <span className={`text-base font-black tabular-nums ${isTabActive ? 'text-emerald-100' : 'text-emerald-700'}`}>
-                        {tab.val}
-                      </span>
-                      <span className={`text-[11px] font-medium ${isTabActive ? 'text-emerald-200' : 'text-slate-500'}`}>
-                        {tab.target}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
+            <div
+              role="tablist"
+              aria-label="Pilih Kelompok Sasaran MBG 3B"
+              className="p-1 bg-slate-100 rounded-xl border border-slate-200/90 inline-flex items-center gap-1 self-start sm:self-auto shadow-2xs overflow-x-auto max-w-full shrink-0"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeMbgTab === 'semua'}
+                onClick={() => setActiveMbgTab('semua')}
+                className={`h-[36px] px-3.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  activeMbgTab === 'semua'
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                Semua Sasaran (3B)
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeMbgTab === 'balita'}
+                onClick={() => setActiveMbgTab('balita')}
+                className={`h-[36px] px-3.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  activeMbgTab === 'balita'
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                Balita Non-PAUD
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeMbgTab === 'ibu_hamil'}
+                onClick={() => setActiveMbgTab('ibu_hamil')}
+                className={`h-[36px] px-3.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  activeMbgTab === 'ibu_hamil'
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                Ibu Hamil
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeMbgTab === 'ibu_menyusui'}
+                onClick={() => setActiveMbgTab('ibu_menyusui')}
+                className={`h-[36px] px-3.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  activeMbgTab === 'ibu_menyusui'
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                Ibu Menyusui
+              </button>
             </div>
           </div>
         )}
@@ -643,7 +692,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
             {effectiveProgram.title}
           </h1>
-          {/* Program explanation directly below the title, without gray box or "Deskripsi Program" label */}
           <p className="text-sm sm:text-base text-slate-600 font-normal leading-relaxed max-w-4xl">
             {effectiveProgram.description}
           </p>
@@ -686,6 +734,8 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
             <span className="text-xl sm:text-2xl font-black text-emerald-700 block tracking-tight">
               {(() => {
                 if (effectiveProgram.currentValue?.toLowerCase() === 'terhenti') return '0% (Terhenti)';
+                const annualMetric = activeAnnualRow.years[2026];
+                if (annualMetric?.percent) return annualMetric.percent;
                 if (summaryMetrics.avgPct > 0) return `${summaryMetrics.avgPct}%`;
                 const pctMatch = effectiveProgram.status?.match(/(\d+(?:[.,]\d+)?)\s*%/);
                 if (pctMatch) return `${pctMatch[1]}%`;
@@ -707,11 +757,11 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                 ? 'Tabel Tahunan'
                 : tableType === 'bulanan'
                 ? 'Tabel Bulanan'
-                : 'Tren Berkala'}
+                : 'Pengkinian Data Bencana'}
             </h3>
 
             {/* When bulanan or timeseries, show year/month filters */}
-            {(tableType === 'bulanan' || tableType === 'timeseries') && (
+            {tableType === 'bulanan' && (
               <div className="flex items-center gap-2.5 flex-wrap">
                 {/* Filter Tahun */}
                 <div className="relative">
@@ -796,20 +846,22 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
               <span>Tabel Bulanan</span>
             </button>
 
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tableType === 'timeseries'}
-              onClick={() => setTableType('timeseries')}
-              className={`h-[36px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-                tableType === 'timeseries'
-                  ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-              }`}
-            >
-              <TrendingUp className="w-4 h-4 text-slate-500" />
-              <span>Tren Berkala</span>
-            </button>
+            {isJumlahBencana && (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tableType === 'timeseries'}
+                onClick={() => setTableType('timeseries')}
+                className={`h-[36px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  tableType === 'timeseries'
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <RefreshCw className="w-4 h-4 text-slate-500" />
+                <span>Pengkinian Data</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -829,11 +881,8 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     <th className="py-3.5 px-4 text-right min-w-[140px] border-r border-slate-200 font-bold text-slate-900">
                       Capaian (C)
                     </th>
-                    <th className="py-3.5 px-4 text-center min-w-[110px] border-r border-slate-200 font-bold text-slate-900">
+                    <th className="py-3.5 px-4 text-center min-w-[120px] font-bold text-slate-900">
                       % Capaian
-                    </th>
-                    <th className="py-3.5 px-4 min-w-[150px] font-bold text-slate-700">
-                      Status Pelaksanaan
                     </th>
                   </tr>
                 </thead>
@@ -897,7 +946,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                         </td>
 
                         {/* % Capaian */}
-                        <td className="py-3.5 px-4 text-center tabular-nums border-r border-slate-100">
+                        <td className="py-3.5 px-4 text-center tabular-nums">
                           {hasCapaian && pctVal !== null ? (
                             <span
                               className={`font-bold ${
@@ -914,23 +963,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                             <span className="text-slate-300">—</span>
                           )}
                         </td>
-
-                        {/* Status Pelaksanaan */}
-                        <td className="py-3.5 px-4 text-slate-600">
-                          {isCutoff && hasCapaian ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                              Posisi Berjalan (Okt 2026)
-                            </span>
-                          ) : isPast && hasCapaian ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              Terealisasi Penuh
-                            </span>
-                          ) : isFuture ? (
-                            <span className="text-slate-400 text-xs">Target RPJMN</span>
-                          ) : (
-                            <span className="text-slate-300 text-xs">—</span>
-                          )}
-                        </td>
                       </tr>
                     );
                   })}
@@ -940,26 +972,23 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           </div>
         )}
 
-        {/* VIEW B: TABEL BULANAN (VERBATIM CAPAIAN BULANAN DARI DOKUMEN RESMI) */}
+        {/* VIEW B: TABEL BULANAN (PENYEDERHANAAN: CAPAIAN & TOTAL CAPAIAN) */}
         {tableType === 'bulanan' && (
           <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse text-xs md:text-sm">
                 <thead>
                   <tr className="bg-slate-100/90 text-slate-900 font-bold border-b border-slate-200">
-                    <th className="py-3 px-4 min-w-[160px] border-r border-slate-200">
+                    <th className="py-3.5 px-4 min-w-[160px] border-r border-slate-200">
                       Bulan
                     </th>
-                    <th className="py-3 px-4 text-right min-w-[140px] border-r border-slate-200 font-bold text-slate-900">
-                      Target (T)
+                    <th className="py-3.5 px-4 text-right min-w-[160px] border-r border-slate-200 font-bold text-slate-900">
+                      Capaian
                     </th>
-                    <th className="py-3 px-4 text-right min-w-[150px] border-r border-slate-200 font-bold text-slate-900">
-                      Capaian (C)
+                    <th className="py-3.5 px-4 text-right min-w-[160px] border-r border-slate-200 font-bold text-slate-900">
+                      Total Capaian
                     </th>
-                    <th className="py-3 px-4 text-center min-w-[140px] border-r border-slate-200 font-bold text-slate-900">
-                      Persentase Capaian
-                    </th>
-                    <th className="py-3 px-4 min-w-[200px] font-bold text-slate-700">
+                    <th className="py-3.5 px-4 min-w-[200px] font-bold text-slate-700">
                       Catatan Pelaksanaan
                     </th>
                   </tr>
@@ -967,9 +996,8 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {displayedMonths.map((m) => {
                     const isCutoff = selectedYear === 2026 && m.month === 10;
-                    const targetDisplay = m.targetFormatted || '';
                     const capaianDisplay = m.capaianFormatted || '';
-                    const pctDisplay = m.percentageFormatted || '';
+                    const totalCapaianDisplay = m.totalCapaianFormatted || m.capaianFormatted || '';
                     const noteDisplay = m.note || '';
 
                     return (
@@ -985,50 +1013,37 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                             <span>{m.monthName} {selectedYear}</span>
                             {isCutoff && (
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                                Posisi Berjalan Saat Ini
+                                Posisi Berjalan
                               </span>
                             )}
                           </div>
                         </td>
 
-                        {/* Target (T) */}
-                        <td className="py-3.5 px-4 text-right text-slate-800 tabular-nums font-semibold border-r border-slate-100">
-                          {targetDisplay === '—' ? (
-                            <span className="text-slate-400 font-normal">—</span>
-                          ) : targetDisplay !== '' ? (
-                            targetDisplay
-                          ) : (
-                            ''
-                          )}
-                        </td>
-
-                        {/* Capaian (C) */}
+                        {/* Capaian */}
                         <td className={`py-3.5 px-4 text-right tabular-nums border-r border-slate-100 ${
                           isCutoff ? 'font-black text-slate-900' : 'font-bold text-slate-800'
                         }`}>
-                          {capaianDisplay === '—' ? (
+                          {capaianDisplay === '—' || !capaianDisplay ? (
                             <span className="text-slate-400 font-normal">—</span>
-                          ) : capaianDisplay !== '' ? (
-                            capaianDisplay
                           ) : (
-                            ''
+                            capaianDisplay
                           )}
                         </td>
 
-                        {/* Persentase Capaian */}
-                        <td className="py-3.5 px-4 text-center tabular-nums font-bold text-slate-900 border-r border-slate-100">
-                          {pctDisplay === '—' ? (
+                        {/* Total Capaian */}
+                        <td className={`py-3.5 px-4 text-right tabular-nums border-r border-slate-100 font-bold ${
+                          isCutoff ? 'text-slate-900' : 'text-slate-800'
+                        }`}>
+                          {totalCapaianDisplay === '—' || !totalCapaianDisplay ? (
                             <span className="text-slate-400 font-normal">—</span>
-                          ) : pctDisplay !== '' ? (
-                            pctDisplay
                           ) : (
-                            ''
+                            totalCapaianDisplay
                           )}
                         </td>
 
                         {/* Catatan Pelaksanaan */}
                         <td className="py-3.5 px-4 text-slate-700 text-xs sm:text-sm">
-                          {noteDisplay}
+                          {noteDisplay || (isCutoff ? 'Data resmi berjalan per 18 Oktober 2026' : '—')}
                         </td>
                       </tr>
                     );
@@ -1039,228 +1054,206 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           </div>
         )}
 
-        {/* VIEW C: TREN BERKALA (DINAMIS & TABULAR - TANPA WIDGET SUMMARY TAMBAHAN) */}
-        {tableType === 'timeseries' && (
-          <div className="space-y-4 animate-in fade-in duration-200">
-            {/* Dinamis & Tabular: Rangkaian Perkembangan Waktu Capaian Bulanan */}
-            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
-              {/* Header Toolbar: Judul & Subtitle di Kiri, Filter Tombol Triwulan di Kanan */}
-              <div className="p-4 sm:p-5 bg-white border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2.5">
-                    <h4 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                      Rangkaian Waktu Capaian Bulanan
-                    </h4>
-                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                      Tahun {selectedYear}
+        {/* VIEW C: PENGKINIAN DATA (KHUSUS INDIKATOR JUMLAH BENCANA - GAMBAR 1, 2, 3) */}
+        {tableType === 'timeseries' && isJumlahBencana && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* WIDGET RINGKASAN UTAMA (BERSIH, TANPA DOT MERAH, FONT NYAMAN) */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-0.5">
+                <h4 className="text-sm font-bold text-slate-900 tracking-tight uppercase">
+                  Ringkasan Utama Pemantauan Bencana
+                </h4>
+                <span className="text-xs font-medium text-slate-500">
+                  Cutoff Laporan: 27 Oktober 2026
+                </span>
+              </div>
+
+              {/* Grid 5 Cards Stat Ringkas */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 items-stretch">
+                {/* 1. Kejadian Baru */}
+                <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                    Kejadian Baru
+                  </span>
+                  <div>
+                    <span className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight block">
+                      {BENCANA_RINGKASAN_UTAMA.kejadianBaru}
+                    </span>
+                    <span className="text-xs text-slate-500 font-medium block mt-1">
+                      Laporan Masuk Baru
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 font-normal mt-1">
-                    Runtut waktu realisasi capaian, pergerakan MoM, akumulasi progres, dan target tahunan ({effectiveProgram.target2026 || '80.282 Satuan Pendidikan'}).
-                  </p>
                 </div>
 
-                {/* Filter Periode / Triwulan: Dropdown Biasa */}
-                <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
-                  <label
-                    htmlFor="filter-periode-timeseries"
-                    className="text-xs font-semibold text-slate-500 whitespace-nowrap hidden sm:inline"
-                  >
-                    Filter Periode:
-                  </label>
-                  <div className="relative">
-                    <select
-                      id="filter-periode-timeseries"
-                      aria-label="Pilih Periode Capaian"
-                      value={timeseriesQuarter}
-                      onChange={(e) => setTimeseriesQuarter(e.target.value as any)}
-                      className="h-[38px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
-                    >
-                      <option value="all">Semua Bulan (12 Bulan)</option>
-                      <option value="q1">Triwulan I (Q1: Jan–Mar)</option>
-                      <option value="q2">Triwulan II (Q2: Apr–Jun)</option>
-                      <option value="q3">Triwulan III (Q3: Jul–Sep)</option>
-                      <option value="q4">Triwulan IV (Q4: Okt–Des)</option>
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                {/* 2. Pengkinian Data */}
+                <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                    Pengkinian Data
+                  </span>
+                  <div>
+                    <span className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight block">
+                      {BENCANA_RINGKASAN_UTAMA.pengkinianData}
+                    </span>
+                    <span className="text-xs text-slate-500 font-medium block mt-1">
+                      Pembaruan Lapangan
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3. Total Kejadian Signifikan */}
+                <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                    Total Kejadian
+                  </span>
+                  <div>
+                    <span className="text-3xl lg:text-4xl font-extrabold text-rose-700 tracking-tight block">
+                      {BENCANA_RINGKASAN_UTAMA.totalKejadianSignifikan}
+                    </span>
+                    <span className="text-xs text-rose-600 font-medium block mt-1">
+                      Berdampak Signifikan
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4. Provinsi Terdampak */}
+                <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                    Wilayah Terdampak
+                  </span>
+                  <div>
+                    <span className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight block">
+                      {BENCANA_RINGKASAN_UTAMA.provinsiTerdampak}
+                    </span>
+                    <span className="text-xs text-slate-500 font-medium block mt-1">
+                      Provinsi Se-Indonesia
+                    </span>
+                  </div>
+                </div>
+
+                {/* 5. Rekap Jenis Bencana */}
+                <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
+                    Jenis Dominan
+                  </span>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-600 font-medium">Karhutla</span>
+                      <span className="font-extrabold text-slate-900">{BENCANA_RINGKASAN_UTAMA.rekapBencana.karhutla}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-600 font-medium">Kekeringan</span>
+                      <span className="font-extrabold text-slate-900">{BENCANA_RINGKASAN_UTAMA.rekapBencana.kekeringan}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-600 font-medium">Banjir</span>
+                      <span className="font-extrabold text-slate-900">{BENCANA_RINGKASAN_UTAMA.rekapBencana.banjir}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-medium pt-0.5 border-t border-slate-100 truncate">
+                      {BENCANA_RINGKASAN_UTAMA.rekapBencana.lainnya}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Dynamic Tabular Table */}
-              <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left border-collapse text-xs md:text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-700 font-bold uppercase text-[11px] tracking-wider border-b border-slate-200">
-                      <th className="py-3.5 px-4 min-w-[150px]">Bulan</th>
-                      <th className="py-3.5 px-4 text-right min-w-[150px]">Realisasi Bulanan</th>
-                      <th className="py-3.5 px-4 text-right min-w-[130px]">Perubahan (Δ MoM)</th>
-                      <th className="py-3.5 px-4 text-right min-w-[150px]">Akumulasi Capaian</th>
-                      <th className="py-3.5 px-4 text-center min-w-[130px]">% Target Tahunan</th>
-                      <th className="py-3.5 px-4 min-w-[140px]">Status Pelaporan</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium">
-                    {filteredTimeseriesMonths.map((m) => {
-                      const isCutoff = selectedYear === 2026 && m.month === 10;
-                      const hasData = m.capaianFormatted !== '' && m.capaianFormatted !== '—';
-
-                      // Annual target calculation
-                      const targetStr = String(effectiveProgram.target2026 || '');
-                      const rawTargetNum = parseFloat(targetStr.replace(/[^0-9]/g, ''));
-                      const accumNum =
-                        m.totalCapaian ||
-                        (m.totalCapaianFormatted ? parseFloat(String(m.totalCapaianFormatted).replace(/[^0-9]/g, '')) : null);
-                      let pctAnnual = '—';
-                      if (rawTargetNum && accumNum && rawTargetNum > 0) {
-                        pctAnnual = `${((accumNum / rawTargetNum) * 100).toFixed(1)}%`;
-                      } else if (hasData && m.percentage) {
-                        pctAnnual = `${m.percentage}%`;
-                      }
-
-                      // Clean values without double unit
-                      const cleanDisplay = (val: string | null | undefined) => {
-                        if (!val || val === '—' || val === '') return '—';
-                        const trimmed = val.trim();
-                        if (/[a-zA-Z%]/.test(trimmed)) return trimmed;
-                        return `${trimmed} ${effectiveProgram.unit}`;
-                      };
-
-                      const realisasiDisplay = hasData ? cleanDisplay(m.capaianFormatted) : '—';
-                      const totalDisplay = hasData ? cleanDisplay(m.totalCapaianFormatted || m.capaianFormatted) : '—';
-
-                      return (
-                        <tr
-                          key={m.month}
-                          className={`hover:bg-slate-50/80 transition-colors ${
-                            isCutoff ? 'bg-blue-50/25 font-semibold' : ''
-                          }`}
-                        >
-                          <td className="py-3.5 px-4 text-slate-900 font-bold">
-                            <div className="flex items-center gap-2">
-                              <span>{m.monthName} {selectedYear}</span>
-                              {isCutoff && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                                  Berjalan
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-4 text-right tabular-nums text-slate-800">
-                            {realisasiDisplay}
-                          </td>
-                          <td className="py-3.5 px-4 text-right tabular-nums">
-                            {m.deltaFormatted === '—' ? (
-                              <span className="text-slate-300">—</span>
-                            ) : m.deltaFormatted === 'Basis Awal' ? (
-                              <span className="text-slate-400 font-normal">Basis Awal</span>
-                            ) : (
-                              <span
-                                className={`font-semibold ${
-                                  (m.deltaMoM ?? 0) >= 0 ? 'text-emerald-700' : 'text-slate-700'
-                                }`}
-                              >
-                                {m.deltaFormatted}
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4 text-right tabular-nums font-bold text-slate-900">
-                            {totalDisplay}
-                          </td>
-                          <td className="py-3.5 px-4 text-center tabular-nums text-slate-800 font-semibold">
-                            {hasData ? pctAnnual : '—'}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            {isCutoff && hasData ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-                                Posisi Berjalan
-                              </span>
-                            ) : hasData ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                Terverifikasi
-                              </span>
-                            ) : (
-                              <span className="text-slate-300 font-normal text-xs">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-
-                  {/* Dynamic Summary Footer Row */}
-                  <tfoot className="bg-slate-50/90 border-t-2 border-slate-200 text-xs md:text-sm font-bold text-slate-900">
-                    {(() => {
-                      const reportedMonths = filteredTimeseriesMonths.filter(
-                        (m) => m.capaianFormatted !== '' && m.capaianFormatted !== '—'
-                      );
-                      const sumMonthly = reportedMonths.reduce((acc, curr) => acc + (curr.capaian || 0), 0);
-                      const lastReported = reportedMonths.length > 0 ? reportedMonths[reportedMonths.length - 1] : null;
-                      const lastAccum = lastReported?.totalCapaian || sumMonthly;
-
-                      const targetStr = String(effectiveProgram.target2026 || '');
-                      const rawTargetNum = parseFloat(targetStr.replace(/[^0-9]/g, ''));
-                      const pctFoot =
-                        rawTargetNum && lastAccum && rawTargetNum > 0
-                          ? `${((lastAccum / rawTargetNum) * 100).toFixed(1)}%`
-                          : '—';
-
-                      const formatNum = (num: number) => {
-                        return `${Math.round(num).toLocaleString('id-ID')} ${effectiveProgram.unit}`;
-                      };
-
-                      return (
-                        <tr>
-                          <td className="py-3.5 px-4 text-slate-900 font-extrabold">
-                            {timeseriesQuarter === 'all'
-                              ? `Total Realisasi (s.d. Oktober ${selectedYear})`
-                              : timeseriesQuarter === 'q1'
-                              ? `Total Capaian Triwulan I (${selectedYear})`
-                              : timeseriesQuarter === 'q2'
-                              ? `Total Capaian Triwulan II (${selectedYear})`
-                              : timeseriesQuarter === 'q3'
-                              ? `Total Capaian Triwulan III (${selectedYear})`
-                              : `Total Capaian Triwulan IV (Berjalan)`}
-                          </td>
-                          <td className="py-3.5 px-4 text-right tabular-nums text-slate-900 font-extrabold">
-                            {sumMonthly > 0 ? formatNum(sumMonthly) : '—'}
-                          </td>
-                          <td className="py-3.5 px-4 text-right text-slate-300 font-normal">
-                            —
-                          </td>
-                          <td className="py-3.5 px-4 text-right tabular-nums text-slate-900 font-extrabold">
-                            {lastAccum > 0 ? formatNum(lastAccum) : '—'}
-                          </td>
-                          <td className="py-3.5 px-4 text-center tabular-nums text-emerald-800 font-extrabold">
-                            {pctFoot}
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-500 font-medium text-xs">
-                            {reportedMonths.length === 0
-                              ? 'Belum Ada Data'
-                              : timeseriesQuarter === 'all'
-                              ? `${reportedMonths.length} / 12 Bulan Terlapor`
-                              : timeseriesQuarter === 'q4'
-                              ? '1 Bulan Berjalan'
-                              : `${reportedMonths.length} Bulan Terverifikasi`}
-                          </td>
-                        </tr>
-                      );
-                    })()}
-                  </tfoot>
-                </table>
+              {/* Rangkuman Situasi / Teks Panjang (Disediakan Tempat Luas & Nyaman Dibaca) */}
+              <div className="p-4 sm:p-4.5 rounded-2xl bg-slate-50/80 border border-slate-200/90 shadow-2xs">
+                <div className="flex items-start gap-2.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-900 shrink-0 mt-0.5">
+                    Dominasi Kejadian:
+                  </span>
+                  <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed">
+                    {BENCANA_RINGKASAN_UTAMA.narasiDominasi}
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Catatan Ringkas */}
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Catatan: Data capaian dihimpun secara berkala setiap bulan dari unit kerja teknis K/L pengampu program untuk monitoring dan evaluasi terpadu.
-            </p>
+            {/* TABEL PENGKINIAN DATA (BERSIH, TANPA NOMOR 5, TANPA CHIPS, FONT NYAMAN DIBACA) */}
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+              <div className="p-4 sm:p-5 bg-white border-b border-slate-200 flex items-center justify-between gap-3">
+                <h4 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight uppercase">
+                  Pengkinian Data Menonjol / Berdampak Signifikan
+                </h4>
+                <span className="text-xs text-slate-500 font-medium">
+                  {PENGKINIAN_BENCANA_DATA.length} Kejadian Terlaporkan
+                </span>
+              </div>
+
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-slate-50/90 text-slate-900 font-bold border-b border-slate-200 text-xs uppercase tracking-wider">
+                      <th className="py-3.5 px-3 w-12 text-center border-r border-slate-200">
+                        No
+                      </th>
+                      <th className="py-3.5 px-4 min-w-[190px] border-r border-slate-200">
+                        Provinsi / Lokasi
+                      </th>
+                      <th className="py-3.5 px-5 min-w-[290px] border-r border-slate-200">
+                        Dampak
+                      </th>
+                      <th className="py-3.5 px-4 min-w-[180px] border-r border-slate-200">
+                        Status
+                      </th>
+                      <th className="py-3.5 px-5 min-w-[360px]">
+                        Kondisi Mutakhir
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {PENGKINIAN_BENCANA_DATA.map((item) => (
+                      <tr
+                        key={item.no}
+                        className="hover:bg-slate-50/80 transition-colors"
+                      >
+                        {/* No */}
+                        <td className="py-4 px-3 text-center text-slate-500 font-bold border-r border-slate-100 align-top text-xs sm:text-sm">
+                          {item.no}
+                        </td>
+
+                        {/* Provinsi / Lokasi */}
+                        <td className="py-4 px-4 font-bold text-slate-900 border-r border-slate-100 align-top text-sm leading-snug whitespace-pre-line">
+                          {item.provinsiLokasi}
+                        </td>
+
+                        {/* Dampak */}
+                        <td className="py-4 px-5 text-slate-800 border-r border-slate-100 align-top text-xs sm:text-sm leading-relaxed font-normal">
+                          {item.dampak}
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-4 px-4 border-r border-slate-100 align-top text-xs">
+                          {item.isEmergencyStatus ? (
+                            <span className="text-rose-700 font-bold leading-tight block">
+                              {item.status}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-medium">-</span>
+                          )}
+                        </td>
+
+                        {/* Kondisi Mutakhir */}
+                        <td className="py-4 px-5 text-slate-800 align-top text-xs sm:text-sm space-y-1.5 font-normal">
+                          <p className="leading-relaxed text-slate-800">
+                            {item.kondisiMutakhir}
+                          </p>
+                          <p className="text-xs text-slate-500 font-medium pt-0.5">
+                            {item.detailLaphar}
+                          </p>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* 4. DEDICATED VISUALISASI GRAFIK SECTION BELOW TABLE */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
+      {/* 4. DEDICATED VISUALISASI GRAFIK SECTION (UNTUK TABEL TAHUNAN & BULANAN) */}
+      {tableType !== 'timeseries' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
           <div className="flex items-center gap-3.5">
@@ -1274,8 +1267,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
               <p className="text-xs sm:text-sm text-slate-500 font-medium">
                 {tableType === 'tahunan'
                   ? `Perbandingan Target (T) vs Capaian (C) RPJMN 2025–2029 · ${activeAnnualRow.name}`
-                  : tableType === 'timeseries'
-                  ? `Visualisasi Tren Runtut Waktu Capaian & Pembaruan Berkala · ${effectiveProgram.title}`
                   : `Tren Capaian Bulanan & Total Capaian Kumulatif · ${effectiveProgram.title}`}
               </p>
             </div>
@@ -1639,7 +1630,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       )}
 
         {/* GRAPH VIEW 2: MONTHLY & TIME-SERIES TRAJECTORY (Jan - Des) */}
-        {(tableType === 'bulanan' || tableType === 'timeseries') && (
+        {tableType === 'bulanan' && (
           <div className="space-y-4">
             {validMonthlyCapaian.length > 0 || validMonthlyTargets.length > 0 ? (
               <div className="relative w-full overflow-x-auto custom-scrollbar border border-slate-200/90 rounded-2xl p-4 sm:p-5 bg-gradient-to-b from-white to-slate-50/50 shadow-2xs">
@@ -1972,6 +1963,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           </div>
         )}
       </div>
+      )}
 
       {/* 5. KENDALA PELAKSANAAN & TINDAK LANJUT */}
       <div id="kendala-section" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6 scroll-mt-6">
