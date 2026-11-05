@@ -275,7 +275,7 @@ export const WilayahSidePanel: React.FC<WilayahSidePanelProps> = ({
       {/* ======================================================== */}
       {/* 3. MINIMAL CLEAN FOOTNOTE                                 */}
       {/* ======================================================== */}
-      <div className="px-3.5 py-2 border-t border-slate-100 bg-slate-50/60 text-[10.5px] font-medium text-slate-400 text-center shrink-0">
+      <div className="px-3.5 py-2 border-t border-slate-100 bg-slate-50/60 text-[11px] font-semibold text-slate-600 text-center shrink-0">
         Posisi s.d. Oktober 2026 · Kemenko PMK
       </div>
     </aside>

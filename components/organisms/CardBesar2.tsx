@@ -37,7 +37,7 @@ export const CardBesar2: React.FC<CardBesar2Props> = ({ className = '' }) => {
         </div>
 
         {/* Tab Switcher Pills */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg self-start sm:self-auto shrink-0 border border-slate-200/60">
+        <div role="tablist" aria-label="Pilihan Kategori Sorotan" className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg self-start sm:self-auto shrink-0 border border-slate-200/60">
           <PillButton
             variant="tab"
             size="sm"
@@ -233,7 +233,7 @@ export const CardBesar2: React.FC<CardBesar2Props> = ({ className = '' }) => {
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-400"></span>
           <span>Pengawalan Regulasi &amp; Orkestrasi Lintas Sektoral: Kemenko PMK</span>
         </div>
-        <span className="text-slate-400 text-[11px]">
+        <span className="text-slate-600 font-semibold text-[11px]">
           Sumber: Pemantauan Rutin K/L Teknis &amp; Sidang Kabinet
         </span>
       </div>

@@ -483,7 +483,7 @@ function drawPillarSummaryPage(
   });
 
   // Get final Y position after table
-  const finalTableY = (doc as any).lastAutoTable?.finalY || currentY + 40;
+  const finalTableY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || currentY + 40;
   currentY = finalTableY + 8;
 
   // 3. Section Heading: Isu Kendala & Tindak Lanjut

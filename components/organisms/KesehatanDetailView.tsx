@@ -142,7 +142,11 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
         {/* Content */}
         <div className="relative z-10 space-y-1.5 max-w-2xl">
           <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-xs">
-            {category === 'PKPN' ? 'PKPN Kesehatan' : 'Kesehatan'}
+            {category === 'Isu Strategis'
+              ? 'Isu Strategis Kesehatan'
+              : category === 'PKPN'
+              ? 'PKPN Kesehatan'
+              : 'Kesehatan'}
           </h2>
           <p className="text-xs sm:text-sm text-slate-200 font-medium drop-shadow-xs">
             Target dan Capaian Kinerja Program
@@ -150,8 +154,21 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Grid of Widget Cards - Calm, elegant, breathable (Gambar 3) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
+      {/* 2. Grid of Widget Cards or Placeholder for Isu Strategis */}
+      {category === 'Isu Strategis' ? (
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs p-8 sm:p-12 text-center flex flex-col items-center justify-center max-w-xl mx-auto space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1">
+            <BarChart3 className="w-6 h-6" />
+          </div>
+          <h3 className="text-base sm:text-lg font-bold text-slate-900">
+            Isu Strategis Kesehatan Sedang Dalam Konsolidasi
+          </h3>
+          <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
+            Data agenda dan indikator isu strategis untuk pilar Kesehatan sedang dalam proses koordinasi bersama kementerian/lembaga teknis terkait.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
         {widgetCards.map((card) => {
           const issueData = getIndicatorMainIssue(card.id, card.title, 'kesehatan');
 
@@ -232,14 +249,14 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
                 <div className="mt-4 pt-3.5 border-t border-slate-100 flex-1 flex flex-col justify-end">
                   {issueData.hasIssue ? (
                     <div className="relative group/popover">
-                      <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50/90 hover:bg-slate-100/90 border border-slate-200/80 transition-colors">
+                      <div title={issueData.description} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50/90 hover:bg-slate-100/90 border border-slate-200/80 transition-colors cursor-pointer">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                           <span className="text-xs font-medium text-slate-700 truncate">
                             {issueData.title || issueData.description}
                           </span>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 shrink-0 uppercase tracking-tight">
+                        <span className="text-[10px] font-bold text-slate-600 shrink-0 uppercase tracking-tight">
                           {issueData.totalCount > 1 ? `+${issueData.totalCount - 1}` : 'Detail'}
                         </span>
                       </div>
@@ -281,6 +298,7 @@ export const KesehatanDetailView: React.FC<KesehatanDetailViewProps> = ({
           );
         })}
       </div>
+      )}
     </div>
   );
 };

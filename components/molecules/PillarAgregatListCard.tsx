@@ -52,9 +52,9 @@ const PILLAR_ITEMS = [
     name: 'Kebencanaan',
     count: '4 Indikator Utama',
     icon: ShieldAlert,
-    iconColor: 'text-[#7a4b27]',
-    iconBg: 'bg-[#fcf8f4] border-[#a8754b]/30',
-    hoverBorder: 'hover:border-[#a8754b] hover:bg-[#fcf8f4]/60',
+    iconColor: 'text-pillar-bencana',
+    iconBg: 'bg-amber-50/70 border-amber-200/80',
+    hoverBorder: 'hover:border-amber-300 hover:bg-amber-50/40',
   },
   {
     id: 'kemiskinan' as const,
@@ -84,7 +84,7 @@ export const PillarAgregatListCard: React.FC<PillarAgregatListCardProps> = ({
       case 'kesehatan':
         return <HeartPulse className="h-4 w-4 text-emerald-600" />;
       case 'bencana':
-        return <ShieldAlert className="h-4 w-4 text-[#7a4b27]" />;
+        return <ShieldAlert className="h-4 w-4 text-pillar-bencana" style={{ color: '#7a4b27' }} />;
       case 'kemiskinan':
         return <TrendingDown className="h-4 w-4 text-rose-600" />;
       default:
@@ -217,7 +217,7 @@ export const PillarAgregatListCard: React.FC<PillarAgregatListCardProps> = ({
                 {/* Row Header: Indicator Name */}
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex items-start gap-1.5 min-w-0">
-                    <span className="text-xs font-bold text-slate-400 shrink-0 mt-0.5">
+                    <span className="text-xs font-bold text-slate-600 shrink-0 mt-0.5">
                       {index + 1}.
                     </span>
                     <span
@@ -235,7 +235,7 @@ export const PillarAgregatListCard: React.FC<PillarAgregatListCardProps> = ({
                       <span>Aktif</span>
                     </span>
                   ) : ind.mapIndicatorId ? (
-                    <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-slate-400 hover:text-blue-600 shrink-0 mt-0.5 transition-colors">
+                    <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-slate-600 hover:text-blue-600 shrink-0 mt-0.5 transition-colors">
                       <MapPin className="h-3 w-3" />
                       <ChevronRight className="h-3 w-3" />
                     </span>
@@ -306,12 +306,6 @@ export const PillarAgregatListCard: React.FC<PillarAgregatListCardProps> = ({
             );
           })
         )}
-      </div>
-
-      {/* 3. Footer Card - Sumber Data removed per request */}
-      <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50/60 shrink-0 flex items-center justify-between text-[11px] text-slate-600 font-medium">
-        <span>Tahun Berjalan {selectedYear}</span>
-        <span className="font-semibold text-slate-700">RPJMN 2025–2029</span>
       </div>
     </div>
   );

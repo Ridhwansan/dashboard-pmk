@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import type { GeoJsonObject, Feature } from 'geojson';
 import {
   WilayahData,
   NASIONAL_DATA,
@@ -33,8 +33,25 @@ interface LeafletBlindMapProps {
   isFullscreen?: boolean;
 }
 
+
+interface GeoFeatureProperties {
+  id?: string;
+  Code?: string | number;
+  kodeBps?: string;
+  kode?: string | number;
+  Propinsi?: string;
+  [key: string]: unknown;
+}
+
+type InteractivePath = L.Path & {
+  _hasCustomHover?: boolean;
+  closeTooltip: () => void;
+  openTooltip: () => void;
+  isTooltipOpen?: () => boolean;
+};
+
 // Module-level in-memory cache for fast GeoJSON switching
-const geojsonCache = new Map<string, any>();
+const geojsonCache = new Map<string, GeoJsonObject>();
 
 const getPillarStrokeColor = (pillarId?: MapPillarId | null): string => {
   switch (pillarId) {
@@ -72,6 +89,49 @@ const getSugtChoroplethColor = (count: number): string => {
   }
 };
 
+// Helper to map GeoJSON feature properties to WilayahData instances
+function resolveWilayah(
+  feature: Feature | { properties?: GeoFeatureProperties },
+  level: 'nasional' | 'provinsi' | 'kabupaten' | 'kecamatan'
+): WilayahData | undefined {
+  const props = (feature.properties || {}) as GeoFeatureProperties;
+
+  if (level === 'kecamatan') {
+    const fid = props.id;
+    const fcode = props.Code ? String(props.Code) : '';
+    const fcodeBps = props.kodeBps;
+    return (
+      KECAMATAN_DATA.find((k) => k.id === fid) ||
+      KECAMATAN_DATA.find((k) => k.kodeBps === fcodeBps) ||
+      KECAMATAN_DATA.find((k) => k.kodeBps.replace(/\./g, '') === fcode)
+    );
+  }
+
+  if (level === 'kabupaten') {
+    const fid = props.id;
+    const fcode = props.Code ? String(props.Code) : '';
+    const fcodeBps = props.kodeBps;
+    return (
+      KABKOTA_DATA.find((k) => k.id === fid) ||
+      KABKOTA_DATA.find((k) => k.kodeBps === fcodeBps) ||
+      KABKOTA_DATA.find((k) => k.kodeBps.replace(/\./g, '') === fcode)
+    );
+  }
+
+  // National Level: Match 38 Provinces
+  const fkode = props.kode;
+  const fkodeStr = String(fkode).padStart(2, '0');
+  const fPropinsi = String(props.Propinsi || '').toUpperCase().trim();
+
+  return (
+    PROVINSI_DATA.find((p) => p.kodeBps === fkodeStr || p.kodeBps === String(fkode)) ||
+    PROVINSI_DATA.find((p) => {
+      const pUpper = p.name.toUpperCase();
+      return fPropinsi.includes(pUpper) || pUpper.includes(fPropinsi);
+    })
+  );
+}
+
 export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
   selectedWilayah,
   onSelectWilayah,
@@ -84,7 +144,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const geojsonLayerRef = useRef<L.GeoJSON | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
-  const activeHoveredLayerRef = useRef<any>(null);
+  const activeHoveredLayerRef = useRef<InteractivePath | null>(null);
   const [showInfo, setShowInfo] = useState(false);
 
   // Active indicator definition (null when no pillar is chosen yet)
@@ -139,7 +199,8 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
 
       onMapMouseLeave = () => {
         if (geojsonLayerRef.current) {
-          geojsonLayerRef.current.eachLayer((l: any) => {
+          geojsonLayerRef.current.eachLayer((layerItem: L.Layer) => {
+            const l = layerItem as InteractivePath;
             try {
               if (l.isTooltipOpen && l.isTooltipOpen()) {
                 l.closeTooltip();
@@ -205,8 +266,9 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
         if (!geoData) {
           const res = await fetch(geojsonUrl);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          geoData = await res.json();
-          geojsonCache.set(geojsonUrl, geoData);
+          const fetchedData = (await res.json()) as GeoJsonObject;
+          geoData = fetchedData;
+          geojsonCache.set(geojsonUrl, fetchedData);
         }
 
         if (isCancelled || !mapInstanceRef.current) return;
@@ -502,8 +564,8 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
 
             // Hover interactions: strictly enforce single active tooltip and clean style resetting
             layer.on({
-              mouseover: (e: any) => {
-                const l = e.target;
+              mouseover: (e: L.LeafletMouseEvent) => {
+                const l = e.target as InteractivePath;
 
                 // Close previously hovered layer tooltip and reset its style
                 if (activeHoveredLayerRef.current && activeHoveredLayerRef.current !== l) {
@@ -518,7 +580,8 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
                 }
 
                 // Global safety cleanup: close any orphaned tooltips and clear lingering hover styles
-                newLayer.eachLayer((other: any) => {
+                newLayer.eachLayer((otherLayer: L.Layer) => {
+                  const other = otherLayer as InteractivePath;
                   if (other !== l) {
                     try {
                       if (other.isTooltipOpen && other.isTooltipOpen()) {
@@ -548,7 +611,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
                   l.openTooltip();
                 } catch {}
               },
-              mouseout: (e: any) => {
+              mouseout: (e: L.LeafletMouseEvent) => {
                 const l = e.target;
                 try {
                   l.closeTooltip();
@@ -564,7 +627,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
               click: () => {
                 if (matched) {
                   try {
-                    (layer as any).closeTooltip();
+                    (layer as InteractivePath).closeTooltip();
                   } catch {}
                   onSelectWilayah(matched);
                 }
@@ -593,15 +656,16 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
         } else {
           // Find matching layer to fit bounds precisely
           let foundBounds: L.LatLngBounds | null = null;
-          newLayer.eachLayer((l: any) => {
+          newLayer.eachLayer((layerItem: L.Layer) => {
+            const l = layerItem as L.Polygon & { feature?: Feature };
             const f = l.feature;
-            const matched = resolveWilayah(f, currentLevel);
+            const matched = f ? resolveWilayah(f, currentLevel) : undefined;
             if (
               matched &&
               (matched.id === selectedWilayah.id ||
                 matched.kodeBps === selectedWilayah.kodeBps)
             ) {
-              if (l.getBounds) {
+              if (typeof l.getBounds === 'function') {
                 foundBounds = l.getBounds();
               }
             }
@@ -634,48 +698,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
     };
   }, [selectedWilayah, selectedPillar, selectedIndicator, onSelectWilayah]);
 
-  // Helper to map GeoJSON feature properties to WilayahData instances
-  function resolveWilayah(
-    feature: any,
-    level: 'nasional' | 'provinsi' | 'kabupaten' | 'kecamatan'
-  ): WilayahData | undefined {
-    const props = feature.properties || {};
 
-    if (level === 'kecamatan') {
-      const fid = props.id;
-      const fcode = props.Code ? String(props.Code) : '';
-      const fcodeBps = props.kodeBps;
-      return (
-        KECAMATAN_DATA.find((k) => k.id === fid) ||
-        KECAMATAN_DATA.find((k) => k.kodeBps === fcodeBps) ||
-        KECAMATAN_DATA.find((k) => k.kodeBps.replace(/\./g, '') === fcode)
-      );
-    }
-
-    if (level === 'kabupaten') {
-      const fid = props.id;
-      const fcode = props.Code ? String(props.Code) : '';
-      const fcodeBps = props.kodeBps;
-      return (
-        KABKOTA_DATA.find((k) => k.id === fid) ||
-        KABKOTA_DATA.find((k) => k.kodeBps === fcodeBps) ||
-        KABKOTA_DATA.find((k) => k.kodeBps.replace(/\./g, '') === fcode)
-      );
-    }
-
-    // National Level: Match 38 Provinces
-    const fkode = props.kode;
-    const fkodeStr = String(fkode).padStart(2, '0');
-    const fPropinsi = String(props.Propinsi || '').toUpperCase().trim();
-
-    return (
-      PROVINSI_DATA.find((p) => p.kodeBps === fkodeStr || p.kodeBps === String(fkode)) ||
-      PROVINSI_DATA.find((p) => {
-        const pUpper = p.name.toUpperCase();
-        return fPropinsi.includes(pUpper) || pUpper.includes(fPropinsi);
-      })
-    );
-  }
 
   const handleZoomIn = () => {
     mapInstanceRef.current?.zoomIn();
@@ -731,7 +754,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
                   <span className="w-3.5 h-3.5 rounded-md bg-white border border-slate-300 shadow-2xs" />
                   <span>Area Putih: 0 Unit</span>
                 </span>
-                <span className="text-[10px] text-slate-400">23 Prov</span>
+                <span className="text-[10px] text-slate-600 font-semibold">23 Prov</span>
               </div>
             </div>
           ) : indicatorDef.customRegionType === 'sugb' ? (
@@ -749,7 +772,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
                   <span className="w-3.5 h-3.5 rounded-md bg-white border border-slate-300 shadow-2xs" />
                   <span>Area Putih: 0 Unit</span>
                 </span>
-                <span className="text-[10px] text-slate-400">34 Prov</span>
+                <span className="text-[10px] text-slate-600 font-semibold">34 Prov</span>
               </div>
             </div>
           ) : indicatorDef.customRegionType === 'sumatera_rehab' ? (
@@ -769,7 +792,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
                   <span className="w-3.5 h-3.5 rounded-md bg-white border border-slate-300 shadow-2xs" />
                   <span>Area Putih: Di Luar Prioritas Bencana</span>
                 </span>
-                <span className="text-[10px] text-slate-400">35 Prov</span>
+                <span className="text-[10px] text-slate-600 font-semibold">35 Prov</span>
               </div>
             </div>
           ) : indicatorDef.isNationalOnly ? (
@@ -861,7 +884,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
             type="button"
             onClick={handleZoomIn}
             aria-label="Perbesar peta"
-            className="w-8 h-8 flex items-center justify-center text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="w-11 h-11 flex items-center justify-center text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -870,7 +893,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
             type="button"
             onClick={handleZoomOut}
             aria-label="Perkecil peta"
-            className="w-8 h-8 flex items-center justify-center text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="w-11 h-11 flex items-center justify-center text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
           >
             <Minus className="h-4 w-4" />
           </button>
@@ -882,7 +905,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
           onClick={() => setShowInfo(!showInfo)}
           aria-label="Informasi Sumber Peta & Indikator"
           title="Sumber Peta & Indikator"
-          className="w-8 h-8 bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-full shadow-xs flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
+          className="w-11 h-11 bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-full shadow-xs flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
         >
           <Info className="h-4 w-4" />
         </button>
@@ -896,7 +919,8 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
             <button
               type="button"
               onClick={() => setShowInfo(false)}
-              className="text-slate-400 hover:text-slate-700 text-sm font-bold"
+              aria-label="Tutup info metadata"
+              className="text-slate-600 hover:text-slate-800 text-sm font-bold p-1 rounded-md hover:bg-slate-100 cursor-pointer"
             >
               ✕
             </button>

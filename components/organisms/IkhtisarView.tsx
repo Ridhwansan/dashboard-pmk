@@ -12,7 +12,6 @@ import {
   HeartPulse,
   ShieldAlert,
   TrendingDown,
-  BarChart3,
 } from 'lucide-react';
 import { ExecutivePdfButton } from '@/components/molecules/ExecutivePdfButton';
 
@@ -26,9 +25,10 @@ interface IkhtisarViewProps {
 interface PillarTabItem {
   id: PillarId;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   activeBg: string;
   inactiveIconColor: string;
+  brandColor: string;
 }
 
 const PILLAR_TABS: PillarTabItem[] = [
@@ -38,6 +38,7 @@ const PILLAR_TABS: PillarTabItem[] = [
     icon: GraduationCap,
     activeBg: 'bg-blue-600 text-white shadow-sm',
     inactiveIconColor: 'text-blue-600',
+    brandColor: '#2563eb',
   },
   {
     id: 'kesehatan',
@@ -45,20 +46,23 @@ const PILLAR_TABS: PillarTabItem[] = [
     icon: HeartPulse,
     activeBg: 'bg-emerald-600 text-white shadow-sm',
     inactiveIconColor: 'text-emerald-600',
+    brandColor: '#059669',
   },
   {
     id: 'bencana',
     label: 'Kebencanaan',
     icon: ShieldAlert,
-    activeBg: 'bg-[#7a4b27] text-white shadow-sm',
-    inactiveIconColor: 'text-[#7a4b27]',
+    activeBg: 'bg-pillar-bencana text-white shadow-sm',
+    inactiveIconColor: 'text-pillar-bencana',
+    brandColor: '#7a4b27',
   },
   {
     id: 'kemiskinan',
     label: 'Penurunan Kemiskinan',
     icon: TrendingDown,
-    activeBg: 'bg-red-600 text-white shadow-sm',
-    inactiveIconColor: 'text-red-600',
+    activeBg: 'bg-rose-600 text-white shadow-sm',
+    inactiveIconColor: 'text-rose-600',
+    brandColor: '#e11d48',
   },
 ];
 
@@ -72,7 +76,7 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
 
   const CATEGORY_OPTIONS = [
     { id: 'PKPN', label: 'PKPN', disabled: false },
-    { id: 'Isu Strategis', label: 'Isu Strategis', disabled: true },
+    { id: 'Isu Strategis', label: 'Isu Strategis', disabled: false },
     { id: 'RPJMN', label: 'RPJMN', disabled: true },
   ];
 
@@ -90,15 +94,12 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
         {/* Top Row: Title on Left, Unduh Ringkasan PDF on Right */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200/90 flex items-center justify-center text-blue-700 shrink-0">
-              <BarChart3 className="w-5 h-5" />
-            </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-tight">
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight leading-tight">
                 Ikhtisar 4 Pilar Prioritas PMK
               </h2>
-              <p className="text-xs text-slate-500 font-medium">
-                Pemantauan kinerja target dan realisasi program lintas kementerian
+              <p className="text-sm text-slate-500 font-medium">
+                Pemantauan kinerja target dan realisasi
               </p>
             </div>
           </div>
@@ -109,9 +110,10 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
           </div>
         </div>
 
-        {/* Bottom Row: Menu pilihan pilar di bawah judul ikhtisar sebagai tombol rapi tanpa card abu-abu */}
+        {/* Bottom Row: Menu pilihan pilar di bawah judul ikhtisar sebagai tombol rapi */}
         <div className="border-t border-slate-100 pt-3.5">
           <nav
+            role="tablist"
             aria-label="Pilih Tab Pilar"
             className="flex items-center gap-2.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden max-w-full"
           >
@@ -122,10 +124,17 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
                 <button
                   key={tab.id}
                   type="button"
+                  role="tab"
+                  aria-selected={isActive}
                   onClick={() => handleTabChange(tab.id)}
+                  style={
+                    isActive
+                      ? { backgroundColor: tab.brandColor, color: '#ffffff', borderColor: tab.brandColor }
+                      : undefined
+                  }
                   className={`h-[40px] sm:h-[42px] inline-flex items-center gap-2 px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
                     isActive
-                      ? `${tab.activeBg} font-extrabold`
+                      ? `${tab.activeBg} font-extrabold shadow-sm`
                       : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50 border border-slate-200/90 shadow-2xs'
                   }`}
                 >
@@ -133,8 +142,12 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
                     className={`h-4 w-4 shrink-0 transition-colors ${
                       isActive ? 'text-white' : tab.inactiveIconColor
                     }`}
+                    style={!isActive ? { color: tab.brandColor } : { color: '#ffffff' }}
                   />
-                  <span className={isActive ? 'text-white' : 'text-slate-800'}>
+                  <span
+                    className={isActive ? 'text-white' : 'text-slate-800'}
+                    style={isActive ? { color: '#ffffff' } : undefined}
+                  >
                     {tab.label}
                   </span>
                 </button>
@@ -144,7 +157,7 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
         </div>
       </div>
 
-      {/* 2. SUB-FILTER KATEGORI: Tombol mandiri rapi tanpa bungkus card abu-abu */}
+      {/* 2. SUB-FILTER KATEGORI: Tombol mandiri rapi */}
       <div className="flex items-center gap-2 pt-0.5">
         {CATEGORY_OPTIONS.map((cat) => {
           const isCatActive = selectedCategory === cat.id;
@@ -162,7 +175,7 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
                 isDisabled
                   ? 'bg-slate-100/70 text-slate-400 border border-slate-200/60 cursor-not-allowed opacity-60 select-none'
                   : isCatActive
-                  ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-300 cursor-pointer'
+                  ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-300 cursor-pointer ring-1 ring-slate-300/40'
                   : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200/80 cursor-pointer'
               }`}
             >
@@ -172,7 +185,7 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
         })}
       </div>
 
-      {/* 2. TAB CONTENT: Render each pillar page as-is */}
+      {/* 3. TAB CONTENT: Render each pillar page with category */}
       <div className="w-full">
         {activePillar === 'pendidikan' && (
           <PendidikanDetailView

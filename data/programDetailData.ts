@@ -80,21 +80,6 @@ const MONTH_NAMES = [
   'Desember',
 ];
 
-const MONTH_SHORT = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'Mei',
-  'Jun',
-  'Jul',
-  'Agu',
-  'Sep',
-  'Okt',
-  'Nov',
-  'Des',
-];
-
 /**
  * Official Monthly Data Generator for programs in the official presentation slides
  * Verbatim from official documents:
@@ -226,20 +211,6 @@ export function generateEmptyMonthlyData(): Record<number, MonthlyDataPoint[]> {
     2026: makeEmptyYear(),
     2027: makeEmptyYear(),
   };
-}
-
-/**
- * Compatibility wrapper - returns empty monthly data for unprovided metrics
- */
-function generateMonthlyData(): Record<number, MonthlyDataPoint[]> {
-  return generateEmptyMonthlyData();
-}
-
-/**
- * Compatibility wrapper - returns empty monthly data for unprovided metrics
- */
-function generateOfficialMonthlyData(): Record<number, MonthlyDataPoint[]> {
-  return generateEmptyMonthlyData();
 }
 
 /**
@@ -561,6 +532,97 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '0,57 poin',
     status: 'Capaian 2025: 0,562',
     subtext: 'Target 2027: 0,575 · Target 2029: 0,59 poin',
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  // --- ISU STRATEGIS PENDIDIKAN (Gambar 2) ---
+  'isu_pendidikan_gratis': {
+    id: 'isu_pendidikan_gratis',
+    title: 'Pendidikan gratis dan bantuan pendidikan',
+    pillarId: 'pendidikan',
+    pillarTitle: 'Pendidikan',
+    category: 'Isu Strategis',
+    description:
+      'Pengawalan kebijakan bantuan pembiayaan dan perluasan akses pendidikan bebas biaya bagi peserta didik dari keluarga pra-sejahtera dan wilayah 3T.',
+    picKementerian: 'Kemendikdasmen, Kemenag, Kemenkeu, Kemendagri',
+    unit: '',
+    currentValue: '—',
+    target2026: '—',
+    status: 'Tahap Perumusan & Koordinasi Lintas K/L',
+    subtext: 'Data target dan capaian dalam tahap finalisasi teknis',
+    kendalaList: [],
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'isu_penataan_guru_pppk': {
+    id: 'isu_penataan_guru_pppk',
+    title: 'Penataan guru PPPK',
+    pillarId: 'pendidikan',
+    pillarTitle: 'Pendidikan',
+    category: 'Isu Strategis',
+    description:
+      'Koordinasi penataan distribusi, alokasi formasi, dan kejelasan status guru Pegawai Pemerintah dengan Perjanjian Kerja (PPPK).',
+    picKementerian: 'Kemendikdasmen, KemenPANRB, BKN, Kemenkeu, Pemda',
+    unit: '',
+    currentValue: '—',
+    target2026: '—',
+    status: 'Tahap Perumusan & Koordinasi Lintas K/L',
+    subtext: 'Data target dan capaian dalam tahap finalisasi teknis',
+    kendalaList: [],
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'isu_akademi_olahraga': {
+    id: 'isu_akademi_olahraga',
+    title: 'Akademi Olahraga Nasional dan Pusat Pelatihan Nasional',
+    pillarId: 'pendidikan',
+    pillarTitle: 'Pendidikan',
+    category: 'Isu Strategis',
+    description:
+      'Pengembangan Akademi Olahraga Nasional dan Pusat Pelatihan Nasional sebagai sentra pembinaan talenta dan prestasi atlet muda.',
+    picKementerian: 'Kemenpora, Kemendikdasmen, Kementerian PU',
+    unit: '',
+    currentValue: '—',
+    target2026: '—',
+    status: 'Tahap Perumusan & Koordinasi Lintas K/L',
+    subtext: 'Data target dan capaian dalam tahap finalisasi teknis',
+    kendalaList: [],
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'isu_revitalisasi_vokasi': {
+    id: 'isu_revitalisasi_vokasi',
+    title: 'Revitalisasi vokasi',
+    pillarId: 'pendidikan',
+    pillarTitle: 'Pendidikan',
+    category: 'Isu Strategis',
+    description:
+      'Peningkatan relevansi dan mutu pendidikan vokasi (SMK & Politeknik) melalui penyelarasan kurikulum dengan kebutuhan industri dan dunia usaha.',
+    picKementerian: 'Kemendiktisaintek, Kemendikdasmen, Kemenaker, Kadin',
+    unit: '',
+    currentValue: '—',
+    target2026: '—',
+    status: 'Tahap Perumusan & Koordinasi Lintas K/L',
+    subtext: 'Data target dan capaian dalam tahap finalisasi teknis',
+    kendalaList: [],
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'isu_bantuan_perlengkapan_sekolah': {
+    id: 'isu_bantuan_perlengkapan_sekolah',
+    title: 'Bantuan perlengkapan sekolah',
+    pillarId: 'pendidikan',
+    pillarTitle: 'Pendidikan',
+    category: 'Isu Strategis',
+    description:
+      'Penyaluran bantuan seragam dan perlengkapan dasar belajar bagi peserta didik di kantong kemiskinan dan wilayah tertinggal.',
+    picKementerian: 'Kemendikdasmen, Kemensos, Pemerintah Daerah',
+    unit: '',
+    currentValue: '—',
+    target2026: '—',
+    status: 'Tahap Perumusan & Koordinasi Lintas K/L',
+    subtext: 'Data target dan capaian dalam tahap finalisasi teknis',
+    kendalaList: [],
     monthlyData: generateEmptyMonthlyData(),
   },
 
@@ -1159,6 +1221,174 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     subtext: 'Penyaluran BOP Pendidikan Anak Usia Dini & Kesetaraan',
     monthlyData: generateEmptyMonthlyData(),
   },
+
+  // =========================================================================
+  // ISU STRATEGIS KETAHANAN BENCANA (Gambar 1)
+  // =========================================================================
+  'isu_pemulihan_infrastruktur_sumatera': {
+    id: 'isu_pemulihan_infrastruktur_sumatera',
+    title: 'Pemulihan infrastruktur dan layanan dasar Sumatera',
+    pillarId: 'bencana',
+    pillarTitle: 'Ketahanan Bencana',
+    category: 'Isu Strategis',
+    description:
+      'Percepatan rehabilitasi dan rekonstruksi infrastruktur vital serta pemulihan fasilitas layanan dasar pascabencana di wilayah Sumatera.',
+    picKementerian: 'Kementerian PU, BNPB, Kemendagri, Satgas PRRP Sumatera',
+    unit: '',
+    currentValue: '—',
+    target2026: '—',
+    status: 'Tahap Perumusan & Koordinasi Lintas K/L',
+    subtext: 'Data target dan capaian dalam tahap finalisasi teknis',
+    kendalaList: [],
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'isu_bantuan_stimulan_rumah_rusak': {
+    id: 'isu_bantuan_stimulan_rumah_rusak',
+    title: 'Bantuan stimulan rumah rusak',
+    pillarId: 'bencana',
+    pillarTitle: 'Ketahanan Bencana',
+    category: 'Isu Strategis',
+    description:
+      'Penyaluran bantuan stimulan perbaikan rumah rusak akibat bencana kategori rusak berat, rusak sedang, dan rusak ringan bagi warga terdampak.',
+    picKementerian: 'BNPB, Kementerian PKP, Kemenkeu, Pemda',
+    unit: '',
+    currentValue: '—',
+    target2026: '—',
+    status: 'Tahap Perumusan & Koordinasi Lintas K/L',
+    subtext: 'Data target dan capaian dalam tahap finalisasi teknis',
+    kendalaList: [],
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'isu_pemulihan_bencana_lainnya': {
+    id: 'isu_pemulihan_bencana_lainnya',
+    title: 'Pemulihan bencana lainnya',
+    pillarId: 'bencana',
+    pillarTitle: 'Ketahanan Bencana',
+    category: 'Isu Strategis',
+    description:
+      'Koordinasi penanganan dan pemulihan sosial ekonomi serta sarana prasarana terdampak bencana alam di berbagai wilayah prioritas di luar Sumatera.',
+    picKementerian: 'BNPB, Kemensos, Kemenko PMK, Pemda',
+    unit: '',
+    currentValue: '—',
+    target2026: '—',
+    status: 'Tahap Perumusan & Koordinasi Lintas K/L',
+    subtext: 'Data target dan capaian dalam tahap finalisasi teknis',
+    kendalaList: [],
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  // =========================================================================
+  // ISU STRATEGIS PENURUNAN KEMISKINAN (Gambar 2 & 3)
+  // =========================================================================
+  'isu_bansos_tepat_sasaran': {
+    id: 'isu_bansos_tepat_sasaran',
+    title: 'Bansos tepat sasaran dan pemutakhiran data',
+    pillarId: 'kemiskinan',
+    pillarTitle: 'Penurunan Kemiskinan',
+    category: 'Isu Strategis',
+    description:
+      'Penguatan integrasi data tunggal sasaran perlindungan sosial, pemutakhiran data berkala, dan verifikasi faktual untuk ketepatan penyaluran bansos.',
+    picKementerian: 'Kemensos, BPS, Kemenko PMK, Bappenas, Pemda',
+    unit: '',
+    currentValue: '—',
+    target2026: '—',
+    status: 'Tahap Perumusan & Koordinasi Lintas K/L',
+    subtext: 'Data target dan capaian dalam tahap finalisasi teknis',
+    kendalaList: [],
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'isu_permakanan_mbg_lansia': {
+    id: 'isu_permakanan_mbg_lansia',
+    title: 'Permakanan atau MBG lansia',
+    pillarId: 'kemiskinan',
+    pillarTitle: 'Penurunan Kemiskinan',
+    category: 'Isu Strategis',
+    description:
+      'Penyediaan dan integrasi bantuan makanan bergizi harian bagi lansia tunggal, miskin, dan telantar untuk memastikan pemenuhan gizi layak.',
+    picKementerian: 'Kemensos, Badan Gizi Nasional (BGN), Kemenko PMK',
+    unit: '',
+    currentValue: '—',
+    target2026: '—',
+    status: 'Tahap Perumusan & Koordinasi Lintas K/L',
+    subtext: 'Data target dan capaian dalam tahap finalisasi teknis',
+    kendalaList: [],
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'isu_permakanan_mbg_disabilitas': {
+    id: 'isu_permakanan_mbg_disabilitas',
+    title: 'Permakanan atau MBG penyandang disabilitas',
+    pillarId: 'kemiskinan',
+    pillarTitle: 'Penurunan Kemiskinan',
+    category: 'Isu Strategis',
+    description:
+      'Penyediaan dan integrasi makanan bergizi harian ramah disabilitas bagi penyandang disabilitas berat dan terlantar.',
+    picKementerian: 'Kemensos, Badan Gizi Nasional (BGN), Kemenko PMK',
+    unit: '',
+    currentValue: '—',
+    target2026: '—',
+    status: 'Tahap Perumusan & Koordinasi Lintas K/L',
+    subtext: 'Data target dan capaian dalam tahap finalisasi teknis',
+    kendalaList: [],
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'isu_layanan_mobilitas_lansia_disabilitas': {
+    id: 'isu_layanan_mobilitas_lansia_disabilitas',
+    title: 'Layanan dasar dan mobilitas lansia serta disabilitas',
+    pillarId: 'kemiskinan',
+    pillarTitle: 'Penurunan Kemiskinan',
+    category: 'Isu Strategis',
+    description:
+      'Peningkatan pemenuhan alat bantu fisik, kemudahan aksesibilitas fasilitas umum, dan penguatan layanan sosial bagi lansia dan disabilitas.',
+    picKementerian: 'Kemensos, Kementerian PU, Kemenkes, Pemda',
+    unit: '',
+    currentValue: '—',
+    target2026: '—',
+    status: 'Tahap Perumusan & Koordinasi Lintas K/L',
+    subtext: 'Data target dan capaian dalam tahap finalisasi teknis',
+    kendalaList: [],
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'isu_stunting_tb_kantong_kemiskinan': {
+    id: 'isu_stunting_tb_kantong_kemiskinan',
+    title: 'Intervensi stunting dan TB pada kantong kemiskinan',
+    pillarId: 'kemiskinan',
+    pillarTitle: 'Penurunan Kemiskinan',
+    category: 'Isu Strategis',
+    description:
+      'Konvergensi percepatan penurunan stunting dan penanggulangan tuberkulosis (TB) dengan fokus sasaran terpadu di kantong-kantong kemiskinan.',
+    picKementerian: 'Kemenkes, Kemensos, BKKBN, Kemendesa, Pemda',
+    unit: '',
+    currentValue: '—',
+    target2026: '—',
+    status: 'Tahap Perumusan & Koordinasi Lintas K/L',
+    subtext: 'Data target dan capaian dalam tahap finalisasi teknis',
+    kendalaList: [],
+    monthlyData: generateEmptyMonthlyData(),
+  },
+
+  'isu_bantuan_pendidikan_kantong_kemiskinan': {
+    id: 'isu_bantuan_pendidikan_kantong_kemiskinan',
+    title: 'Bantuan pendidikan pada kantong kemiskinan',
+    pillarId: 'kemiskinan',
+    pillarTitle: 'Penurunan Kemiskinan',
+    category: 'Isu Strategis',
+    description:
+      'Afirmasi pembiayaan, bantuan sarana belajar, dan beasiswa pendidikan bagi anak usia sekolah dari keluarga tidak mampu di kawasan kantong kemiskinan.',
+    picKementerian: 'Kemendikdasmen, Kemenag, Kemensos, Pemda',
+    unit: '',
+    currentValue: '—',
+    target2026: '—',
+    status: 'Tahap Perumusan & Koordinasi Lintas K/L',
+    subtext: 'Data target dan capaian dalam tahap finalisasi teknis',
+    kendalaList: [],
+    monthlyData: generateEmptyMonthlyData(),
+  },
 };
 
 const PROGRAM_ALIASES: Record<string, string> = {
@@ -1184,12 +1414,25 @@ const PROGRAM_ALIASES: Record<string, string> = {
   huntap_bencana: 'huntap',
   jumlah_kejadian_bencana: 'jumlah_bencana',
   kerugian_bencana: 'kerugian',
+  pemulihan_infrastruktur_dan_layanan_dasar_sumatera: 'isu_pemulihan_infrastruktur_sumatera',
+  pemulihan_infrastruktur_sumatera: 'isu_pemulihan_infrastruktur_sumatera',
+  bantuan_stimulan_rumah_rusak: 'isu_bantuan_stimulan_rumah_rusak',
+  pemulihan_bencana_lainnya: 'isu_pemulihan_bencana_lainnya',
   // Kemiskinan
   tingkat_kemiskinan: 'kemiskinan',
   bantuan_permakanan_lansia: 'permakanan_lansia',
   bantuan_permakanan_disabilitas: 'permakanan_disabilitas',
   cakupan_lansia_desil: 'desil_lansia',
   cakupan_disabilitas_desil: 'desil_disabilitas',
+  bansos_tepat_sasaran: 'isu_bansos_tepat_sasaran',
+  bansos_tepat_sasaran_dan_pemutakhiran_data: 'isu_bansos_tepat_sasaran',
+  permakanan_atau_mbg_lansia: 'isu_permakanan_mbg_lansia',
+  permakanan_mbg_lansia: 'isu_permakanan_mbg_lansia',
+  permakanan_atau_mbg_penyandang_disabilitas: 'isu_permakanan_mbg_disabilitas',
+  permakanan_mbg_disabilitas: 'isu_permakanan_mbg_disabilitas',
+  layanan_dasar_dan_mobilitas_lansia_serta_disabilitas: 'isu_layanan_mobilitas_lansia_disabilitas',
+  intervensi_stunting_dan_tb_pada_kantong_kemiskinan: 'isu_stunting_tb_kantong_kemiskinan',
+  bantuan_pendidikan_pada_kantong_kemiskinan: 'isu_bantuan_pendidikan_kantong_kemiskinan',
 };
 
 /**

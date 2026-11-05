@@ -45,7 +45,7 @@ const PILLARS_NAV: PillarNavItem[] = [
   {
     id: 'bencana',
     label: 'Kebencanaan',
-    icon: <ShieldAlert className="h-4 w-4 text-[#7a4b27]" />,
+    icon: <ShieldAlert className="h-4 w-4 text-pillar-bencana" style={{ color: '#7a4b27' }} />,
   },
   {
     id: 'kemiskinan',
@@ -184,7 +184,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Dropdown for Pilar Sub-Menus */}
             {isPilarDropdownOpen && (
               <div className="absolute right-0 left-auto top-full pt-2 z-50 w-56 sm:w-60 max-w-[calc(100vw-2rem)] animate-in fade-in zoom-in-95 duration-100">
-                <div className="bg-white rounded-xl border border-slate-200 shadow-xl p-2 text-xs space-y-1">
+                <div role="menu" aria-label="Pilihan Tab Pilar" className="bg-white rounded-xl border border-slate-200 shadow-xl p-2 text-xs space-y-1">
                   {PILLARS_NAV.map((p) => {
                     const isCurrentPillar =
                       isIkhtisarActive && currentPillarId === p.id;
@@ -196,6 +196,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           setIsPilarDropdownOpen(false);
                           onSelectPillar?.(p.id);
                         }}
+                        role="menuitem"
                         className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-left transition-colors cursor-pointer ${
                           isCurrentPillar
                             ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200/80'

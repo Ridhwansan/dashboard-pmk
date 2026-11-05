@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   ArrowLeft,
   ChevronDown,
@@ -8,27 +8,13 @@ import {
   CalendarRange,
   BarChart3,
   AlertCircle,
-  TrendingUp,
   CheckCircle2,
   Clock,
-  Sparkles,
-  ArrowUpRight,
-  ArrowDownRight,
-  Activity,
   RefreshCw,
-  History,
-  ArrowRight,
-  Search,
-  Flame,
-  MapPin,
-  Megaphone,
-  FileText,
-  AlertTriangle,
 } from 'lucide-react';
 import { ProgramDetailData, KendalaDetailItem, getProgramDetailData } from '@/data/programDetailData';
 import { PENGKINIAN_BENCANA_DATA, BENCANA_RINGKASAN_UTAMA } from '@/data/bencanaPengkinianData';
 import {
-  PILLAR_AGREGAT_DATA,
   AgregatIndicatorRow,
   getIndicatorAnnualRow,
   AVAILABLE_YEARS,
@@ -134,6 +120,15 @@ function buildSmoothPath(points: { x: number; y: number }[]): string {
   return d;
 }
 
+const chartW = 900;
+const chartH = 260;
+const padL = 70;
+const padR = 40;
+const padT = 35;
+const padB = 45;
+const plotW = chartW - padL - padR;
+const plotH = chartH - padT - padB;
+
 export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   program,
   onBack,
@@ -194,18 +189,11 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   const [tableType, setTableType] = useState<'tahunan' | 'bulanan' | 'timeseries'>('tahunan');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedMonth, setSelectedMonth] = useState<number>(0); // 0 = Semua Bulan
-  const [spotlightMonth, setSpotlightMonth] = useState<number>(10); // default to Oktober 2026 (current month)
-  const [timeseriesQuarter, setTimeseriesQuarter] = useState<'all' | 'q1' | 'q2' | 'q3' | 'q4'>('all');
-  const [selectedProvinsiFilter, setSelectedProvinsiFilter] = useState<string>('all');
   const [hoveredAnnualIdx, setHoveredAnnualIdx] = useState<number | null>(null);
   const [hoveredMonthlyIdx, setHoveredMonthlyIdx] = useState<number | null>(null);
   const isJumlahBencana = effectiveProgram.id === 'jumlah_bencana';
 
-  useEffect(() => {
-    if (!isJumlahBencana && tableType === 'timeseries') {
-      setTableType('tahunan');
-    }
-  }, [isJumlahBencana, tableType]);
+  // Table type defaults to tahunan if timeseries is not supported for this program
 
   // Resolve annual row for this specific program (only this indicator appears in the annual table)
   const annualRowForProgram = useMemo(() => {
@@ -275,49 +263,10 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
     });
   }, [rawMonths, selectedYear]);
 
-  // Quarterly metrics for time-series view
-  const quarterlyMetrics = useMemo(() => {
-    const quarters = [
-      { name: 'Triwulan I (Q1)', months: [1, 2, 3], range: 'Januari – Maret 2026' },
-      { name: 'Triwulan II (Q2)', months: [4, 5, 6], range: 'April – Juni 2026' },
-      { name: 'Triwulan III (Q3)', months: [7, 8, 9], range: 'Juli – September 2026' },
-      { name: 'Triwulan IV (Q4)', months: [10, 11, 12], range: 'Oktober – Desember 2026' },
-    ];
-
-    return quarters.map((q) => {
-      const qMonths = enrichedMonths.filter((m) => q.months.includes(m.month));
-      const validCapaian = qMonths.filter(
-        (m) => m.capaian !== null && m.capaianFormatted !== '' && m.capaianFormatted !== '—'
-      );
-      const totalQ = validCapaian.reduce((acc, curr) => acc + (curr.capaian || 0), 0);
-      const hasData = validCapaian.length > 0;
-      const isComplete = validCapaian.length === 3;
-      const isOngoing = q.name.includes('Q4');
-
-      return {
-        ...q,
-        totalQ,
-        totalQFormatted: totalQ > 0 ? totalQ.toLocaleString('id-ID') : '—',
-        hasData,
-        isComplete,
-        isOngoing,
-        reportedCount: validCapaian.length,
-      };
-    });
-  }, [enrichedMonths]);
-
   const displayedMonths = useMemo(() => {
     if (selectedMonth === 0) return enrichedMonths;
     return enrichedMonths.filter((m) => m.month === selectedMonth);
   }, [enrichedMonths, selectedMonth]);
-
-  const filteredTimeseriesMonths = useMemo(() => {
-    if (timeseriesQuarter === 'q1') return enrichedMonths.filter((m) => [1, 2, 3].includes(m.month));
-    if (timeseriesQuarter === 'q2') return enrichedMonths.filter((m) => [4, 5, 6].includes(m.month));
-    if (timeseriesQuarter === 'q3') return enrichedMonths.filter((m) => [7, 8, 9].includes(m.month));
-    if (timeseriesQuarter === 'q4') return enrichedMonths.filter((m) => [10, 11, 12].includes(m.month));
-    return enrichedMonths;
-  }, [enrichedMonths, timeseriesQuarter]);
 
   // Aggregate metrics
   const summaryMetrics = useMemo(() => {
@@ -391,15 +340,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   // =========================================================================
   // ANNUAL CHART CALCULATIONS (2025–2029)
   // =========================================================================
-  const chartW = 900;
-  const chartH = 260;
-  const padL = 70;
-  const padR = 40;
-  const padT = 35;
-  const padB = 45;
-  const plotW = chartW - padL - padR;
-  const plotH = chartH - padT - padB;
-
   const annualPoints = useMemo(() => {
     return AVAILABLE_YEARS.map((year) => {
       const metric = activeAnnualRow.years[year] || { target: '—', capaian: '—' };
@@ -434,19 +374,19 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   const maxValAnnual = Math.max(...validAnnualTargets, ...validAnnualCapaian, 10);
   const yMaxAnnual = maxValAnnual * 1.18;
 
-  const getXAnnual = (index: number) => padL + (index / (AVAILABLE_YEARS.length - 1)) * plotW;
-  const getYAnnual = (val: number | null) => {
+  const getXAnnual = useCallback((index: number) => padL + (index / (AVAILABLE_YEARS.length - 1)) * plotW, []);
+  const getYAnnual = useCallback((val: number | null) => {
     if (val === null) return padT + plotH;
     const ratio = Math.min(1, Math.max(0, val / yMaxAnnual));
     return padT + plotH - ratio * plotH;
-  };
+  }, [yMaxAnnual]);
 
   const targetAnnualPath = useMemo(() => {
     const pts = annualPoints
       .map((p, idx) => ({ x: getXAnnual(idx), y: p.targetNum !== null ? getYAnnual(p.targetNum) : null }))
       .filter((p): p is { x: number; y: number } => p.y !== null);
     return buildSmoothPath(pts);
-  }, [annualPoints, yMaxAnnual]);
+  }, [annualPoints, getXAnnual, getYAnnual]);
 
   const capaianAnnualPoints = useMemo(
     () => annualPoints.filter((p) => p.capaianNum !== null),
@@ -459,7 +399,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       return { x: getXAnnual(idx), y: getYAnnual(p.capaianNum) };
     });
     return buildSmoothPath(pts);
-  }, [capaianAnnualPoints, annualPoints, yMaxAnnual]);
+  }, [capaianAnnualPoints, annualPoints, getXAnnual, getYAnnual]);
 
   const capaianAnnualArea = useMemo(() => {
     if (capaianAnnualPoints.length === 0) return '';
@@ -470,7 +410,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
     const xStart = getXAnnual(firstIdx);
     const xEnd = getXAnnual(lastIdx);
     return `${capaianAnnualPath} L ${xEnd} ${padT + plotH} L ${xStart} ${padT + plotH} Z`;
-  }, [capaianAnnualPoints, capaianAnnualPath, annualPoints]);
+  }, [capaianAnnualPoints, capaianAnnualPath, annualPoints, getXAnnual]);
 
   // =========================================================================
   // MONTHLY CHART CALCULATIONS (Jan - Des) & TRAJECTORY TO ANNUAL TARGET
@@ -501,12 +441,18 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   const maxValMonthly = Math.max(...validMonthlyTargets, ...validMonthlyCapaian, 10);
   const yMaxMonthly = maxValMonthly * 1.18;
 
-  const getXMonthly = (index: number) => padL + (index / (rawMonths.length - 1)) * plotW;
-  const getYMonthly = (val: number | null) => {
-    if (val === null) return padT + plotH;
-    const ratio = Math.min(1, Math.max(0, val / yMaxMonthly));
-    return padT + plotH - ratio * plotH;
-  };
+  const getXMonthly = useCallback(
+    (index: number) => padL + (index / Math.max(1, rawMonths.length - 1)) * plotW,
+    [rawMonths.length]
+  );
+  const getYMonthly = useCallback(
+    (val: number | null) => {
+      if (val === null) return padT + plotH;
+      const ratio = Math.min(1, Math.max(0, val / yMaxMonthly));
+      return padT + plotH - ratio * plotH;
+    },
+    [yMaxMonthly]
+  );
 
   const targetMonthlyList = useMemo(() => {
     return rawMonths.filter(
@@ -532,7 +478,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       return buildSmoothPath(pts);
     }
     return '';
-  }, [targetMonthlyList, annualTargetNum, rawMonths, yMaxMonthly]);
+  }, [targetMonthlyList, annualTargetNum, rawMonths, getXMonthly, getYMonthly]);
 
   const capaianMonthlyList = useMemo(() => {
     return rawMonths.filter(
@@ -562,7 +508,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       return buildSmoothPath(pts);
     }
     return '';
-  }, [capaianMonthlyList, latestCapaianPoint, rawMonths, yMaxMonthly]);
+  }, [capaianMonthlyList, latestCapaianPoint, rawMonths, getXMonthly, getYMonthly]);
 
   // Gradient area under realized progress
   const capaianMonthlyArea = useMemo(() => {
@@ -572,7 +518,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
     const xStart = getXMonthly(firstIdx);
     const xEnd = getXMonthly(lastIdx);
     return `${capaianMonthlyPath} L ${xEnd} ${padT + plotH} L ${xStart} ${padT + plotH} Z`;
-  }, [capaianMonthlyList, capaianMonthlyPath, latestCapaianPoint, rawMonths]);
+  }, [capaianMonthlyList, capaianMonthlyPath, latestCapaianPoint, rawMonths, getXMonthly]);
 
   // Trajectory projection path (dashed line from latest capaian to December annual target)
   const trajectoryProjectionPath = useMemo(() => {
@@ -584,7 +530,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       { x: getXMonthly(endIdx), y: getYMonthly(annualTargetNum) },
     ];
     return buildSmoothPath(pts);
-  }, [latestCapaianPoint, annualTargetNum, rawMonths, yMaxMonthly]);
+  }, [latestCapaianPoint, annualTargetNum, rawMonths, getXMonthly, getYMonthly]);
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
@@ -684,11 +630,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         )}
 
         <div className="space-y-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200/90 shadow-2xs">
-              {category || 'PKPN'}
-            </span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
             {effectiveProgram.title}
           </h1>
@@ -772,9 +713,9 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     onChange={(e) => setSelectedYear(Number(e.target.value))}
                     className="h-[38px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
                   >
-                    <option value={2026}>Tahun 2026 (Berjalan)</option>
-                    <option value={2025}>Tahun 2025 (Historis)</option>
-                    <option value={2027}>Tahun 2027 (Rencana)</option>
+                    <option value={2026}>Tahun 2026</option>
+                    <option value={2025}>Tahun 2025</option>
+                    <option value={2027}>Tahun 2027</option>
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 </div>
@@ -890,8 +831,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   {AVAILABLE_YEARS.map((yr) => {
                     const metric = activeAnnualRow.years[yr] || { target: '—', capaian: '—' };
                     const isCutoff = yr === 2026;
-                    const isPast = yr === 2025;
-                    const isFuture = yr > 2026;
                     const hasCapaian = metric.capaian && metric.capaian !== '—';
 
                     // Percentage calculation
@@ -915,24 +854,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                         }`}
                       >
                         <td className="py-3.5 px-4 text-slate-900 font-bold border-r border-slate-100">
-                          <div className="flex items-center gap-2">
-                            <span>Tahun {yr}</span>
-                            {isCutoff && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                                Berjalan
-                              </span>
-                            )}
-                            {isPast && (
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                                Historis
-                              </span>
-                            )}
-                            {isFuture && (
-                              <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-slate-50 text-slate-400">
-                                Rencana
-                              </span>
-                            )}
-                          </div>
+                          Tahun {yr}
                         </td>
 
                         {/* Target */}
@@ -1009,14 +931,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                       >
                         {/* Bulan */}
                         <td className="py-3.5 px-4 text-slate-900 font-bold border-r border-slate-100">
-                          <div className="flex items-center gap-2">
-                            <span>{m.monthName} {selectedYear}</span>
-                            {isCutoff && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                                Posisi Berjalan
-                              </span>
-                            )}
-                          </div>
+                          {m.monthName} {selectedYear}
                         </td>
 
                         {/* Capaian */}
@@ -1321,20 +1236,9 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                       style={{ left: `${Math.max(16, Math.min(84, leftPct))}%` }}
                     >
                       <div className="bg-slate-100/95 backdrop-blur-md text-slate-800 rounded-2xl px-4 py-3 shadow-xl border border-slate-300/90 min-w-[220px] space-y-2">
-                        <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2">
-                          <span className="font-extrabold text-slate-900 text-sm">
+                        <div className="border-b border-slate-200 pb-2">
+                          <span className="font-extrabold text-slate-900 text-sm block">
                             Tahun {pt.year}
-                          </span>
-                          <span
-                            className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
-                              pt.year === 2026
-                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                                : pt.year === 2025
-                                ? 'bg-slate-200 text-slate-700 border border-slate-300'
-                                : 'bg-slate-100 text-slate-500 border border-slate-200'
-                            }`}
-                          >
-                            {pt.year === 2026 ? 'Berjalan' : pt.year === 2025 ? 'Historis' : 'Rencana'}
                           </span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
@@ -1542,23 +1446,10 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                         : 'bg-slate-50/80 border-slate-200/80'
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-1 mb-2">
-                      <span className="text-xs font-extrabold text-slate-900">
+                    <div className="mb-2">
+                      <span className="text-xs font-extrabold text-slate-900 block">
                         Tahun {pt.year}
                       </span>
-                      {pt.year === 2026 ? (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-600 text-white">
-                          Berjalan
-                        </span>
-                      ) : pt.year === 2025 ? (
-                        <span className="text-[9px] font-semibold text-slate-500">
-                          Historis
-                        </span>
-                      ) : (
-                        <span className="text-[9px] font-semibold text-slate-400">
-                          Rencana
-                        </span>
-                      )}
                     </div>
                     <div className="space-y-1 text-xs">
                       <div className="text-slate-600 flex justify-between gap-1">
@@ -1594,15 +1485,10 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   key={pt.year}
                   className="p-4 rounded-2xl border border-slate-200/90 bg-slate-50/80 space-y-2 shadow-2xs"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-slate-900">
+                  <div className="mb-1">
+                    <span className="text-xs font-extrabold text-slate-900 block">
                       Tahun {pt.year}
                     </span>
-                    {pt.year === 2026 && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-600 text-white">
-                        Berjalan
-                      </span>
-                    )}
                   </div>
                   <div className="space-y-1">
                     <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
@@ -1639,25 +1525,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                 const m = rawMonths[hoveredMonthlyIdx];
                 const colX = getXMonthly(hoveredMonthlyIdx);
                 const leftPct = (colX / chartW) * 100;
-                const hasCapaian = m.capaian !== null && m.capaianFormatted !== '' && m.capaianFormatted !== '—';
-                const hasTarget = m.target > 0 && m.targetFormatted !== '' && m.targetFormatted !== '—';
-                const capaianVal = m.capaian;
-                const pct =
-                  m.percentageFormatted && m.percentageFormatted !== '—' && m.percentageFormatted !== ''
-                    ? m.percentageFormatted
-                    : hasCapaian && m.target > 0
-                    ? `${Math.round(((capaianVal as number) / m.target) * 100)}%`
-                    : null;
-                const targetText = hasTarget
-                  ? m.targetFormatted
-                  : m.targetFormatted === '—'
-                  ? '—'
-                  : '—';
-                const capaianText = hasCapaian
-                  ? m.capaianFormatted
-                  : m.capaianFormatted === '—'
-                  ? '—'
-                  : 'Belum ada data';
 
                 return (
                   <div
@@ -1665,20 +1532,9 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     style={{ left: `${Math.max(16, Math.min(84, leftPct))}%` }}
                   >
                     <div className="bg-slate-100/95 backdrop-blur-md text-slate-800 rounded-2xl px-4 py-3 shadow-xl border border-slate-300/90 min-w-[220px] space-y-2">
-                      <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2">
-                        <span className="font-extrabold text-slate-900 text-sm">
+                      <div className="border-b border-slate-200 pb-2">
+                        <span className="font-extrabold text-slate-900 text-sm block">
                           {m.monthName} {selectedYear}
-                        </span>
-                        <span
-                          className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
-                            hasCapaian
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                              : hasTarget
-                              ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                              : 'bg-slate-200 text-slate-600 border border-slate-300'
-                          }`}
-                        >
-                          {hasCapaian ? 'Posisi Berjalan' : hasTarget ? 'Target Tahunan' : 'Belum Ada Data'}
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
@@ -2006,16 +1862,9 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm sm:text-base font-bold text-slate-900">
-                        {item.title}
-                      </h4>
-                      {isHighlighted && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
-                          Fokus Isu Terpilih
-                        </span>
-                      )}
-                    </div>
+                    <h4 className="text-sm sm:text-base font-bold text-slate-900">
+                      {item.title}
+                    </h4>
                   </div>
 
                   {/* 2 Clean Columns with Left Accent Borders */}

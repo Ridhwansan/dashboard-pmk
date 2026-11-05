@@ -141,14 +141,25 @@ body {
   font-feature-settings: "tnum" 1;
 }
 
-/* Accessible reduced motion */
+/* Accessible reduced motion: disables vestibular motion while preserving opacity and state transitions */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
-    animation-duration: 0.01ms !important;
+    animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Pillar brand theme tokens (ensures Kebencanaan #7a4b27 renders reliably) */
+.bg-pillar-bencana {
+  background-color: #7a4b27 !important;
+  color: #ffffff !important;
+}
+.text-pillar-bencana {
+  color: #7a4b27 !important;
+}
+.border-pillar-bencana {
+  border-color: #7a4b27 !important;
 }
 
 /* Custom scrollbar */

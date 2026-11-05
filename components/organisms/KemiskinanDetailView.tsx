@@ -1,12 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  ChevronRight,
-  BarChart3,
-  AlertCircle,
-  CheckCircle2,
-} from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { PillarData } from '@/types/dashboard';
 import { ProgramDetailPageView } from './ProgramDetailPageView';
 import { getProgramDetailData, getIndicatorMainIssue } from '@/data/programDetailData';
@@ -134,7 +129,6 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
     },
     {
       id: 'bos_madrasah',
-      chipLabel: 'PKPN',
       title: 'Bantuan Operasional Sekolah Madrasah',
       value: '10,36',
       unit: 'Juta Penerima',
@@ -144,6 +138,66 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
       subtext: 'Penyaluran BOS Madrasah di Lingkungan Kementerian Agama',
     },
   ];
+
+  // 6 Strategic Issue Widgets for Penurunan Kemiskinan (Gambar 2 & 3 Verbatim)
+  const isuStrategisCards: WidgetCardItem[] = [
+    {
+      id: 'isu_bansos_tepat_sasaran',
+      title: 'Bansos tepat sasaran dan pemutakhiran data',
+      value: '—',
+      unit: '',
+      status: 'Menunggu Data Realisasi',
+      target: 'Target: Belum Ditetapkan',
+      subtext: 'Integrasi dan pemutakhiran data terpadu untuk ketepatan sasaran bansos',
+    },
+    {
+      id: 'isu_permakanan_mbg_lansia',
+      title: 'Permakanan atau MBG lansia',
+      value: '—',
+      unit: '',
+      status: 'Menunggu Data Realisasi',
+      target: 'Target: Belum Ditetapkan',
+      subtext: 'Skema pemenuhan makanan bergizi harian bagi lansia tunggal dan tidak mampu',
+    },
+    {
+      id: 'isu_permakanan_mbg_disabilitas',
+      title: 'Permakanan atau MBG penyandang disabilitas',
+      value: '—',
+      unit: '',
+      status: 'Menunggu Data Realisasi',
+      target: 'Target: Belum Ditetapkan',
+      subtext: 'Skema pemenuhan makanan bergizi bagi penyandang disabilitas berat',
+    },
+    {
+      id: 'isu_layanan_mobilitas_lansia_disabilitas',
+      title: 'Layanan dasar dan mobilitas lansia serta disabilitas',
+      value: '—',
+      unit: '',
+      status: 'Menunggu Data Realisasi',
+      target: 'Target: Belum Ditetapkan',
+      subtext: 'Aksesibilitas fasilitas dasar dan dukungan mobilitas inklusif',
+    },
+    {
+      id: 'isu_stunting_tb_kantong_kemiskinan',
+      title: 'Intervensi stunting dan TB pada kantong kemiskinan',
+      value: '—',
+      unit: '',
+      status: 'Menunggu Data Realisasi',
+      target: 'Target: Belum Ditetapkan',
+      subtext: 'Intervensi terpadu kesehatan dan perbaikan sanitasi di kantong kemiskinan',
+    },
+    {
+      id: 'isu_bantuan_pendidikan_kantong_kemiskinan',
+      title: 'Bantuan pendidikan pada kantong kemiskinan',
+      value: '—',
+      unit: '',
+      status: 'Menunggu Data Realisasi',
+      target: 'Target: Belum Ditetapkan',
+      subtext: 'Pemberian afirmasi biaya dan perlengkapan sekolah anak keluarga pra-sejahtera',
+    },
+  ];
+
+  const displayedCards = category === 'Isu Strategis' ? isuStrategisCards : widgetCards;
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
@@ -163,7 +217,11 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
         {/* Content */}
         <div className="relative z-10 space-y-1.5 max-w-2xl">
           <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-xs">
-            {category === 'PKPN' ? 'PKPN Penurunan Kemiskinan' : 'Penurunan Kemiskinan'}
+            {category === 'Isu Strategis'
+              ? 'Isu Strategis Penurunan Kemiskinan'
+              : category === 'PKPN'
+              ? 'PKPN Penurunan Kemiskinan'
+              : 'Penurunan Kemiskinan'}
           </h2>
           <p className="text-xs sm:text-sm text-slate-200 font-medium drop-shadow-xs">
             Target dan Capaian Kinerja Program
@@ -171,9 +229,9 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Grid of Widget Cards - Calm, elegant, breathable (Gambar 3) */}
+      {/* 2. Grid of Widget Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
-        {widgetCards.map((card) => {
+        {displayedCards.map((card) => {
           const issueData = getIndicatorMainIssue(card.id, card.title, 'kemiskinan');
 
           return (
@@ -253,14 +311,14 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
                 <div className="mt-4 pt-3.5 border-t border-slate-100 flex-1 flex flex-col justify-end">
                   {issueData.hasIssue ? (
                     <div className="relative group/popover">
-                      <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50/90 hover:bg-slate-100/90 border border-slate-200/80 transition-colors">
+                      <div title={issueData.description} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50/90 hover:bg-slate-100/90 border border-slate-200/80 transition-colors cursor-pointer">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                           <span className="text-xs font-medium text-slate-700 truncate">
                             {issueData.title || issueData.description}
                           </span>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 shrink-0 uppercase tracking-tight">
+                        <span className="text-[10px] font-bold text-slate-600 shrink-0 uppercase tracking-tight">
                           {issueData.totalCount > 1 ? `+${issueData.totalCount - 1}` : 'Detail'}
                         </span>
                       </div>

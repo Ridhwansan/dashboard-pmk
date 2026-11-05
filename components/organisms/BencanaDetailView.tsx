@@ -1,12 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  ChevronRight,
-  BarChart3,
-  AlertCircle,
-  CheckCircle2,
-} from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { PillarData } from '@/types/dashboard';
 import { ProgramDetailPageView } from './ProgramDetailPageView';
 import { getProgramDetailData, getIndicatorMainIssue } from '@/data/programDetailData';
@@ -109,7 +104,6 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
     },
     {
       id: 'kerugian_bencana',
-      chipLabel: 'PKPN',
       title: 'Kerugian Bencana',
       value: '—',
       unit: '% PDB',
@@ -118,6 +112,39 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
       subtext: 'Monitoring Dampak Kerugian Ekonomi terhadap Produk Domestik Bruto',
     },
   ];
+
+  // 3 Strategic Issue Widgets for Kebencanaan (Gambar 1)
+  const isuStrategisCards: WidgetCardItem[] = [
+    {
+      id: 'isu_pemulihan_infrastruktur_sumatera',
+      title: 'Pemulihan infrastruktur dan layanan dasar Sumatera',
+      value: '—',
+      unit: '',
+      status: 'Menunggu Data Realisasi',
+      target: 'Target: Belum Ditetapkan',
+      subtext: 'Percepatan pemulihan infrastruktur dasar dan fasilitas publik wilayah Sumatera',
+    },
+    {
+      id: 'isu_bantuan_stimulan_rumah_rusak',
+      title: 'Bantuan stimulan rumah rusak',
+      value: '—',
+      unit: '',
+      status: 'Menunggu Data Realisasi',
+      target: 'Target: Belum Ditetapkan',
+      subtext: 'Penyaluran bantuan stimulan perbaikan rumah rusak akibat dampak bencana',
+    },
+    {
+      id: 'isu_pemulihan_bencana_lainnya',
+      title: 'Pemulihan bencana lainnya',
+      value: '—',
+      unit: '',
+      status: 'Menunggu Data Realisasi',
+      target: 'Target: Belum Ditetapkan',
+      subtext: 'Pemulihan pascabencana multi-wilayah dan koordinasi lintas K/L',
+    },
+  ];
+
+  const displayedCards = category === 'Isu Strategis' ? isuStrategisCards : widgetCards;
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
@@ -137,7 +164,11 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
         {/* Content */}
         <div className="relative z-10 space-y-1.5 max-w-2xl">
           <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-xs">
-            {category === 'PKPN' ? 'PKPN Kebencanaan' : 'Kebencanaan'}
+            {category === 'Isu Strategis'
+              ? 'Isu Strategis Kebencanaan'
+              : category === 'PKPN'
+              ? 'PKPN Kebencanaan'
+              : 'Kebencanaan'}
           </h2>
           <p className="text-xs sm:text-sm text-slate-200 font-medium drop-shadow-xs">
             Target dan Capaian Kinerja Program
@@ -145,9 +176,9 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Grid of Widget Cards - Calm, elegant, breathable (Gambar 3) */}
+      {/* 2. Grid of Widget Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
-        {widgetCards.map((card) => {
+        {displayedCards.map((card) => {
           const issueData = getIndicatorMainIssue(card.id, card.title, 'bencana');
 
           return (
@@ -227,14 +258,14 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
                 <div className="mt-4 pt-3.5 border-t border-slate-100 flex-1 flex flex-col justify-end">
                   {issueData.hasIssue ? (
                     <div className="relative group/popover">
-                      <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50/90 hover:bg-slate-100/90 border border-slate-200/80 transition-colors">
+                      <div title={issueData.description} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50/90 hover:bg-slate-100/90 border border-slate-200/80 transition-colors cursor-pointer">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                           <span className="text-xs font-medium text-slate-700 truncate">
                             {issueData.title || issueData.description}
                           </span>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 shrink-0 uppercase tracking-tight">
+                        <span className="text-[10px] font-bold text-slate-600 shrink-0 uppercase tracking-tight">
                           {issueData.totalCount > 1 ? `+${issueData.totalCount - 1}` : 'Detail'}
                         </span>
                       </div>

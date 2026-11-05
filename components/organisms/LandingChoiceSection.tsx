@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { BarChart3, Map, ArrowRight } from 'lucide-react';
 import { DASHBOARD_META } from '@/data/dashboardData';
 
@@ -19,10 +20,12 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
       <div className="text-center space-y-4 max-w-2xl mx-auto flex flex-col items-center">
         <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg mb-1">
           <div className="relative h-7 w-7 sm:h-8 sm:w-8 shrink-0 overflow-hidden rounded-full shadow-xs ring-1 ring-white/30">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src="/images/logo-kemenko-pmk-baru.png"
               alt="Logo Kemenko PMK"
+              width={32}
+              height={32}
+              priority
               className="h-full w-full object-contain"
             />
           </div>

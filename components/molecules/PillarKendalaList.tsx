@@ -165,7 +165,7 @@ export const PillarKendalaList: React.FC<PillarKendalaListProps> = ({
                 >
                   <span className="truncate">{selectedProgramTitle}</span>
                   <ChevronDown
-                    className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-150 ${
+                    className={`w-3.5 h-3.5 text-slate-600 font-semibold shrink-0 transition-transform duration-150 ${
                       openIndikator ? 'rotate-180 text-blue-600' : ''
                     }`}
                   />
@@ -234,7 +234,7 @@ export const PillarKendalaList: React.FC<PillarKendalaListProps> = ({
                 >
                   <span>{sortBy === 'terbaru' ? 'Terbaru' : 'Terlama'}</span>
                   <ChevronDown
-                    className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-150 ${
+                    className={`w-3.5 h-3.5 text-slate-600 font-semibold shrink-0 transition-transform duration-150 ${
                       openSort ? 'rotate-180 text-blue-600' : ''
                     }`}
                   />
@@ -283,13 +283,13 @@ export const PillarKendalaList: React.FC<PillarKendalaListProps> = ({
           {/* Right Controls: Search Input & Clean Executive PDF Download */}
           <div className="flex items-center gap-2.5 shrink-0">
             <div className="relative min-w-[160px] sm:w-56">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-slate-600 font-semibold absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari kendala..."
-                className="w-full h-9 pl-9 pr-3 text-xs rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all font-medium text-slate-900 placeholder:text-slate-400 shadow-2xs"
+                className="w-full h-9 pl-9 pr-3 text-xs rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all font-medium text-slate-900 placeholder:text-slate-600 font-semibold shadow-2xs"
               />
             </div>
 
@@ -302,7 +302,7 @@ export const PillarKendalaList: React.FC<PillarKendalaListProps> = ({
       {sortedKendalaItems.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 text-center border border-slate-200/90 shadow-2xs space-y-2">
           <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto mb-2">
-            <CheckCircle2 className="w-5 h-5 text-slate-400" />
+            <CheckCircle2 className="w-5 h-5 text-slate-600 font-semibold" />
           </div>
           <h4 className="text-sm sm:text-base font-bold text-slate-900">
             Tidak Ada Kendala Yang Sesuai Filter
@@ -354,7 +354,7 @@ export const PillarKendalaList: React.FC<PillarKendalaListProps> = ({
                           className="flex items-center gap-1.5 text-xs font-medium text-slate-500 tabular-nums"
                           title={`Diperbarui: ${updateDate}`}
                         >
-                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <Calendar className="w-3.5 h-3.5 text-slate-600 font-semibold shrink-0" />
                           <span>{updateDate}</span>
                         </div>
                       )}

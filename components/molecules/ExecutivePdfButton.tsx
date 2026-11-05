@@ -75,6 +75,7 @@ export const ExecutivePdfButton: React.FC<ExecutivePdfButtonProps> = ({
         disabled={isGenerating}
         aria-label="Unduh Ringkasan PDF Eksekutif"
         aria-expanded={dropdownOpen}
+        aria-haspopup="true"
         className={`h-9 px-3.5 inline-flex items-center gap-2 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer disabled:opacity-75 disabled:cursor-wait bg-white hover:bg-slate-50 text-slate-800 hover:text-slate-950 border border-slate-200 shadow-2xs active:scale-[0.99] select-none ${
           dropdownOpen ? 'ring-2 ring-blue-500/20 border-blue-400 text-blue-900' : ''
         }`}
@@ -104,11 +105,12 @@ export const ExecutivePdfButton: React.FC<ExecutivePdfButtonProps> = ({
 
       {/* Simplified Dropdown Menu: Clean and title-only */}
       {dropdownOpen && (
-        <div className="absolute right-0 top-full mt-1.5 w-52 bg-white rounded-xl shadow-lg border border-slate-200/90 p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+        <div role="menu" aria-label="Pilihan Unduh Ringkasan PDF" className="absolute right-0 top-full mt-1.5 w-52 bg-white rounded-xl shadow-lg border border-slate-200/90 p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
           {/* Option 1: Ringkasan Lengkap 4 Pilar */}
           <button
             type="button"
             onClick={() => handleDownload()}
+            role="menuitem"
             className="w-full px-3 py-2 text-left rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-800 hover:text-blue-700"
           >
             <FileText className="w-4 h-4 text-blue-600 shrink-0" />
@@ -120,7 +122,8 @@ export const ExecutivePdfButton: React.FC<ExecutivePdfButtonProps> = ({
             <button
               type="button"
               onClick={() => handleDownload(currentPillar)}
-              className="w-full px-3 py-2 text-left rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-800 hover:text-amber-700 border-t border-slate-100"
+              role="menuitem"
+            className="w-full px-3 py-2 text-left rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-800 hover:text-amber-700 border-t border-slate-100"
             >
               <FileDown className="w-4 h-4 text-amber-600 shrink-0" />
               <span className="truncate">{getPillarLabel(currentPillar)} Saja</span>

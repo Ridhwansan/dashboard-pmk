@@ -35,11 +35,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       )}
 
       {/* 1. Top Navbar (Hidden on Front Page) */}
-      {!isFrontPage && (
-        <header className="sticky top-0 z-50">
-          <Navbar />
-        </header>
-      )}
+      {!isFrontPage && <Navbar />}
 
       {/* 2. Main Dashboard Content Area */}
       <div
@@ -67,7 +63,7 @@ export function DashboardLayoutClient({
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400 text-sm">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-600 font-semibold text-sm">
           Memuat Dashboard PMK...
         </div>
       }
