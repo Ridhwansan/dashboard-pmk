@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { PillarId } from '@/types/dashboard';
-import { PILLARS_DATA } from '@/data/dashboardData';
 import { PendidikanDetailView } from './PendidikanDetailView';
 import { KesehatanDetailView } from './KesehatanDetailView';
 import { BencanaDetailView } from './BencanaDetailView';
@@ -84,8 +83,6 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
     setActivePillar(pillarId);
     onPillarChange?.(pillarId);
   };
-
-  const currentPillarData = PILLARS_DATA[activePillar];
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
@@ -190,28 +187,24 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
         {activePillar === 'pendidikan' && (
           <PendidikanDetailView
             onBackToHome={onBackToLanding}
-            pillar={currentPillarData}
             category={selectedCategory}
           />
         )}
         {activePillar === 'kesehatan' && (
           <KesehatanDetailView
             onBackToHome={onBackToLanding}
-            pillar={currentPillarData}
             category={selectedCategory}
           />
         )}
         {activePillar === 'bencana' && (
           <BencanaDetailView
             onBackToHome={onBackToLanding}
-            pillar={currentPillarData}
             category={selectedCategory}
           />
         )}
         {activePillar === 'kemiskinan' && (
           <KemiskinanDetailView
             onBackToHome={onBackToLanding}
-            pillar={currentPillarData}
             category={selectedCategory}
           />
         )}

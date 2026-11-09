@@ -2,26 +2,13 @@
 
 import React, { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import { PillarData } from '@/types/dashboard';
 import { ProgramDetailPageView } from './ProgramDetailPageView';
-import { getProgramDetailData, getIndicatorMainIssue } from '@/data/programDetailData';
+import { ProgramDetailData, KendalaDetailItem, MonthlyDataPoint, DataUpdateLogItem, getProgramDetailData } from '@/data/programDetailData';
+import { useCmsCards } from '@/lib/useCmsCards';
 
 interface KemiskinanDetailViewProps {
   onBackToHome: () => void;
-  pillar: PillarData;
   category?: string;
-}
-
-interface WidgetCardItem {
-  id: string;
-  chipLabel?: string;
-  title: string;
-  value: string;
-  unit?: string;
-  status: string;
-  target: string;
-  percent?: number;
-  subtext?: string;
 }
 
 export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
@@ -30,9 +17,32 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   const [activeKendalaId, setActiveKendalaId] = useState<string | number | undefined>(undefined);
 
+  // Fetch cards dynamically from CMS / Database
+  const { cards: cmsCards, loading } = useCmsCards('kemiskinan', category);
+
   // If a program detail is selected, render it as its own full page
   if (selectedProgramId) {
-    const programDetail = getProgramDetailData(selectedProgramId, undefined, 'kemiskinan');
+    const selectedCard = cmsCards.find((c) => (c.slug || c.id) === selectedProgramId);
+    const programDetail: ProgramDetailData = selectedCard
+      ? {
+          id: selectedCard.slug || selectedCard.id,
+          title: selectedCard.title,
+          pillarId: 'kemiskinan',
+          pillarTitle: 'Pilar Penurunan Kemiskinan',
+          category: selectedCard.category,
+          description: selectedCard.description || 'Pengawalan perlindungan sosial, penanggulangan kemiskinan ekstrem, dan graduasi mandiri.',
+          picKementerian: selectedCard.picKementerian || 'Kemensos',
+          unit: selectedCard.unit || '',
+          currentValue: selectedCard.value,
+          target2026: selectedCard.target,
+          status: selectedCard.status,
+          subtext: selectedCard.subtext,
+          kendalaList: (selectedCard.kendalaList as KendalaDetailItem[]) || [],
+          monthlyData: (selectedCard.monthlyData as Record<number, MonthlyDataPoint[]>) || {},
+          updateLogs: (selectedCard.updateLogs as DataUpdateLogItem[]) || [],
+        }
+      : getProgramDetailData(selectedProgramId, undefined, 'kemiskinan');
+
     return (
       <ProgramDetailPageView
         program={programDetail}
@@ -47,174 +57,33 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
     );
   }
 
-  // 9 Executive Program Widgets for Penurunan Kemiskinan (Gambar 4 Verbatim)
-  const widgetCards: WidgetCardItem[] = [
-    {
-      id: 'tingkat_kemiskinan',
-      chipLabel: 'PKPN',
-      title: 'Tingkat Kemiskinan',
-      value: '8,07',
-      status: 'Realisasi 2026 (% Penduduk)',
-      target: 'Target 2026: 6,5–7,5% Penduduk',
-      percent: 91.0,
-      subtext: 'Pemantauan Laju Penurunan Kemiskinan Nasional',
-    },
-    {
-      id: 'kemiskinan_ekstrem',
-      chipLabel: 'PKPN',
-      title: 'Kemiskinan Ekstrem',
-      value: '0,78',
-      status: 'Realisasi 2025 (% Penduduk)',
-      target: 'Target 2026: 0–0,5% Penduduk',
-      percent: 85.0,
-      subtext: 'Target Penurunan Kemiskinan Ekstrem Mendekati 0%',
-    },
-    {
-      id: 'bantuan_permakanan_lansia',
-      chipLabel: 'PKPN',
-      title: 'Bantuan Permakanan Lansia',
-      value: '116.754',
-      unit: 'Orang',
-      status: 'Realisasi 2025',
-      target: 'Target 2027: ≥116.754 Penerima (2026 Terhenti)',
-      subtext: 'Dalam Proses Peralihan & Sinkronisasi Program',
-    },
-    {
-      id: 'bantuan_permakanan_disabilitas',
-      chipLabel: 'PKPN',
-      title: 'Bantuan Permakanan Disabilitas',
-      value: '36.000',
-      unit: 'Orang',
-      status: 'Realisasi 2025',
-      target: 'Target 2027: ≥36.000 Penerima (2026 Terhenti)',
-      subtext: 'Dalam Proses Peralihan & Sinkronisasi Program',
-    },
-    {
-      id: 'cakupan_lansia_desil',
-      chipLabel: 'PKPN',
-      title: 'Cakupan Lansia Desil 1–5',
-      value: '0,66',
-      status: 'Realisasi 2025 (% Sasaran)',
-      target: 'Target 2026: Dalam Proses Pendataan',
-      subtext: 'Perlindungan Sosial & Jaminan Kesejahteraan Lanjut Usia',
-    },
-    {
-      id: 'cakupan_disabilitas_desil',
-      chipLabel: 'PKPN',
-      title: 'Cakupan Disabilitas Desil 1–5',
-      value: '0,41',
-      status: 'Realisasi 2025 (% Sasaran)',
-      target: 'Target 2026: Dalam Proses Pendataan',
-      subtext: 'Perlindungan Sosial & Pemenuhan Hak Penyandang Disabilitas',
-    },
-    {
-      id: 'bos_reguler',
-      chipLabel: 'PKPN',
-      title: 'Bantuan Operasional Sekolah Reguler',
-      value: '432.654 (99%)',
-      status: 'Realisasi 2026',
-      target: 'Target 2026: 432.716 Sekolah Penerima',
-      percent: 99.9,
-      subtext: 'Penyaluran Dana BOS Reguler Sekolah Dasar & Menengah',
-    },
-    {
-      id: 'bop_pendidikan',
-      chipLabel: 'PKPN',
-      title: 'Bantuan Operasional Pendidikan',
-      value: '396.618',
-      status: 'Realisasi 2026',
-      target: 'Target 2026: 406.741 Lembaga',
-      percent: 97.5,
-      subtext: 'Dukungan Operasional PAUD & Pendidikan Non-Formal',
-    },
-    {
-      id: 'bos_madrasah',
-      title: 'Bantuan Operasional Sekolah Madrasah',
-      value: '10,36',
-      unit: 'Juta Penerima',
-      status: 'Realisasi 2026',
-      target: 'Target 2026: 10,36 Juta Penerima',
-      percent: 100,
-      subtext: 'Penyaluran BOS Madrasah di Lingkungan Kementerian Agama',
-    },
-  ];
-
-  // 6 Strategic Issue Widgets for Penurunan Kemiskinan (Gambar 2 & 3 Verbatim)
-  const isuStrategisCards: WidgetCardItem[] = [
-    {
-      id: 'isu_bansos_tepat_sasaran',
-      title: 'Bansos tepat sasaran dan pemutakhiran data',
-      value: '—',
-      unit: '',
-      status: 'Menunggu Data Realisasi',
-      target: 'Target: Belum Ditetapkan',
-      subtext: 'Integrasi dan pemutakhiran data terpadu untuk ketepatan sasaran bansos',
-    },
-    {
-      id: 'isu_permakanan_mbg_lansia',
-      title: 'Permakanan atau MBG lansia',
-      value: '—',
-      unit: '',
-      status: 'Menunggu Data Realisasi',
-      target: 'Target: Belum Ditetapkan',
-      subtext: 'Skema pemenuhan makanan bergizi harian bagi lansia tunggal dan tidak mampu',
-    },
-    {
-      id: 'isu_permakanan_mbg_disabilitas',
-      title: 'Permakanan atau MBG penyandang disabilitas',
-      value: '—',
-      unit: '',
-      status: 'Menunggu Data Realisasi',
-      target: 'Target: Belum Ditetapkan',
-      subtext: 'Skema pemenuhan makanan bergizi bagi penyandang disabilitas berat',
-    },
-    {
-      id: 'isu_layanan_mobilitas_lansia_disabilitas',
-      title: 'Layanan dasar dan mobilitas lansia serta disabilitas',
-      value: '—',
-      unit: '',
-      status: 'Menunggu Data Realisasi',
-      target: 'Target: Belum Ditetapkan',
-      subtext: 'Aksesibilitas fasilitas dasar dan dukungan mobilitas inklusif',
-    },
-    {
-      id: 'isu_stunting_tb_kantong_kemiskinan',
-      title: 'Intervensi stunting dan TB pada kantong kemiskinan',
-      value: '—',
-      unit: '',
-      status: 'Menunggu Data Realisasi',
-      target: 'Target: Belum Ditetapkan',
-      subtext: 'Intervensi terpadu kesehatan dan perbaikan sanitasi di kantong kemiskinan',
-    },
-    {
-      id: 'isu_bantuan_pendidikan_kantong_kemiskinan',
-      title: 'Bantuan pendidikan pada kantong kemiskinan',
-      value: '—',
-      unit: '',
-      status: 'Menunggu Data Realisasi',
-      target: 'Target: Belum Ditetapkan',
-      subtext: 'Pemberian afirmasi biaya dan perlengkapan sekolah anak keluarga pra-sejahtera',
-    },
-  ];
-
-  const displayedCards = category === 'Isu Strategis' ? isuStrategisCards : widgetCards;
+  const displayedCards = cmsCards.map((c) => ({
+    id: c.slug || c.id,
+    chipLabel: c.category,
+    title: c.title,
+    value: c.value,
+    unit: c.unit,
+    status: c.status,
+    target: c.target,
+    percent: c.percent !== null && c.percent !== undefined ? c.percent : undefined,
+    subtext: c.subtext,
+    isMilestone: c.isMilestone,
+    milestoneContent: c.milestoneContent,
+    kendalaList: c.kendalaList,
+  }));
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
-      {/* 1. Header Card: Photographic Banner with Gradient Overlay & High Contrast (Centered Vertically) */}
+      {/* 1. Header Card: Photographic Banner with Gradient Overlay & High Contrast */}
       <div className="relative overflow-hidden rounded-3xl min-h-[140px] sm:min-h-[160px] border border-slate-200/90 shadow-xs flex flex-col justify-center p-6 sm:p-8 group bg-slate-900">
-        {/* Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-105"
           style={{ backgroundImage: `url('/images/banners/header-kemiskinan.jpg')` }}
         />
-        {/* Multi-stop Gradient Overlay for Legibility & Contrast */}
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/85 to-rose-950/45 backdrop-blur-[0.5px]" />
         
-        {/* Ambient Subtle Accent Light */}
         <div className="absolute -top-12 -right-12 w-64 h-64 rounded-full bg-rose-500/20 blur-3xl pointer-events-none" />
 
-        {/* Content */}
         <div className="relative z-10 space-y-1.5 max-w-2xl">
           <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-xs">
             {category === 'Isu Strategis'
@@ -224,15 +93,42 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
               : 'Penurunan Kemiskinan'}
           </h2>
           <p className="text-xs sm:text-sm text-slate-200 font-medium drop-shadow-xs">
-            Target dan Capaian Kinerja Program
+            {category === 'Isu Strategis'
+              ? 'Pemantauan 6 Agenda Isu Strategis Prioritas Penurunan Kemiskinan Nasional'
+              : 'Target dan Capaian Kinerja Program'}
           </p>
         </div>
       </div>
 
       {/* 2. Grid of Widget Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
-        {displayedCards.map((card) => {
-          const issueData = getIndicatorMainIssue(card.id, card.title, 'kemiskinan');
+      {loading && displayedCards.length === 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-7 h-64 animate-pulse">
+              <div className="h-4 bg-slate-200 rounded w-2/3 mb-4"></div>
+              <div className="h-8 bg-slate-200 rounded w-1/3 mb-4"></div>
+              <div className="h-3 bg-slate-100 rounded w-full mb-2"></div>
+              <div className="h-3 bg-slate-100 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
+          {displayedCards.map((card) => {
+            const kendalaList = (card.kendalaList as Array<{ title?: string; kendala?: string }>) || [];
+            const issueData = kendalaList.length > 0
+              ? {
+                  hasIssue: true,
+                  title: kendalaList[0].title || 'Kendala Pelaksanaan',
+                  description: kendalaList[0].kendala || kendalaList[0].title || 'Kendala sedang dalam tindak lanjut orkestrasi.',
+                  totalCount: kendalaList.length,
+                }
+              : {
+                  hasIssue: false,
+                  title: 'Status Pelaksanaan Terkendali',
+                  description: 'Tidak terdata kendala operasional kritis.',
+                  totalCount: 0,
+                };
 
           return (
             <div
@@ -246,14 +142,19 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
                   setSelectedProgramId(card.id);
                 }
               }}
-              className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg hover:border-rose-400 p-6 sm:p-7 flex flex-col justify-between h-full group transition-all duration-200 cursor-pointer select-none relative"
+              className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg hover:border-rose-400 p-6 sm:p-7 flex flex-col justify-between h-full group transition-all duration-200 cursor-pointer select-none relative focus-visible:outline-2 focus-visible:outline-rose-500"
             >
               <div className="flex-1 flex flex-col">
-                {/* Header Widget */}
+                {/* Header Widget with Percentage in Front of Card */}
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-rose-900 transition-colors leading-snug">
                     {card.title}
                   </h3>
+                  {card.percent !== undefined && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-50 text-rose-700 border border-rose-200/80 shrink-0">
+                      {card.percent}%
+                    </span>
+                  )}
                 </div>
 
                 {/* Big Number & Unit */}
@@ -266,11 +167,16 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
                       {card.unit}
                     </span>
                   )}
+                  {card.value === '—' && (
+                    <span className="text-xs font-semibold text-slate-500">
+                      (Belum Ada Data)
+                    </span>
+                  )}
                 </div>
 
                 {/* Status, Progress Bar, & Helper Target */}
                 <div className="pt-3.5 border-t border-slate-100 space-y-2 text-xs">
-                  {/* Simplified Status Label (e.g. "Realisasi 2026") */}
+                  {/* Status Label */}
                   {card.status && (
                     <p className="text-xs font-semibold text-slate-800 leading-snug">
                       {card.status}
@@ -292,7 +198,7 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
                     </div>
                   )}
 
-                  {/* Target as Small Helper Text Right Below Progress Bar */}
+                  {/* Target as Small Helper Text */}
                   {card.target && (
                     <p className="text-[11.5px] text-slate-600 font-medium leading-relaxed pt-0.5">
                       {card.target}
@@ -307,11 +213,11 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
                   )}
                 </div>
 
-                {/* Sederhana, Ringkas & Bebas Warna Kuning Berlebih (Gambar 3) */}
+                {/* Bottom Status / Issue Container */}
                 <div className="mt-4 pt-3.5 border-t border-slate-100 flex-1 flex flex-col justify-end">
                   {issueData.hasIssue ? (
                     <div className="relative group/popover">
-                      <div title={issueData.description} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50/90 hover:bg-slate-100/90 border border-slate-200/80 transition-colors cursor-pointer">
+                      <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50/90 hover:bg-slate-100/90 border border-slate-200/80 transition-colors">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                           <span className="text-xs font-medium text-slate-700 truncate">
@@ -323,43 +229,38 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
                         </span>
                       </div>
 
-                      {/* Floating Micro-Popover on Hover (Abu-abu elegan, mudah dibaca) */}
+                      {/* Floating Micro-Popover on Hover */}
                       <div className="pointer-events-none opacity-0 group-hover/popover:opacity-100 transition-all duration-200 absolute bottom-full left-0 right-0 mb-2 z-30">
-                        <div className="bg-slate-100/95 backdrop-blur-md text-slate-800 rounded-2xl p-4 shadow-xl border border-slate-300/90 space-y-2">
-                          <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                            <span className="text-xs font-extrabold text-amber-800 bg-amber-100/90 px-2.5 py-0.5 rounded-md uppercase tracking-wider">
-                              Isu Pelaksanaan
-                            </span>
-                            {issueData.totalCount > 1 && (
-                              <span className="text-xs font-semibold text-slate-500">
-                                {issueData.totalCount} Isu Teridentifikasi
-                              </span>
-                            )}
+                        <div className="bg-slate-900 text-white rounded-2xl p-3 shadow-xl border border-slate-800 text-xs space-y-1.5">
+                          <div className="font-bold text-[11px] text-amber-400 uppercase tracking-wider">
+                            Kendala & Isu Utama
                           </div>
-                          <p className="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed">
+                          <p className="font-medium text-slate-200 leading-snug">
                             {issueData.description}
                           </p>
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50/60 border border-slate-200/60 text-slate-500 text-xs">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                      <span className="text-xs font-medium truncate">Status Pelaksanaan Terkendali</span>
+                    <div className="px-3 py-2 rounded-xl bg-slate-50/50 border border-slate-200/40 text-center">
+                      <span className="text-[11px] font-medium text-slate-400">
+                        Tidak ada kendala krusial
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Action: Detail Program Clean Link (Gambar 3) */}
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-600 group-hover:text-rose-700 transition-colors">
-                <span>Lihat Detail Program</span>
-                <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              {/* Bottom Action: Detail Indikator CTA */}
+              <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-slate-500 group-hover:text-rose-600 transition-colors">
+                <span>Detail Indikator</span>
+                <ChevronRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
           );
         })}
       </div>
+      )}
     </div>
   );
 };

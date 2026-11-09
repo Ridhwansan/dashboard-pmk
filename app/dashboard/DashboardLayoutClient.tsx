@@ -1,13 +1,38 @@
 'use client';
 
-import React, { Suspense } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import React, { Suspense, useEffect } from 'react';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/organisms/Navbar';
+import { useAuth } from '@/lib/useAuth';
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || '';
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const view = searchParams.get('view');
+
+  // Dedicated full-page layout for CMS with back-office sidebar
+  const isCms = pathname.startsWith('/dashboard/cms');
+
+  // Guard: Redirect unauthenticated users to /login
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      if (isCms) {
+        router.replace('/admin');
+      } else {
+        router.replace('/login');
+      }
+    }
+  }, [authLoading, isAuthenticated, isCms, router]);
+
+  if (isCms) {
+    return (
+      <div className="min-h-screen bg-slate-100 text-slate-900 font-sans antialiased">
+        {children}
+      </div>
+    );
+  }
 
   // Front / Landing page is active when on /dashboard/eksekutif without ?view parameter (or ?view=landing)
   const isFrontPage =
@@ -34,7 +59,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* 1. Top Navbar (Hidden on Front Page) */}
+      {/* 1. Top Navbar (Hidden on Front / Landing Page) */}
       {!isFrontPage && <Navbar />}
 
       {/* 2. Main Dashboard Content Area */}

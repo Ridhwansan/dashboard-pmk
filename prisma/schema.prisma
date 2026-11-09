@@ -1,0 +1,126 @@
+// Prisma Schema for Dashboard PMK - Full Database Storage
+// Connected to PostgreSQL database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String?  @unique
+  password  String
+  name      String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DashboardMeta {
+  id            String   @id @default("default")
+  title         String   @default("Program Kerja Prioritas Nasional (PKPN)")
+  subtitle      String   @default("Kementerian Koordinator Bidang Pembangunan Manusia dan Kebudayaan")
+  cutoffDate    String   @default("18 Oktober 2026")
+  ministerTitle String   @default("Menteri Koordinator Bidang Pembangunan Manusia dan Kebudayaan (Menko PMK)")
+  updatedAt     DateTime @updatedAt
+}
+
+model PillarCard {
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  pillarId         String   // 'pendidikan' | 'kesehatan' | 'bencana' | 'kemiskinan'
+  category         String   @default("PKPN") // 'PKPN' | 'Isu Strategis'
+  title            String
+  value            String   @default("—") // Realisasi / Capaian
+  unit             String?  @default("")
+  status           String   @default("Menunggu Data Realisasi")
+  target           String   @default("Target: Belum Ditetapkan")
+  percent          Float?   // Otomatis dihitung dari capaian / target
+  subtext          String?
+  description      String?
+  picKementerian   String?
+  order            Int      @default(0)
+  isActive         Boolean  @default(true) // Admin toggle: muncul / tidak di Ikhtisar
+  isMilestone      Boolean  @default(false)
+  milestoneContent String?
+
+  // Program details stored directly in PostgreSQL
+  annualTargets    Json?    // Target & capaian tahunan 2025–2029
+  monthlyData      Json?    // Realisasi bulanan
+  kendalaList      Json?    // Daftar kendala & tindak lanjut
+  updateLogs       Json?    // Audit trails / log pembaruan
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([pillarId, category])
+  @@index([isActive])
+}
+
+model PillarAgregat {
+  id          String   @id
+  pillarId    String   // 'pendidikan' | 'kesehatan' | 'bencana' | 'kemiskinan'
+  name        String
+  badge       String
+  indicators  Json     // Array of AgregatIndicatorRow [{ id, name, unit, annualData }]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([pillarId])
+}
+
+model MapIndicator {
+  id               String   @id
+  pillarId         String   // 'pendidikan' | 'kesehatan' | 'bencana' | 'kemiskinan'
+  name             String
+  shortName        String
+  unit             String
+  nationalValue    String
+  target2026       String
+  description      String
+  minVal           Float
+  maxVal           Float
+  isLowerBetter    Boolean  @default(false)
+  colorScheme      String   @default("blue")
+  isNationalOnly   Boolean  @default(false)
+  customRegionType String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([pillarId])
+}
+
+model SugLocation {
+  id           String   @id @default(cuid())
+  provinceId   String
+  kodeBps      String
+  provinceName String
+  type         String   // 'SUGT' | 'SUGB'
+  count        Int
+  lat          Float
+  lng          Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([provinceId])
+  @@index([type])
+}
+
+model BencanaReport {
+  id              String   @id @default("default")
+  ringkasanUtama  Json     // { kejadianBaru, pengkinianData, totalKejadianSignifikan, ... }
+  pengkinianData  Json     // Array of disaster incident events
+  vervalData      Json?    // Verification data per province / district
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

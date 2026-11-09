@@ -146,6 +146,29 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const activeHoveredLayerRef = useRef<InteractivePath | null>(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [sugLocations, setSugLocations] = useState(SUG_LOCATIONS);
+
+  // Sync SUG locations from database
+  useEffect(() => {
+    let active = true;
+    const fetchSugLocations = async () => {
+      try {
+        const res = await fetch('/api/sug-locations');
+        if (res.ok) {
+          const json = await res.json();
+          if (active && json.data && Array.isArray(json.data)) {
+            setSugLocations(json.data);
+          }
+        }
+      } catch {
+        // baseline fallback
+      }
+    };
+    fetchSugLocations();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Active indicator definition (null when no pillar is chosen yet)
   const indicatorDef = selectedIndicator
@@ -327,7 +350,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
 
             // 2. SUGT Transformasi (Gradasi Warna Merah 1 s.d. 7 Unit, Terpekat di Jawa Barat = 7)
             if (currentInd.customRegionType === 'sugt') {
-              const sugtLoc = SUG_LOCATIONS.find(
+              const sugtLoc = sugLocations.find(
                 (l) => l.type === 'SUGT' && (l.provinceId === targetWilayah.id || l.kodeBps === targetWilayah.kodeBps)
               );
               if (sugtLoc && sugtLoc.count > 0) {
@@ -353,7 +376,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
 
             // 3. SUGB Baru Saja (Warna Terpekat Biru Navy untuk 1 Unit, lainnya Area Putih)
             if (currentInd.customRegionType === 'sugb') {
-              const sugbLoc = SUG_LOCATIONS.find(
+              const sugbLoc = sugLocations.find(
                 (l) => l.type === 'SUGB' && (l.provinceId === targetWilayah.id || l.kodeBps === targetWilayah.kodeBps)
               );
               if (sugbLoc && sugbLoc.count > 0) {
@@ -465,7 +488,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
                   </div>
                 `;
               } else if (currentInd.customRegionType === 'sugt') {
-                const sugtLoc = SUG_LOCATIONS.find(
+                const sugtLoc = sugLocations.find(
                   (l) => l.type === 'SUGT' && (l.provinceId === targetWilayah.id || l.kodeBps === targetWilayah.kodeBps)
                 );
                 const count = sugtLoc ? sugtLoc.count : 0;
@@ -478,7 +501,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
                   </div>
                 `;
               } else if (currentInd.customRegionType === 'sugb') {
-                const sugbLoc = SUG_LOCATIONS.find(
+                const sugbLoc = sugLocations.find(
                   (l) => l.type === 'SUGB' && (l.provinceId === targetWilayah.id || l.kodeBps === targetWilayah.kodeBps)
                 );
                 const count = sugbLoc ? sugbLoc.count : 0;

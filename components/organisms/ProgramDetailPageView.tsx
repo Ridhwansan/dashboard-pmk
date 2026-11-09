@@ -136,6 +136,30 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   initialSection,
   highlightKendalaId,
 }) => {
+  const [currentProgram, setCurrentProgram] = useState<ProgramDetailData>(program);
+
+  // Sync program detail from database API
+  useEffect(() => {
+    let active = true;
+    const fetchDbDetail = async () => {
+      try {
+        const res = await fetch(`/api/programs/${program.id}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (active && json.data) {
+            setCurrentProgram(json.data);
+          }
+        }
+      } catch {
+        // Keep baseline
+      }
+    };
+    fetchDbDetail();
+    return () => {
+      active = false;
+    };
+  }, [program.id]);
+
   // Always scroll to top when entering program detail unless kendala is targeted
   useEffect(() => {
     if (initialSection === 'kendala') {
@@ -153,17 +177,17 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
 
   // Check if current indicator is MBG 3B
   const isMbg3b =
-    program.id === 'mbg_3b' ||
-    program.id === 'mbg_balita' ||
-    program.id === 'mbg_ibu_hamil' ||
-    program.id === 'mbg_ibu_menyusui';
+    currentProgram.id === 'mbg_3b' ||
+    currentProgram.id === 'mbg_balita' ||
+    currentProgram.id === 'mbg_ibu_hamil' ||
+    currentProgram.id === 'mbg_ibu_menyusui';
 
   const [activeMbgTab, setActiveMbgTab] = useState<'semua' | 'balita' | 'ibu_hamil' | 'ibu_menyusui'>(
-    program.id === 'mbg_balita'
+    currentProgram.id === 'mbg_balita'
       ? 'balita'
-      : program.id === 'mbg_ibu_hamil'
+      : currentProgram.id === 'mbg_ibu_hamil'
       ? 'ibu_hamil'
-      : program.id === 'mbg_ibu_menyusui'
+      : currentProgram.id === 'mbg_ibu_menyusui'
       ? 'ibu_menyusui'
       : 'semua'
   );
@@ -182,8 +206,8 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       }
       return getProgramDetailData('mbg_3b', 'MBG Ibu Hamil, Ibu Menyusui, dan Balita (3B)', 'kesehatan');
     }
-    return program;
-  }, [isMbg3b, activeMbgTab, program]);
+    return currentProgram;
+  }, [isMbg3b, activeMbgTab, currentProgram]);
 
   // Default view is 'bulanan' or 'timeseries' or 'tahunan'
   const [tableType, setTableType] = useState<'tahunan' | 'bulanan' | 'timeseries'>('tahunan');
@@ -192,6 +216,36 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   const [hoveredAnnualIdx, setHoveredAnnualIdx] = useState<number | null>(null);
   const [hoveredMonthlyIdx, setHoveredMonthlyIdx] = useState<number | null>(null);
   const isJumlahBencana = effectiveProgram.id === 'jumlah_bencana';
+  const [bencanaReport, setBencanaReport] = useState<{
+    ringkasanUtama: typeof BENCANA_RINGKASAN_UTAMA;
+    pengkinianData: typeof PENGKINIAN_BENCANA_DATA;
+  }>({
+    ringkasanUtama: BENCANA_RINGKASAN_UTAMA,
+    pengkinianData: PENGKINIAN_BENCANA_DATA,
+  });
+
+  useEffect(() => {
+    let active = true;
+    const loadBencana = async () => {
+      try {
+        const res = await fetch('/api/bencana');
+        if (res.ok) {
+          const json = await res.json();
+          if (active && json.data) {
+            setBencanaReport(json.data);
+          }
+        }
+      } catch {
+        // baseline fallback
+      }
+    };
+    if (isJumlahBencana) {
+      loadBencana();
+    }
+    return () => {
+      active = false;
+    };
+  }, [isJumlahBencana]);
 
   // Table type defaults to tahunan if timeseries is not supported for this program
 
@@ -992,7 +1046,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   </span>
                   <div>
                     <span className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight block">
-                      {BENCANA_RINGKASAN_UTAMA.kejadianBaru}
+                      {bencanaReport.ringkasanUtama.kejadianBaru}
                     </span>
                     <span className="text-xs text-slate-500 font-medium block mt-1">
                       Laporan Masuk Baru
@@ -1007,7 +1061,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   </span>
                   <div>
                     <span className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight block">
-                      {BENCANA_RINGKASAN_UTAMA.pengkinianData}
+                      {bencanaReport.ringkasanUtama.pengkinianData}
                     </span>
                     <span className="text-xs text-slate-500 font-medium block mt-1">
                       Pembaruan Lapangan
@@ -1022,7 +1076,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   </span>
                   <div>
                     <span className="text-3xl lg:text-4xl font-extrabold text-rose-700 tracking-tight block">
-                      {BENCANA_RINGKASAN_UTAMA.totalKejadianSignifikan}
+                      {bencanaReport.ringkasanUtama.totalKejadianSignifikan}
                     </span>
                     <span className="text-xs text-rose-600 font-medium block mt-1">
                       Berdampak Signifikan
@@ -1037,7 +1091,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   </span>
                   <div>
                     <span className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight block">
-                      {BENCANA_RINGKASAN_UTAMA.provinsiTerdampak}
+                      {bencanaReport.ringkasanUtama.provinsiTerdampak}
                     </span>
                     <span className="text-xs text-slate-500 font-medium block mt-1">
                       Provinsi Se-Indonesia
@@ -1053,18 +1107,18 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   <div className="space-y-1 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="text-slate-600 font-medium">Karhutla</span>
-                      <span className="font-extrabold text-slate-900">{BENCANA_RINGKASAN_UTAMA.rekapBencana.karhutla}</span>
+                      <span className="font-extrabold text-slate-900">{bencanaReport.ringkasanUtama.rekapBencana.karhutla}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-600 font-medium">Kekeringan</span>
-                      <span className="font-extrabold text-slate-900">{BENCANA_RINGKASAN_UTAMA.rekapBencana.kekeringan}</span>
+                      <span className="font-extrabold text-slate-900">{bencanaReport.ringkasanUtama.rekapBencana.kekeringan}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-600 font-medium">Banjir</span>
-                      <span className="font-extrabold text-slate-900">{BENCANA_RINGKASAN_UTAMA.rekapBencana.banjir}</span>
+                      <span className="font-extrabold text-slate-900">{bencanaReport.ringkasanUtama.rekapBencana.banjir}</span>
                     </div>
                     <div className="text-[10px] text-slate-400 font-medium pt-0.5 border-t border-slate-100 truncate">
-                      {BENCANA_RINGKASAN_UTAMA.rekapBencana.lainnya}
+                      {bencanaReport.ringkasanUtama.rekapBencana.lainnya}
                     </div>
                   </div>
                 </div>
@@ -1077,7 +1131,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     Dominasi Kejadian:
                   </span>
                   <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed">
-                    {BENCANA_RINGKASAN_UTAMA.narasiDominasi}
+                    {bencanaReport.ringkasanUtama.narasiDominasi}
                   </p>
                 </div>
               </div>
@@ -1090,7 +1144,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   Pengkinian Data Menonjol / Berdampak Signifikan
                 </h4>
                 <span className="text-xs text-slate-500 font-medium">
-                  {PENGKINIAN_BENCANA_DATA.length} Kejadian Terlaporkan
+                  {bencanaReport.pengkinianData.length} Kejadian Terlaporkan
                 </span>
               </div>
 
@@ -1116,7 +1170,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
-                    {PENGKINIAN_BENCANA_DATA.map((item) => (
+                    {bencanaReport.pengkinianData.map((item) => (
                       <tr
                         key={item.no}
                         className="hover:bg-slate-50/80 transition-colors"

@@ -2,26 +2,13 @@
 
 import React, { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import { PillarData } from '@/types/dashboard';
 import { ProgramDetailPageView } from './ProgramDetailPageView';
-import { getProgramDetailData, getIndicatorMainIssue } from '@/data/programDetailData';
+import { ProgramDetailData, KendalaDetailItem, MonthlyDataPoint, DataUpdateLogItem, getProgramDetailData } from '@/data/programDetailData';
+import { useCmsCards } from '@/lib/useCmsCards';
 
 interface BencanaDetailViewProps {
   onBackToHome: () => void;
-  pillar: PillarData;
   category?: string;
-}
-
-interface WidgetCardItem {
-  id: string;
-  chipLabel?: string;
-  title: string;
-  value: string;
-  unit?: string;
-  status: string;
-  target: string;
-  percent?: number;
-  subtext?: string;
 }
 
 export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
@@ -30,9 +17,32 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   const [activeKendalaId, setActiveKendalaId] = useState<string | number | undefined>(undefined);
 
+  // Fetch cards dynamically from CMS / Database
+  const { cards: cmsCards, loading } = useCmsCards('bencana', category);
+
   // If a program detail is selected, render it as its own full page
   if (selectedProgramId) {
-    const programDetail = getProgramDetailData(selectedProgramId, undefined, 'bencana');
+    const selectedCard = cmsCards.find((c) => (c.slug || c.id) === selectedProgramId);
+    const programDetail: ProgramDetailData = selectedCard
+      ? {
+          id: selectedCard.slug || selectedCard.id,
+          title: selectedCard.title,
+          pillarId: 'bencana',
+          pillarTitle: 'Pilar Kebencanaan',
+          category: selectedCard.category,
+          description: selectedCard.description || 'Pengawalan penanggulangan, tanggap darurat, dan rehabilitasi pascabencana nasional.',
+          picKementerian: selectedCard.picKementerian || 'BNPB',
+          unit: selectedCard.unit || '',
+          currentValue: selectedCard.value,
+          target2026: selectedCard.target,
+          status: selectedCard.status,
+          subtext: selectedCard.subtext,
+          kendalaList: (selectedCard.kendalaList as KendalaDetailItem[]) || [],
+          monthlyData: (selectedCard.monthlyData as Record<number, MonthlyDataPoint[]>) || {},
+          updateLogs: (selectedCard.updateLogs as DataUpdateLogItem[]) || [],
+        }
+      : getProgramDetailData(selectedProgramId, undefined, 'bencana');
+
     return (
       <ProgramDetailPageView
         program={programDetail}
@@ -47,121 +57,33 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
     );
   }
 
-  // 6 Priority Program Widgets for Bencana (Gambar 3 Verbatim)
-  const widgetCards: WidgetCardItem[] = [
-    {
-      id: 'jumlah_kejadian_bencana',
-      chipLabel: 'PKPN',
-      title: 'Jumlah Kejadian Bencana',
-      value: '2.100',
-      unit: 'Kejadian',
-      status: 'Tercatat s.d. Okt 2026',
-      target: '2025: 4.727 Kejadian',
-      subtext: 'Pemantauan Kesiapsiagaan Darurat Bencana Nasional',
-    },
-    {
-      id: 'huntara_sumatera',
-      chipLabel: 'PKPN',
-      title: 'Pembangunan Huntara Sumatera',
-      value: '20.770',
-      unit: 'Unit',
-      status: 'Realisasi 2026',
-      target: 'Target 2026: 20.803 Unit',
-      percent: 99.8,
-      subtext: 'Penyediaan Hunian Sementara Pengungsi Pascabencana',
-    },
-    {
-      id: 'huntap_sumatera',
-      chipLabel: 'PKPN',
-      title: 'Pembangunan Huntap Sumatera',
-      value: '1.012',
-      unit: 'Unit',
-      status: 'Realisasi 2026',
-      target: 'Target 2026: 44.121 Unit',
-      percent: 2.3,
-      subtext: 'Pembangunan Hunian Tetap Relokasi Bencana',
-    },
-    {
-      id: 'provinsi_karhutla',
-      chipLabel: 'PKPN',
-      title: 'Provinsi Prioritas Terdampak Karhutla',
-      value: '6',
-      unit: 'Provinsi',
-      status: 'Data 13 Oktober 2026',
-      target: 'Fokus Pengendalian & Pencegahan Terpadu',
-      subtext: 'Wilayah Prioritas Kerawanan Kebakaran Hutan dan Lahan',
-    },
-    {
-      id: 'luas_karhutla',
-      chipLabel: 'PKPN',
-      title: 'Luas Karhutla yang Sudah Dipadamkan',
-      value: '129.434,18',
-      unit: 'Ha',
-      status: 'Jumlah Luas Karhutla: 130.097,79 Ha',
-      target: 'Dalam Proses Pemadaman: 663,61 Ha',
-      percent: 99.5,
-      subtext: 'Efektivitas Satgas Pemadaman Karhutla Tuntas 99,5%',
-    },
-    {
-      id: 'kerugian_bencana',
-      title: 'Kerugian Bencana',
-      value: '—',
-      unit: '% PDB',
-      status: 'Realisasi 2026',
-      target: 'Target 2026: 0,136% PDB',
-      subtext: 'Monitoring Dampak Kerugian Ekonomi terhadap Produk Domestik Bruto',
-    },
-  ];
-
-  // 3 Strategic Issue Widgets for Kebencanaan (Gambar 1)
-  const isuStrategisCards: WidgetCardItem[] = [
-    {
-      id: 'isu_pemulihan_infrastruktur_sumatera',
-      title: 'Pemulihan infrastruktur dan layanan dasar Sumatera',
-      value: '—',
-      unit: '',
-      status: 'Menunggu Data Realisasi',
-      target: 'Target: Belum Ditetapkan',
-      subtext: 'Percepatan pemulihan infrastruktur dasar dan fasilitas publik wilayah Sumatera',
-    },
-    {
-      id: 'isu_bantuan_stimulan_rumah_rusak',
-      title: 'Bantuan stimulan rumah rusak',
-      value: '—',
-      unit: '',
-      status: 'Menunggu Data Realisasi',
-      target: 'Target: Belum Ditetapkan',
-      subtext: 'Penyaluran bantuan stimulan perbaikan rumah rusak akibat dampak bencana',
-    },
-    {
-      id: 'isu_pemulihan_bencana_lainnya',
-      title: 'Pemulihan bencana lainnya',
-      value: '—',
-      unit: '',
-      status: 'Menunggu Data Realisasi',
-      target: 'Target: Belum Ditetapkan',
-      subtext: 'Pemulihan pascabencana multi-wilayah dan koordinasi lintas K/L',
-    },
-  ];
-
-  const displayedCards = category === 'Isu Strategis' ? isuStrategisCards : widgetCards;
+  const displayedCards = cmsCards.map((c) => ({
+    id: c.slug || c.id,
+    chipLabel: c.category,
+    title: c.title,
+    value: c.value,
+    unit: c.unit,
+    status: c.status,
+    target: c.target,
+    percent: c.percent !== null && c.percent !== undefined ? c.percent : undefined,
+    subtext: c.subtext,
+    isMilestone: c.isMilestone,
+    milestoneContent: c.milestoneContent,
+    kendalaList: c.kendalaList,
+  }));
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
-      {/* 1. Header Card: Photographic Banner with Gradient Overlay & High Contrast (Centered Vertically) */}
+      {/* 1. Header Card: Photographic Banner with Gradient Overlay & High Contrast */}
       <div className="relative overflow-hidden rounded-3xl min-h-[140px] sm:min-h-[160px] border border-slate-200/90 shadow-xs flex flex-col justify-center p-6 sm:p-8 group bg-slate-900">
-        {/* Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-105"
-          style={{ backgroundImage: `url('/images/banners/header-bencana.jpg')` }}
+          style={{ backgroundImage: `url('/images/banners/header-kebencanaan.jpg')` }}
         />
-        {/* Multi-stop Gradient Overlay for Legibility & Contrast */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/85 to-[#3b2110]/50 backdrop-blur-[0.5px]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/85 to-[#3b2312]/50 backdrop-blur-[0.5px]" />
         
-        {/* Ambient Subtle Accent Light */}
-        <div className="absolute -top-12 -right-12 w-64 h-64 rounded-full bg-[#a8754b]/20 blur-3xl pointer-events-none" />
+        <div className="absolute -top-12 -right-12 w-64 h-64 rounded-full bg-[#7a4b27]/25 blur-3xl pointer-events-none" />
 
-        {/* Content */}
         <div className="relative z-10 space-y-1.5 max-w-2xl">
           <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-xs">
             {category === 'Isu Strategis'
@@ -171,15 +93,42 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
               : 'Kebencanaan'}
           </h2>
           <p className="text-xs sm:text-sm text-slate-200 font-medium drop-shadow-xs">
-            Target dan Capaian Kinerja Program
+            {category === 'Isu Strategis'
+              ? 'Pemantauan 3 Agenda Isu Strategis Prioritas Kebencanaan Nasional'
+              : 'Target dan Capaian Kinerja Program'}
           </p>
         </div>
       </div>
 
       {/* 2. Grid of Widget Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
-        {displayedCards.map((card) => {
-          const issueData = getIndicatorMainIssue(card.id, card.title, 'bencana');
+      {loading && displayedCards.length === 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-7 h-64 animate-pulse">
+              <div className="h-4 bg-slate-200 rounded w-2/3 mb-4"></div>
+              <div className="h-8 bg-slate-200 rounded w-1/3 mb-4"></div>
+              <div className="h-3 bg-slate-100 rounded w-full mb-2"></div>
+              <div className="h-3 bg-slate-100 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
+          {displayedCards.map((card) => {
+            const kendalaList = (card.kendalaList as Array<{ title?: string; kendala?: string }>) || [];
+            const issueData = kendalaList.length > 0
+              ? {
+                  hasIssue: true,
+                  title: kendalaList[0].title || 'Kendala Pelaksanaan',
+                  description: kendalaList[0].kendala || kendalaList[0].title || 'Kendala sedang dalam tindak lanjut orkestrasi.',
+                  totalCount: kendalaList.length,
+                }
+              : {
+                  hasIssue: false,
+                  title: 'Status Pelaksanaan Terkendali',
+                  description: 'Tidak terdata kendala operasional kritis.',
+                  totalCount: 0,
+                };
 
           return (
             <div
@@ -193,14 +142,19 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
                   setSelectedProgramId(card.id);
                 }
               }}
-              className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg hover:border-[#a8754b] p-6 sm:p-7 flex flex-col justify-between h-full group transition-all duration-200 cursor-pointer select-none relative"
+              className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg hover:border-[#a8754b] p-6 sm:p-7 flex flex-col justify-between h-full group transition-all duration-200 cursor-pointer select-none relative focus-visible:outline-2 focus-visible:outline-[#7a4b27]"
             >
               <div className="flex-1 flex flex-col">
-                {/* Header Widget */}
+                {/* Header Widget with Percentage in Front of Card */}
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-[#7a4b27] transition-colors leading-snug">
                     {card.title}
                   </h3>
+                  {card.percent !== undefined && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-[#7a4b27]/10 text-[#7a4b27] border border-[#7a4b27]/20 shrink-0">
+                      {card.percent}%
+                    </span>
+                  )}
                 </div>
 
                 {/* Big Number & Unit */}
@@ -213,11 +167,16 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
                       {card.unit}
                     </span>
                   )}
+                  {card.value === '—' && (
+                    <span className="text-xs font-semibold text-slate-500">
+                      (Belum Ada Data)
+                    </span>
+                  )}
                 </div>
 
                 {/* Status, Progress Bar, & Helper Target */}
                 <div className="pt-3.5 border-t border-slate-100 space-y-2 text-xs">
-                  {/* Simplified Status Label (e.g. "Realisasi 2026") */}
+                  {/* Status Label */}
                   {card.status && (
                     <p className="text-xs font-semibold text-slate-800 leading-snug">
                       {card.status}
@@ -239,7 +198,7 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
                     </div>
                   )}
 
-                  {/* Target as Small Helper Text Right Below Progress Bar */}
+                  {/* Target as Small Helper Text */}
                   {card.target && (
                     <p className="text-[11.5px] text-slate-600 font-medium leading-relaxed pt-0.5">
                       {card.target}
@@ -254,11 +213,11 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
                   )}
                 </div>
 
-                {/* Sederhana, Ringkas & Bebas Warna Kuning Berlebih (Gambar 3) */}
+                {/* Bottom Status / Issue Container */}
                 <div className="mt-4 pt-3.5 border-t border-slate-100 flex-1 flex flex-col justify-end">
                   {issueData.hasIssue ? (
                     <div className="relative group/popover">
-                      <div title={issueData.description} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50/90 hover:bg-slate-100/90 border border-slate-200/80 transition-colors cursor-pointer">
+                      <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50/90 hover:bg-slate-100/90 border border-slate-200/80 transition-colors">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                           <span className="text-xs font-medium text-slate-700 truncate">
@@ -270,45 +229,38 @@ export const BencanaDetailView: React.FC<BencanaDetailViewProps> = ({
                         </span>
                       </div>
 
-                      {/* Floating Micro-Popover on Hover (Abu-abu elegan, mudah dibaca) */}
+                      {/* Floating Micro-Popover on Hover */}
                       <div className="pointer-events-none opacity-0 group-hover/popover:opacity-100 transition-all duration-200 absolute bottom-full left-0 right-0 mb-2 z-30">
-                        <div className="bg-slate-100/95 backdrop-blur-md text-slate-800 rounded-2xl p-4 shadow-xl border border-slate-300/90 space-y-2">
-                          <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                            <span className="text-xs font-extrabold text-amber-800 bg-amber-100/90 px-2.5 py-0.5 rounded-md uppercase tracking-wider">
-                              Isu Pelaksanaan
-                            </span>
-                            {issueData.totalCount > 1 && (
-                              <span className="text-xs font-semibold text-slate-500">
-                                {issueData.totalCount} Isu Teridentifikasi
-                              </span>
-                            )}
+                        <div className="bg-slate-900 text-white rounded-2xl p-3 shadow-xl border border-slate-800 text-xs space-y-1.5">
+                          <div className="font-bold text-[11px] text-amber-400 uppercase tracking-wider">
+                            Kendala & Isu Utama
                           </div>
-                          <p className="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed">
+                          <p className="font-medium text-slate-200 leading-snug">
                             {issueData.description}
                           </p>
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50/60 border border-slate-200/60 text-slate-500 text-xs">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                      <span className="text-xs font-medium truncate">Status Pelaksanaan Terkendali</span>
+                    <div className="px-3 py-2 rounded-xl bg-slate-50/50 border border-slate-200/40 text-center">
+                      <span className="text-[11px] font-medium text-slate-400">
+                        Tidak ada kendala krusial
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Action: Detail Program Clean Link (Gambar 3) */}
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-600 group-hover:text-[#7a4b27] transition-colors">
-                <span>Lihat Detail Program</span>
-                <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              {/* Bottom Action: Detail Indikator CTA */}
+              <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-slate-500 group-hover:text-[#7a4b27] transition-colors">
+                <span>Detail Indikator</span>
+                <ChevronRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
           );
         })}
       </div>
+      )}
     </div>
   );
 };
-
-

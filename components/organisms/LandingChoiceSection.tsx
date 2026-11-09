@@ -1,9 +1,22 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { BarChart3, Map, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import {
+  BarChart3,
+  Map,
+  ArrowRight,
+  ChevronDown,
+  ShieldCheck,
+  User,
+  UserCircle,
+  Sliders,
+  LogOut,
+} from 'lucide-react';
 import { DASHBOARD_META } from '@/data/dashboardData';
+import { useAuth } from '@/lib/useAuth';
+import { UserProfileModal } from '@/components/organisms/UserProfileModal';
 
 interface LandingChoiceSectionProps {
   onSelectIkhtisar: () => void;
@@ -14,8 +27,193 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
   onSelectIkhtisar,
   onSelectProfilWilayah,
 }) => {
+  const [meta, setMeta] = useState(DASHBOARD_META);
+  const { user, logout } = useAuth();
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const loadMeta = async () => {
+      try {
+        const res = await fetch('/api/meta');
+        if (res.ok) {
+          const json = await res.json();
+          if (active && json.data) {
+            setMeta(json.data);
+          }
+        }
+      } catch {
+        // baseline fallback
+      }
+    };
+    loadMeta();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Close dropdown on click outside or Escape key
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
-    <div className="w-full max-w-5xl mx-auto py-6 sm:py-12 space-y-9 animate-in fade-in duration-300">
+    <div className="relative w-full max-w-5xl mx-auto py-6 sm:py-12 space-y-9 animate-in fade-in duration-300">
+      {/* Discreet Frameless User Account Control (Floating top-right on landing page without navbar) */}
+      {user && (
+        <div className="fixed top-4 right-4 sm:top-6 sm:right-8 z-30" ref={userMenuRef}>
+          <button
+            type="button"
+            onClick={() => setIsUserMenuOpen((prev) => !prev)}
+            aria-expanded={isUserMenuOpen}
+            aria-haspopup="true"
+            aria-label="Menu akun pengguna"
+            className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-colors cursor-pointer group"
+          >
+            <div
+              className={`w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-2xs ${
+                user.role === 'ADMIN' ? 'bg-blue-600' : 'bg-emerald-600'
+              }`}
+            >
+              {user.role === 'ADMIN' ? (
+                <ShieldCheck className="h-4 w-4" />
+              ) : (
+                <User className="h-4 w-4" />
+              )}
+            </div>
+
+            <div className="text-left hidden sm:block max-w-[150px]">
+              <div className="text-xs font-bold text-white group-hover:text-white truncate">
+                {user.name}
+              </div>
+              <div className="text-[10px] text-slate-300 font-medium leading-none mt-0.5">
+                {user.role === 'ADMIN' ? 'Administrator' : 'Pengguna'}
+              </div>
+            </div>
+
+            <ChevronDown
+              className={`h-3.5 w-3.5 text-slate-300 group-hover:text-white transition-transform duration-150 ${
+                isUserMenuOpen ? 'rotate-180 text-white' : ''
+              }`}
+            />
+          </button>
+
+          {/* User Dropdown Menu */}
+          {isUserMenuOpen && (
+            <div className="absolute right-0 top-full pt-2 z-50 w-64 animate-in fade-in zoom-in-95 duration-100">
+              <div
+                role="menu"
+                aria-label="Menu Pilihan Pengguna"
+                className="bg-white rounded-2xl border border-slate-200 shadow-xl p-2 text-xs divide-y divide-slate-100 text-slate-900"
+              >
+                {/* Dropdown Header: Account Overview */}
+                <div className="p-2.5 pb-3">
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Akun Terhubung
+                  </p>
+                  <p className="text-sm font-extrabold text-slate-900 truncate mt-0.5">
+                    {user.name}
+                  </p>
+                  <p className="text-xs text-slate-500 truncate font-mono">
+                    @{user.username}
+                  </p>
+                </div>
+
+                {/* Dropdown Action Items */}
+                <div className="py-1.5 space-y-1">
+                  {/* Option 1: Profil */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setIsProfileModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-slate-700 hover:text-slate-900 hover:bg-slate-50 font-semibold transition-colors cursor-pointer"
+                  >
+                    <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                      <UserCircle className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-800">Profil</div>
+                      <div className="text-[11px] text-slate-500 font-normal">
+                        Rincian identitas & akun
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Admin CMS Panel */}
+                  {user.role === 'ADMIN' && (
+                    <Link
+                      href="/dashboard/cms"
+                      role="menuitem"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-blue-700 hover:bg-blue-50 font-semibold transition-colors cursor-pointer"
+                    >
+                      <div className="p-1.5 rounded-lg bg-blue-100/70 text-blue-700">
+                        <Sliders className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-blue-900">
+                          Panel CMS Admin
+                        </div>
+                        <div className="text-[11px] text-blue-600 font-normal">
+                          Kelola kartu & indikator
+                        </div>
+                      </div>
+                    </Link>
+                  )}
+                </div>
+
+                {/* Option 2: Logout */}
+                <div className="pt-1.5">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      logout();
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-rose-600 hover:text-rose-700 hover:bg-rose-50 font-semibold transition-colors cursor-pointer"
+                  >
+                    <div className="p-1.5 rounded-lg bg-rose-50 text-rose-600">
+                      <LogOut className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-rose-700">Logout</div>
+                      <div className="text-[11px] text-rose-500 font-normal">
+                        Keluar dari sesi ini
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 1. Header with Official Kemenko PMK Emblem (Navbar is removed on landing) */}
       <div className="text-center space-y-4 max-w-2xl mx-auto flex flex-col items-center">
         <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg mb-1">
@@ -35,11 +233,11 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
         </div>
 
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
-          Pusat Pemantauan Program Kerja Prioritas Nasional
+          {meta.title || 'Pusat Pemantauan Program Kerja Prioritas Nasional'}
         </h1>
 
         <p className="text-xs sm:text-sm text-slate-300 font-medium pt-1">
-          Pembaruan data: {DASHBOARD_META.cutoffDate}
+          Pembaruan data: {meta.cutoffDate}
         </p>
       </div>
 
@@ -125,6 +323,14 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
           </div>
         </div>
       </div>
+
+      {/* User Profile Modal on Landing */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        user={user}
+        onLogout={logout}
+      />
     </div>
   );
 };
