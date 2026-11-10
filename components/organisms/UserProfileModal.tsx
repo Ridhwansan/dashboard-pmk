@@ -70,13 +70,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           </button>
 
           <div className="flex justify-center mb-3">
-            <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl ring-1 ring-white/20 shadow-inner">
+            <div className="p-1 bg-white/10 backdrop-blur-md rounded-full ring-1 ring-white/20 shadow-inner w-12 h-12 flex items-center justify-center overflow-hidden">
               <Image
-                src="/images/logo-kemenko-pmk-baru.png"
+                src="/images/logo-pmk-garuda.png"
                 alt="Logo Kemenko PMK"
-                width={36}
-                height={36}
-                className="object-contain"
+                width={40}
+                height={40}
+                className="w-full h-full object-contain"
               />
             </div>
           </div>

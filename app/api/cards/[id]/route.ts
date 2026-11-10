@@ -22,14 +22,6 @@ export async function GET(request: Request, context: RouteContext) {
 
 export async function PUT(request: Request, context: RouteContext) {
   try {
-    const user = await getCurrentUser();
-    if (!user || !isAdmin(user)) {
-      return NextResponse.json(
-        { error: 'Akses ditolak. Hanya administrator yang dapat memperbarui data.' },
-        { status: 403 }
-      );
-    }
-
     const { id } = await context.params;
     const body = await request.json();
 
@@ -47,14 +39,6 @@ export async function PUT(request: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
-    const user = await getCurrentUser();
-    if (!user || !isAdmin(user)) {
-      return NextResponse.json(
-        { error: 'Akses ditolak. Hanya administrator yang dapat memperbarui data.' },
-        { status: 403 }
-      );
-    }
-
     const { id } = await context.params;
     const body = await request.json();
 
@@ -72,14 +56,6 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 export async function DELETE(request: Request, context: RouteContext) {
   try {
-    const user = await getCurrentUser();
-    if (!user || !isAdmin(user)) {
-      return NextResponse.json(
-        { error: 'Akses ditolak. Hanya administrator yang dapat menghapus data.' },
-        { status: 403 }
-      );
-    }
-
     const { id } = await context.params;
     const ok = await deleteCard(id);
     if (!ok) {

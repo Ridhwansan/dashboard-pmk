@@ -6,7 +6,6 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { Logo } from '@/components/atoms/Logo';
 import { LayerType, PillarId } from '@/types/dashboard';
 import { useAuth } from '@/lib/useAuth';
-import { UserProfileModal } from '@/components/organisms/UserProfileModal';
 import {
   ChevronDown,
   GraduationCap,
@@ -73,7 +72,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   const pillarParam = (searchParams.get('pillar') as PillarId) || null;
 
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isPilarDropdownOpen, setIsPilarDropdownOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
@@ -338,13 +336,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {/* Dropdown Action Items */}
                       <div className="py-1.5 space-y-1">
                         {/* Option 1: Profil */}
-                        <button
-                          type="button"
+                        <Link
+                          href="/dashboard/profil"
                           role="menuitem"
-                          onClick={() => {
-                            setIsUserMenuOpen(false);
-                            setIsProfileModalOpen(true);
-                          }}
+                          onClick={() => setIsUserMenuOpen(false)}
                           className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-slate-700 hover:text-slate-900 hover:bg-slate-50 font-semibold transition-colors cursor-pointer"
                         >
                           <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
@@ -356,7 +351,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               Rincian identitas & akun
                             </div>
                           </div>
-                        </button>
+                        </Link>
 
                         {/* Admin CMS Panel (Only for Admin, inside profile dropdown) */}
                         {isAdmin && (
@@ -407,26 +402,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                 )}
               </div>
-            ) : (
-              <Link
-                href="/login"
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <LogIn className="h-3.5 w-3.5" />
-                <span>Masuk</span>
-              </Link>
-            )}
+            ) : null}
           </div>
         </div>
       </header>
-
-      {/* User Profile Modal */}
-      <UserProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        user={user}
-        onLogout={logout}
-      />
     </>
   );
 };

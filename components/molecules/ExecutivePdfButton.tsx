@@ -4,16 +4,19 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FileDown, ChevronDown, Loader2, Check, FileText } from 'lucide-react';
 import { PillarId } from '@/types/dashboard';
 import { generateExecutiveSummaryPdf } from '@/lib/exportExecutivePdf';
+import { CmsCardItem } from '@/types/cms';
 
 interface ExecutivePdfButtonProps {
   currentPillar?: PillarId;
   variant?: 'toolbar' | 'outline' | 'subtle';
   className?: string;
+  cards?: CmsCardItem[];
 }
 
 export const ExecutivePdfButton: React.FC<ExecutivePdfButtonProps> = ({
   currentPillar,
   className = '',
+  cards,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -52,9 +55,10 @@ export const ExecutivePdfButton: React.FC<ExecutivePdfButtonProps> = ({
     setIsSuccess(false);
 
     try {
-      await generateExecutiveSummaryPdf(
-        specific ? { specificPillar: specific } : undefined
-      );
+      await generateExecutiveSummaryPdf({
+        specificPillar: specific,
+        cards,
+      });
       setIsSuccess(true);
       setTimeout(() => {
         setIsSuccess(false);

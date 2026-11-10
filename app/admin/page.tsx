@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
 import {
   Lock,
   User,
   ArrowRight,
+  ArrowLeft,
   Eye,
   EyeOff,
   AlertCircle,
@@ -79,7 +81,7 @@ export default function AdminPortalPage() {
         <div className="flex items-center gap-3">
           <div className="relative h-10 w-10 sm:h-12 sm:w-12 shrink-0 overflow-hidden rounded-full ring-2 ring-white/20 shadow-lg bg-white/10 backdrop-blur-md p-1">
             <Image
-              src="/images/logo-kemenko-pmk-baru.png"
+              src="/images/logo-pmk-garuda.png"
               alt="Logo Kemenko PMK"
               width={48}
               height={48}
@@ -232,6 +234,16 @@ export default function AdminPortalPage() {
                 </>
               )}
             </button>
+
+            <div className="pt-2 text-center">
+              <Link
+                href="/dashboard/eksekutif"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Kembali ke Dashboard Publik</span>
+              </Link>
+            </div>
           </form>
 
           {/* Secure Note */}

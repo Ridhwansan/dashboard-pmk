@@ -4,6 +4,8 @@ import { PILLAR_AGREGAT_DATA } from '@/data/pillarAgregatData';
 import { getKendalaListByPillar, PillarKendalaItem } from '@/data/programDetailData';
 import { DASHBOARD_META } from '@/data/dashboardData';
 import { MapPillarId } from '@/data/mapIndicators';
+import { CmsCardItem } from '@/types/cms';
+import { INITIAL_CMS_CARDS } from '@/data/initialCmsCards';
 
 interface PillarConfig {
   id: Exclude<MapPillarId, 'all'>;
@@ -72,6 +74,7 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
  */
 export async function generateExecutiveSummaryPdf(options?: {
   specificPillar?: Exclude<MapPillarId, 'all'>;
+  cards?: CmsCardItem[];
 }): Promise<void> {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -84,8 +87,47 @@ export async function generateExecutiveSummaryPdf(options?: {
   const marginX = 14;
   const contentWidth = pageWidth - marginX * 2; // ~182 mm
 
+  // Fetch or use live CMS cards to respect includeInPdf settings
+  let allCards: CmsCardItem[] = options?.cards || [];
+  if (allCards.length === 0 && typeof window !== 'undefined') {
+    try {
+      const res = await fetch(`/api/cards?all=true&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.data) && json.data.length > 0) {
+          allCards = json.data;
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch cards from /api/cards, fallback to INITIAL_CMS_CARDS:', err);
+    }
+  }
+
+  if (allCards.length === 0) {
+    allCards = INITIAL_CMS_CARDS;
+  }
+
+  // Also apply any locally applied settings if available
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('pmk_pdf_settings');
+      if (saved) {
+        const map = JSON.parse(saved) as Record<string, boolean>;
+        allCards = allCards.map((c) => ({
+          ...c,
+          includeInPdf: map[c.id] !== undefined ? map[c.id] : (c.slug && map[c.slug] !== undefined ? map[c.slug] : c.includeInPdf),
+        }));
+      }
+    } catch (e) {
+      console.warn('Could not read pmk_pdf_settings from localStorage:', e);
+    }
+  }
+
   // Pre-load official logo if available
-  const logoImg = await loadImage('/images/logo-kemenko-pmk-official.png');
+  const logoImg = await loadImage('/images/logo-pmk-garuda.png');
 
   // Pillars to render
   const pillarsToRender = options?.specificPillar
@@ -98,7 +140,7 @@ export async function generateExecutiveSummaryPdf(options?: {
   // PAGE 1: COVER & EXECUTIVE OVERVIEW
   // ==========================================
   if (isFullReport) {
-    drawExecutiveCoverPage(doc, logoImg, pageWidth, pageHeight, marginX, contentWidth);
+    drawExecutiveCoverPage(doc, logoImg, pageWidth, pageHeight, marginX, contentWidth, allCards);
     doc.addPage();
   }
 
@@ -109,7 +151,7 @@ export async function generateExecutiveSummaryPdf(options?: {
     if (index > 0) {
       doc.addPage();
     }
-    drawPillarSummaryPage(doc, pillarConfig, pageWidth, pageHeight, marginX, contentWidth);
+    drawPillarSummaryPage(doc, pillarConfig, pageWidth, pageHeight, marginX, contentWidth, allCards);
   });
 
   // ==========================================
@@ -177,7 +219,8 @@ function drawExecutiveCoverPage(
   pageWidth: number,
   pageHeight: number,
   marginX: number,
-  contentWidth: number
+  contentWidth: number,
+  cards: CmsCardItem[]
 ) {
   let currentY = 16;
 
@@ -309,16 +352,29 @@ function drawExecutiveCoverPage(
     doc.setTextColor(15, 23, 42);
     doc.text(pillar.title.replace('PKPN ', ''), cardX + 6, cardY + 11.5);
 
-    // Stats
+    // Stats based on included indicators
     const pData = PILLAR_AGREGAT_DATA[pillar.id];
-    const indCount = pData?.indicators?.length || 0;
-    const kendalaList = getKendalaListByPillar(pillar.id);
+    const pillarIncludedCards = cards.filter(
+      (c) => c.pillarId === pillar.id && c.isActive !== false && c.includeInPdf !== false
+    );
+    const indCount = pillarIncludedCards.length;
+    const allKendalaList = getKendalaListByPillar(pillar.id);
+    const includedTitles = new Set(pillarIncludedCards.map((c) => c.title.toLowerCase().trim()));
+    const includedSlugs = new Set(pillarIncludedCards.map((c) => (c.slug || c.id).toLowerCase().trim()));
+    const kendalaCount = pillarIncludedCards.length > 0
+      ? allKendalaList.filter(
+          (k) =>
+            includedTitles.has(k.programTitle.toLowerCase().trim()) ||
+            includedSlugs.has((k.programId || '').toLowerCase().trim()) ||
+            includedTitles.has(k.title.toLowerCase().trim())
+        ).length
+      : 0;
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(100, 116, 139);
     doc.text(
-      `${indCount} Indikator Kunci  ·  ${kendalaList.length} Isu Kendala Strategis`,
+      `${indCount} Indikator Kunci  ·  ${kendalaCount} Isu Kendala Strategis`,
       cardX + 6,
       cardY + 16.5
     );
@@ -379,7 +435,8 @@ function drawPillarSummaryPage(
   pageWidth: number,
   pageHeight: number,
   marginX: number,
-  contentWidth: number
+  contentWidth: number,
+  cards: CmsCardItem[]
 ) {
   let currentY = 18;
 
@@ -416,25 +473,56 @@ function drawPillarSummaryPage(
 
   currentY += 4;
 
-  // Prepare table data from PILLAR_AGREGAT_DATA
+  // Filter cards for this pillar where isActive !== false and includeInPdf !== false
   const pData = PILLAR_AGREGAT_DATA[pillar.id];
-  const indicators = pData?.indicators || [];
+  const activeCards = cards.filter(
+    (c) => c.pillarId === pillar.id && c.isActive !== false && c.includeInPdf !== false
+  );
 
   const tableHead = [['No', 'Indikator Program Prioritas', 'Target 2026', 'Realisasi 2026', '% Capaian']];
-  const tableBody = indicators.map((ind, idx) => {
-    const yr2026 = ind.years?.[2026];
-    const targetStr = yr2026?.target ? `${yr2026.target} ${ind.unit || ''}`.trim() : '—';
-    const capaianStr = yr2026?.capaian ? `${yr2026.capaian} ${ind.unit || ''}`.trim() : '—';
-    const percentStr = yr2026?.percent || '—';
+  let tableBody: string[][] = [];
 
-    return [
-      String(idx + 1),
-      ind.name,
-      targetStr,
-      capaianStr,
-      percentStr,
+  if (activeCards.length > 0) {
+    tableBody = activeCards.map((card, idx) => {
+      const agregatInd = pData?.indicators?.find(
+        (ind) => ind.id === card.id || ind.id === card.slug || ind.mapIndicatorId === card.slug
+      );
+      const yr2026 = agregatInd?.years?.[2026];
+
+      let targetStr = '—';
+      if (yr2026?.target) {
+        targetStr = `${yr2026.target} ${agregatInd?.unit || card.unit || ''}`.trim();
+      } else if (card.target) {
+        targetStr = card.target.replace(/^Target(\s*2026)?:\s*/i, '').trim();
+      }
+
+      let capaianStr = '—';
+      if (yr2026?.capaian) {
+        capaianStr = `${yr2026.capaian} ${agregatInd?.unit || card.unit || ''}`.trim();
+      } else if (card.value) {
+        capaianStr = `${card.value} ${card.unit && !card.value.includes(card.unit) ? card.unit : ''}`.trim();
+      }
+
+      let percentStr = '—';
+      if (yr2026?.percent) {
+        percentStr = yr2026.percent;
+      } else if (card.percent !== null && card.percent !== undefined) {
+        percentStr = `${card.percent}%`;
+      }
+
+      return [
+        String(idx + 1),
+        card.title,
+        targetStr,
+        capaianStr,
+        percentStr,
+      ];
+    });
+  } else {
+    tableBody = [
+      ['—', 'Tidak ada indikator yang disertakan dalam ringkasan untuk pilar ini.', '—', '—', '—'],
     ];
-  });
+  }
 
   // Render indicators table with autoTable
   autoTable(doc, {
@@ -494,8 +582,19 @@ function drawPillarSummaryPage(
 
   currentY += 4;
 
-  // Fetch kendala items for this pillar
-  const kendalaList = getKendalaListByPillar(pillar.id);
+  // Fetch kendala items for this pillar, filtering only included programs
+  const allKendalaList = getKendalaListByPillar(pillar.id);
+  const includedTitles = new Set(activeCards.map((c) => c.title.toLowerCase().trim()));
+  const includedSlugs = new Set(activeCards.map((c) => (c.slug || c.id).toLowerCase().trim()));
+
+  const kendalaList = activeCards.length > 0
+    ? allKendalaList.filter(
+        (k) =>
+          includedTitles.has(k.programTitle.toLowerCase().trim()) ||
+          includedSlugs.has((k.programId || '').toLowerCase().trim()) ||
+          includedTitles.has(k.title.toLowerCase().trim())
+      )
+    : [];
 
   if (kendalaList.length === 0) {
     doc.setFillColor(248, 250, 252);
@@ -503,7 +602,13 @@ function drawPillarSummaryPage(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(100, 116, 139);
-    doc.text('Tidak ada isu kendala kritis yang terdata pada pilar ini.', marginX + 4, currentY + 8);
+    doc.text(
+      activeCards.length === 0
+        ? 'Tidak ada indikator aktif yang disertakan untuk pilar ini.'
+        : 'Tidak ada isu kendala kritis yang terdata untuk indikator terpilih.',
+      marginX + 4,
+      currentY + 8
+    );
     return;
   }
 

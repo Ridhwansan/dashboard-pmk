@@ -223,11 +223,10 @@ export const WilayahSidePanel: React.FC<WilayahSidePanelProps> = ({
                           {ind.name}
                         </div>
 
-                        {/* Unified Dynamic Target vs Capaian: Stacks as full-width rows with label left and value right, perfectly responsive to both short and long text without awkward column breaks */}
+                        {/* Target & Capaian: Clean Flat Rows (No Nested Boxes) */}
                         <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
-                          {/* Target Box (Full Width) */}
-                          <div className="bg-slate-50/90 rounded-lg p-2 border border-slate-200/70 flex items-start justify-between gap-2.5">
-                            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider shrink-0 mt-0.5">
+                          <div className="flex items-start justify-between gap-2.5">
+                            <span className="text-[11px] font-semibold text-slate-500 shrink-0">
                               Target
                             </span>
                             <span
@@ -238,12 +237,9 @@ export const WilayahSidePanel: React.FC<WilayahSidePanelProps> = ({
                             </span>
                           </div>
 
-                          {/* Capaian Box (Full Width with Theme Tint) */}
-                          <div
-                            className={`rounded-lg p-2 border flex items-start justify-between gap-2.5 ${theme.headerBg} ${theme.headerBorder}`}
-                          >
+                          <div className="flex items-start justify-between gap-2.5">
                             <span
-                              className={`text-[10px] uppercase font-bold tracking-wider shrink-0 mt-0.5 ${theme.capaianText}`}
+                              className={`text-[11px] font-bold shrink-0 ${theme.capaianText}`}
                             >
                               Capaian
                             </span>

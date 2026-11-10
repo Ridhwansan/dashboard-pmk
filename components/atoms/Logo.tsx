@@ -11,7 +11,7 @@ export const Logo: React.FC<LogoProps> = ({ className = '' }) => {
       {/* Logo Kemenko PMK Only */}
       <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full shadow-xs ring-1 ring-slate-900/10">
         <Image
-          src="/images/logo-kemenko-pmk-baru.png"
+          src="/images/logo-pmk-garuda.png"
           alt="Logo Kemenko PMK"
           width={40}
           height={40}

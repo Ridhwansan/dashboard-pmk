@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { DASHBOARD_META } from '@/data/dashboardData';
 import { useAuth } from '@/lib/useAuth';
-import { UserProfileModal } from '@/components/organisms/UserProfileModal';
 
 interface LandingChoiceSectionProps {
   onSelectIkhtisar: () => void;
@@ -30,7 +29,6 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
   const [meta, setMeta] = useState(DASHBOARD_META);
   const { user, logout } = useAuth();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -80,7 +78,7 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
 
   return (
     <div className="relative w-full max-w-5xl mx-auto py-6 sm:py-12 space-y-9 animate-in fade-in duration-300">
-      {/* Discreet Frameless User Account Control (Floating top-right on landing page without navbar) */}
+      {/* Discreet Frameless User Account Control (Only shown when an authorized user is logged in) */}
       {user && (
         <div className="fixed top-4 right-4 sm:top-6 sm:right-8 z-30" ref={userMenuRef}>
           <button
@@ -143,13 +141,10 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
                 {/* Dropdown Action Items */}
                 <div className="py-1.5 space-y-1">
                   {/* Option 1: Profil */}
-                  <button
-                    type="button"
+                  <Link
+                    href="/dashboard/profil"
                     role="menuitem"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      setIsProfileModalOpen(true);
-                    }}
+                    onClick={() => setIsUserMenuOpen(false)}
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-slate-700 hover:text-slate-900 hover:bg-slate-50 font-semibold transition-colors cursor-pointer"
                   >
                     <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
@@ -161,7 +156,7 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
                         Rincian identitas & akun
                       </div>
                     </div>
-                  </button>
+                  </Link>
 
                   {/* Admin CMS Panel */}
                   {user.role === 'ADMIN' && (
@@ -219,7 +214,7 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
         <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg mb-1">
           <div className="relative h-7 w-7 sm:h-8 sm:w-8 shrink-0 overflow-hidden rounded-full shadow-xs ring-1 ring-white/30">
             <Image
-              src="/images/logo-kemenko-pmk-baru.png"
+              src="/images/logo-pmk-garuda.png"
               alt="Logo Kemenko PMK"
               width={32}
               height={32}
@@ -267,15 +262,12 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
               </h2>
 
               <p className="text-sm text-slate-600 font-medium leading-relaxed">
-                Monitoring komprehensif target, capaian 2026, trajektori RPJMN 2025–2029, dan matriks kendala yang terbagi dalam 4 pilar: Pendidikan, Kesehatan, Bencana, dan Penurunan Kemiskinan.
+                Pemantauan terpadu target, capaian realisasi, dan kendala pada 4 pilar pembangunan.
               </p>
             </div>
           </div>
 
-          <div className="pt-8 mt-8 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 group-hover:text-slate-700 transition-colors">
-              4 Pilar Prioritas
-            </span>
+          <div className="pt-6 mt-6 border-t border-slate-100 flex items-center justify-end">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 group-hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-all group-hover:translate-x-1">
               <span>Buka Ikhtisar</span>
               <ArrowRight className="h-4 w-4" />
@@ -307,15 +299,12 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
               </h2>
 
               <p className="text-sm text-slate-600 font-medium leading-relaxed">
-                Eksplorasi peta interaktif geospasial tematik 38 provinsi di seluruh Indonesia, dilengkapi rincian profil performa dan capaian 4 pilar untuk wilayah yang dipilih langsung di bawah peta.
+                Peta interaktif geospasial 38 provinsi serta profil capaian kinerja per wilayah.
               </p>
             </div>
           </div>
 
-          <div className="pt-8 mt-8 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 group-hover:text-slate-700 transition-colors">
-              Peta Layar Penuh
-            </span>
+          <div className="pt-6 mt-6 border-t border-slate-100 flex items-center justify-end">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 group-hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-all group-hover:translate-x-1">
               <span>Buka PKPN Wilayah</span>
               <ArrowRight className="h-4 w-4" />
@@ -323,14 +312,6 @@ export const LandingChoiceSection: React.FC<LandingChoiceSectionProps> = ({
           </div>
         </div>
       </div>
-
-      {/* User Profile Modal on Landing */}
-      <UserProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        user={user}
-        onLogout={logout}
-      />
     </div>
   );
 };

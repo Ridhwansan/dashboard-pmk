@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { INITIAL_CMS_CARDS } from '../data/initialCmsCards';
 import { getProgramDetailData } from '../data/programDetailData';
 import { PILLAR_AGREGAT_DATA } from '../data/pillarAgregatData';
@@ -8,7 +8,6 @@ import {
   PENGKINIAN_BENCANA_DATA,
 } from '../data/bencanaPengkinianData';
 
-const prisma = new PrismaClient();
 
 const DEFAULT_USERS = [
   {

@@ -7,11 +7,13 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
   ADMIN
+  MENKO
+  ESELON_1
+  ESELON_2
   USER
 }
 
@@ -51,6 +53,7 @@ model PillarCard {
   picKementerian   String?
   order            Int      @default(0)
   isActive         Boolean  @default(true) // Admin toggle: muncul / tidak di Ikhtisar
+  includeInPdf     Boolean  @default(true) // Admin toggle: disertakan atau tidak dalam unduhan Ringkasan PDF
   isMilestone      Boolean  @default(false)
   milestoneContent String?
 

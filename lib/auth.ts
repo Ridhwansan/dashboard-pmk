@@ -2,7 +2,15 @@ import { cookies } from 'next/headers';
 import crypto from 'crypto';
 import { prisma } from './prisma';
 
-export type UserRole = 'ADMIN' | 'USER';
+export type UserRole = 'ADMIN' | 'USER' | 'MENKO' | 'ESELON_1' | 'ESELON_2';
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  ADMIN: 'Administrator PMK',
+  MENKO: 'Menteri Koordinator (Menko PMK)',
+  ESELON_1: 'Pejabat Eselon I / Deputi',
+  ESELON_2: 'Pejabat Eselon II / Asisten Deputi',
+  USER: 'Pengguna Eksekutif',
+};
 
 export interface AuthUser {
   id: string;

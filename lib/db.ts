@@ -152,6 +152,7 @@ function toCmsCardItem(r: any): CmsCardItem {
     picKementerian: r.picKementerian || undefined,
     order: r.order,
     isActive: r.isActive,
+    includeInPdf: r.includeInPdf ?? true,
     isMilestone: r.isMilestone,
     milestoneContent: r.milestoneContent || undefined,
     annualTargets: r.annualTargets || undefined,
@@ -272,6 +273,7 @@ export async function updateCard(
         picKementerian: updated.picKementerian || null,
         order: updated.order,
         isActive: updated.isActive,
+        includeInPdf: updated.includeInPdf ?? true,
         isMilestone: updated.isMilestone || false,
         milestoneContent: updated.milestoneContent || null,
         annualTargets: toJsonInput(updated.annualTargets),
@@ -309,6 +311,52 @@ export async function toggleCardActive(id: string): Promise<CmsCardItem | null> 
   const existing = await getCardById(id);
   if (!existing) return null;
   return updateCard(id, { isActive: !existing.isActive });
+}
+
+/**
+ * Batch update includeInPdf settings for all cards
+ */
+export async function updatePdfSettings(
+  settings: Record<string, boolean>
+): Promise<{ success: boolean; count: number }> {
+  let count = 0;
+  const useDb = await testPrismaConnection();
+  if (useDb) {
+    try {
+      const updates = Object.entries(settings).map(([id, includeInPdf]) =>
+        prisma.pillarCard.updateMany({
+          where: {
+            OR: [{ id }, { slug: id }],
+          },
+          data: { includeInPdf },
+        })
+      );
+      const results = await prisma.$transaction(updates);
+      count = results.reduce((acc, r) => acc + r.count, 0);
+    } catch (err) {
+      console.warn('Prisma updatePdfSettings failed, falling back to JSON:', err);
+      isPrismaAvailable = false;
+    }
+  }
+
+  // Also update in JSON / memory fallback
+  const all = ensureJsonFile();
+  let changed = false;
+  all.forEach((card) => {
+    if (settings[card.id] !== undefined) {
+      card.includeInPdf = settings[card.id];
+      changed = true;
+    } else if (card.slug && settings[card.slug] !== undefined) {
+      card.includeInPdf = settings[card.slug];
+      changed = true;
+    }
+  });
+  if (changed) {
+    saveJsonFile(all);
+    if (!useDb) count = Object.keys(settings).length;
+  }
+
+  return { success: true, count };
 }
 
 /**
@@ -350,6 +398,7 @@ export async function createCard(
         picKementerian: newCard.picKementerian || null,
         order: newCard.order || 0,
         isActive: newCard.isActive ?? true,
+        includeInPdf: newCard.includeInPdf ?? true,
         isMilestone: newCard.isMilestone || false,
         milestoneContent: newCard.milestoneContent || null,
         annualTargets: toJsonInput(newCard.annualTargets),

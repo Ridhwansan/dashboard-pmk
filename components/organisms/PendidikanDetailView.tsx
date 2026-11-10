@@ -9,13 +9,20 @@ import { useCmsCards } from '@/lib/useCmsCards';
 interface PendidikanDetailViewProps {
   onBackToHome: () => void;
   category?: string;
+  onDetailOpenChange?: (isOpen: boolean) => void;
 }
 
 export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
   category = 'PKPN',
+  onDetailOpenChange,
 }) => {
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   const [activeKendalaId, setActiveKendalaId] = useState<string | number | undefined>(undefined);
+
+  const handleSelectProgram = (programId: string) => {
+    setSelectedProgramId(programId);
+    onDetailOpenChange?.(true);
+  };
 
   // Fetch cards dynamically from CMS / Database
   const { cards: cmsCards, loading } = useCmsCards('pendidikan', category);
@@ -49,6 +56,7 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
         onBack={() => {
           setSelectedProgramId(null);
           setActiveKendalaId(undefined);
+          onDetailOpenChange?.(false);
         }}
         category={category}
         initialSection={activeKendalaId ? 'kendala' : 'overview'}
@@ -137,39 +145,35 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
             return (
               <div
                 key={card.id}
-                onClick={() => setSelectedProgramId(card.id)}
+                onClick={() => handleSelectProgram(card.id)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    setSelectedProgramId(card.id);
+                    handleSelectProgram(card.id);
                   }
                 }}
-                className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-lg hover:border-blue-400 p-6 sm:p-7 flex flex-col justify-between h-full group transition-all duration-200 cursor-pointer select-none relative focus-visible:outline-2 focus-visible:outline-blue-500"
+                className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-blue-400 p-5 sm:p-6 flex flex-col justify-between h-full group transition-all duration-200 cursor-pointer select-none focus-visible:outline-2 focus-visible:outline-blue-500"
               >
                 <div className="flex-1 flex flex-col">
-                  {/* Header Widget with Percentage in Front of Card */}
-                  <div className="flex items-start justify-between gap-2 mb-3">
+                  {/* Header: Title and Top-right Indicator */}
+                  <div className="flex items-start justify-between gap-3 mb-2">
                     <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-blue-900 transition-colors leading-snug">
                       {card.title}
                     </h3>
-                    {card.percent !== undefined && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-50 text-blue-700 border border-blue-200/80 shrink-0">
-                        {card.percent}%
-                      </span>
-                    )}
+                    <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0 mt-0.5" />
                   </div>
 
-                  {/* Metric Display: Big Number, Milestone, or Empty Placeholder */}
+                  {/* Metric Display */}
                   {card.isMilestone ? (
-                    <div className="mb-4 min-h-[44px] flex items-center">
-                      <p className="text-sm sm:text-[15px] font-bold text-slate-900 leading-snug">
+                    <div className="my-2 min-h-[40px] flex items-center">
+                      <p className="text-sm font-semibold text-slate-900 leading-snug">
                         {card.milestoneContent}
                       </p>
                     </div>
                   ) : (
-                    <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1 mb-4 min-h-[44px]">
+                    <div className="flex items-baseline gap-x-2 my-2 min-h-[40px]">
                       <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tabular-nums tracking-tight">
                         {card.value}
                       </span>
@@ -178,95 +182,70 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
                           {card.unit}
                         </span>
                       )}
-                      {card.value === '—' && (
-                        <span className="text-xs font-semibold text-slate-500">
-                          (Belum Ada Data)
-                        </span>
-                      )}
                     </div>
                   )}
 
-                  {/* Status, Progress Bar, & Helper Target */}
-                  <div className="pt-3.5 border-t border-slate-100 space-y-2 text-xs">
-                    {/* Status Label */}
-                    {card.status && (
-                      <p className="text-xs font-semibold text-slate-800 leading-snug">
-                        {card.status}
-                      </p>
-                    )}
-
-                    {/* Progress Bar with Directly Aligned Percentage */}
+                  {/* Target, Progress, & Status */}
+                  <div className="pt-3 border-t border-slate-100 space-y-2 text-xs">
+                    {/* Progress Bar with Percentage */}
                     {card.percent !== undefined && (
-                      <div className="flex items-center gap-2.5 pt-0.5">
-                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-blue-600 rounded-full transition-all duration-300"
                             style={{ width: `${Math.min(100, card.percent)}%` }}
                           />
                         </div>
-                        <span className="text-xs font-extrabold text-blue-700 tabular-nums shrink-0">
+                        <span className="text-xs font-bold text-slate-700 tabular-nums shrink-0">
                           {card.percent}%
                         </span>
                       </div>
                     )}
 
-                    {/* Target as Small Helper Text */}
+                    {/* Target */}
                     {card.target && (
-                      <p className="text-[11.5px] text-slate-600 font-medium leading-relaxed pt-0.5">
+                      <p className="text-xs text-slate-600 font-medium leading-relaxed">
                         {card.target}
                       </p>
                     )}
 
-                    {/* Subtext if present */}
-                    {card.subtext && (
-                      <p className="text-[11px] text-slate-500 font-normal leading-normal">
-                        {card.subtext}
+                    {/* Status Label */}
+                    {card.status && (
+                      <p className="text-[11px] text-slate-500">
+                        {card.status}
                       </p>
                     )}
-                  </div>
 
-                  {/* Bottom Status / Issue Container */}
-                  <div className="mt-4 pt-3.5 border-t border-slate-100 flex-1 flex flex-col justify-end">
-                    {issueData.hasIssue ? (
-                      <div className="relative group/popover">
-                        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50/90 hover:bg-slate-100/90 border border-slate-200/80 transition-colors">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                            <span className="text-xs font-medium text-slate-700 truncate">
-                              {issueData.title || issueData.description}
-                            </span>
-                          </div>
-                          <span className="text-[10px] font-bold text-slate-600 shrink-0 uppercase tracking-tight">
-                            {issueData.totalCount > 1 ? `+${issueData.totalCount - 1}` : 'Detail'}
-                          </span>
+                    {/* Inline Issue indicator with interactive hover popover */}
+                    {issueData.hasIssue && (
+                      <div className="pt-2 relative group/issue">
+                        <div
+                          title={issueData.description}
+                          className="flex items-center gap-1.5 text-xs text-amber-800 font-medium hover:text-amber-950 transition-colors cursor-help"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 ring-2 ring-amber-200" />
+                          <span className="truncate">{issueData.description}</span>
                         </div>
 
-                        {/* Floating Micro-Popover on Hover */}
-                        <div className="pointer-events-none opacity-0 group-hover/popover:opacity-100 transition-all duration-200 absolute bottom-full left-0 right-0 mb-2 z-30">
-                          <div className="bg-slate-900 text-white rounded-2xl p-3 shadow-xl border border-slate-800 text-xs space-y-1.5">
-                            <div className="font-bold text-[11px] text-amber-400 uppercase tracking-wider">
-                              Kendala & Isu Utama
+                        {/* Floating Tooltip Popover on Hover (White background with shadow, black text) */}
+                        <div className="pointer-events-none opacity-0 group-hover/issue:opacity-100 transition-all duration-200 absolute bottom-full left-0 right-0 mb-2 z-40">
+                          <div className="bg-white text-slate-900 rounded-2xl p-4 shadow-xl border border-slate-200/90 ring-1 ring-slate-900/5 text-sm space-y-1.5">
+                            <div className="flex items-center justify-between text-xs font-bold text-amber-700">
+                              <span className="tracking-wide">KENDALA & CATATAN</span>
+                              {issueData.totalCount > 1 && (
+                                <span className="text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200/80 px-2 py-0.5 rounded-full">
+                                  {issueData.totalCount} isu
+                                </span>
+                              )}
                             </div>
-                            <p className="font-medium text-slate-200 leading-snug">
+                            <p className="text-slate-800 font-normal leading-relaxed text-sm break-words">
                               {issueData.description}
                             </p>
                           </div>
                         </div>
                       </div>
-                    ) : (
-                      <div className="px-3 py-2 rounded-xl bg-slate-50/50 border border-slate-200/40 text-center">
-                        <span className="text-[11px] font-medium text-slate-400">
-                          Tidak ada kendala krusial
-                        </span>
-                      </div>
                     )}
                   </div>
-                </div>
-
-                {/* Bottom Action: Detail Indikator CTA */}
-                <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-slate-500 group-hover:text-blue-600 transition-colors">
-                  <span>Detail Indikator</span>
-                  <ChevronRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
             );

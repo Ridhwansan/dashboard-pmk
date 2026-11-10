@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getCards, createCard } from '@/lib/db';
-import { getCurrentUser, isAdmin } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
@@ -15,7 +14,16 @@ export async function GET(request: Request) {
       onlyActive: !all,
     });
 
-    return NextResponse.json({ success: true, count: cards.length, data: cards });
+    return NextResponse.json(
+      { success: true, count: cards.length, data: cards },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+      }
+    );
   } catch (error) {
     console.error('API GET /api/cards error:', error);
     return NextResponse.json({ error: 'Gagal mengambil data kartu pilar' }, { status: 500 });
@@ -24,14 +32,6 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await getCurrentUser();
-    if (!user || !isAdmin(user)) {
-      return NextResponse.json(
-        { error: 'Akses ditolak. Hanya administrator yang dapat menambah kartu pilar.' },
-        { status: 403 }
-      );
-    }
-
     const body = await request.json();
     if (!body.title || !body.pillarId) {
       return NextResponse.json(
@@ -57,6 +57,10 @@ export async function POST(request: Request) {
       isActive: body.isActive !== undefined ? body.isActive : true,
       isMilestone: body.isMilestone || false,
       milestoneContent: body.milestoneContent || '',
+      kendalaList: body.kendalaList || [],
+      annualTargets: body.annualTargets || null,
+      monthlyData: body.monthlyData || null,
+      updateLogs: body.updateLogs || [],
     });
 
     return NextResponse.json({ success: true, data: newCard }, { status: 201 });

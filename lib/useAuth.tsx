@@ -6,7 +6,7 @@ export interface UserSession {
   id: string;
   username: string;
   name: string;
-  role: 'ADMIN' | 'USER';
+  role: 'ADMIN' | 'USER' | 'MENKO' | 'ESELON_1' | 'ESELON_2';
   email?: string;
 }
 

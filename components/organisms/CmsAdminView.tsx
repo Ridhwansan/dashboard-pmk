@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   GraduationCap,
@@ -17,7 +18,6 @@ import {
   ArrowLeft,
   Check,
   Loader2,
-  Calculator,
   ExternalLink,
   Search,
   LogOut,
@@ -26,17 +26,35 @@ import {
   Copy,
   Sliders,
   ChevronRight,
+  ChevronLeft,
   Hash,
   Type,
+  Users,
+  Percent,
+  Calendar,
+  AlertTriangle,
+  FileText,
+  CheckCircle2,
+  KeyRound,
+  ShieldCheck,
+  User,
+  UserPlus,
+  FileDown,
+  ToggleLeft,
+  ToggleRight,
+  CheckCheck,
 } from 'lucide-react';
 import { CmsCardItem } from '@/types/cms';
 import { calculatePercentage, parseMetricNumber } from '@/lib/calcPercent';
 import { useAuth } from '@/lib/useAuth';
 import { setClientCardsCache } from '@/lib/useCmsCards';
+import { KendalaDetailItem } from '@/data/programDetailData';
+import { ExecutivePdfButton } from '@/components/molecules/ExecutivePdfButton';
 
-type PillarTab = 'all' | 'pendidikan' | 'kesehatan' | 'bencana' | 'kemiskinan';
-type CategoryFilter = 'all' | 'PKPN' | 'Isu Strategis';
-type CmsViewMode = 'list' | 'create' | 'edit' | 'metadata';
+export type PillarTab = 'all' | 'pendidikan' | 'kesehatan' | 'bencana' | 'kemiskinan';
+export type CategoryFilter = 'all' | 'PKPN' | 'Isu Strategis';
+export type CmsViewMode = 'list' | 'create' | 'edit' | 'metadata' | 'users' | 'pdf-settings';
+export type MetricType = 'number' | 'percent' | 'text';
 
 interface PillarNavConfig {
   id: PillarTab;
@@ -52,6 +70,55 @@ const PILLAR_NAV_CONFIGS: PillarNavConfig[] = [
   { id: 'kemiskinan', label: 'Penurunan Kemiskinan', icon: TrendingDown },
 ];
 
+export interface CmsUserItem {
+  id: string;
+  username: string;
+  name: string;
+  email: string | null;
+  role: 'ADMIN' | 'MENKO' | 'ESELON_1' | 'ESELON_2' | 'USER';
+  createdAt: string;
+  updatedAt?: string;
+}
+
+const ROLE_OPTIONS = [
+  { value: 'MENKO', label: 'Menteri Koordinator (Menko PMK)', badge: 'bg-amber-100 text-amber-800 border-amber-200' },
+  { value: 'ESELON_1', label: 'Pejabat Eselon I / Deputi', badge: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
+  { value: 'ESELON_2', label: 'Pejabat Eselon II / Asisten Deputi', badge: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
+  { value: 'ADMIN', label: 'Administrator PMK', badge: 'bg-blue-100 text-blue-800 border-blue-200' },
+  { value: 'USER', label: 'Pengguna Eksekutif / Staf', badge: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+];
+
+/**
+ * Formats integer/decimal strings with Indonesian thousands dots.
+ * e.g. "36669" -> "36.669"
+ * e.g. "1000000" -> "1.000.000"
+ */
+export function formatIndonesianNumber(input: string): string {
+  if (!input) return '';
+  const hasComma = input.includes(',');
+  const parts = input.split(',');
+  const intDigits = parts[0].replace(/\D/g, '');
+  if (!intDigits) return hasComma ? '0,' + (parts[1]?.replace(/\D/g, '') || '') : '';
+  try {
+    const formattedInt = new Intl.NumberFormat('id-ID').format(BigInt(intDigits));
+    if (hasComma) {
+      const decDigits = parts.slice(1).join('').replace(/\D/g, '');
+      return `${formattedInt},${decDigits}`;
+    }
+    return formattedInt;
+  } catch {
+    return input;
+  }
+}
+
+/**
+ * Strips formatting dots to get clean numeric string for calculation
+ */
+export function unformatIndonesianNumber(input: string): string {
+  if (!input) return '';
+  return input.replace(/\./g, '').replace(',', '.');
+}
+
 export const CmsAdminView: React.FC = () => {
   const { user, logout } = useAuth();
 
@@ -63,12 +130,21 @@ export const CmsAdminView: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // View mode navigation (Replaces modals completely)
+  // View mode navigation
   const [viewMode, setViewMode] = useState<CmsViewMode>('list');
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Dashboard Metadata state
+  // Pagination for Indicator Table (10 items / page)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
+
+  // Reset page to 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedPillar, selectedCategory, searchQuery]);
+
+  // Dashboard Metadata state (Informasi Tampilan Depan)
   const [metadata, setMetadata] = useState({
     title: 'Pusat Pemantauan Program Kerja Prioritas Nasional',
     subtitle: 'Kementerian Koordinator Bidang Pembangunan Manusia dan Kebudayaan',
@@ -77,17 +153,34 @@ export const CmsAdminView: React.FC = () => {
   });
   const [isSavingMeta, setIsSavingMeta] = useState(false);
 
-  // Form state for Create / Edit
+  // PDF Settings state (Pengaturan Unduh Ringkasan)
+  const [pdfPillarFilter, setPdfPillarFilter] = useState<PillarTab>('all');
+  const [pdfSearchQuery, setPdfSearchQuery] = useState('');
+  const [isBulkUpdatingPdf, setIsBulkUpdatingPdf] = useState(false);
+  const [isApplyingPdfSettings, setIsApplyingPdfSettings] = useState(false);
+  const [isPdfDirty, setIsPdfDirty] = useState(false);
+
+  // Metric Type: 'number' (angka satuan) | 'percent' (%) | 'text' (kualitatif milestone)
+  const [metricType, setMetricType] = useState<MetricType>('number');
+  const [targetYear, setTargetYear] = useState('2026');
+
+  // Strict Separate Inputs per Unit
+  const [numberCapaian, setNumberCapaian] = useState('');
+  const [numberTarget, setNumberTarget] = useState('');
+  const [percentCapaian, setPercentCapaian] = useState('');
+  const [percentTarget, setPercentTarget] = useState('100');
+  const [textCapaian, setTextCapaian] = useState('—');
+  const [textTarget, setTextTarget] = useState('');
+
+  // Form general state
   const [formData, setFormData] = useState<{
     id?: string;
     slug?: string;
     pillarId: CmsCardItem['pillarId'];
     category: CmsCardItem['category'];
     title: string;
-    value: string;
     unit: string;
     status: string;
-    target: string;
     subtext: string;
     description: string;
     picKementerian: string;
@@ -96,72 +189,44 @@ export const CmsAdminView: React.FC = () => {
     pillarId: 'pendidikan',
     category: 'PKPN',
     title: '',
-    value: '',
     unit: '',
     status: 'Realisasi 2026',
-    target: '',
     subtext: '',
     description: '',
     picKementerian: '',
     isActive: true,
   });
 
-  // Data format state: 'number' (angka/numerik) vs 'text' (tulisan/kualitatif)
-  const [valueFormat, setValueFormat] = useState<'number' | 'text'>('number');
-  const [targetFormat, setTargetFormat] = useState<'number' | 'text'>('number');
+  // Annual Targets (2025–2029) directly connected to program detail
+  const [annualRows, setAnnualRows] = useState<Record<number, { target: string; capaian: string }>>({
+    2025: { target: '', capaian: '' },
+    2026: { target: '', capaian: '' },
+    2027: { target: '', capaian: '' },
+    2028: { target: '', capaian: '' },
+    2029: { target: '', capaian: '' },
+  });
 
-  // Detect whether a metric string is numeric or qualitative text
-  const detectMetricFormat = (
-    val: string | null | undefined,
-    defaultForEmpty: 'number' | 'text' = 'number'
-  ): 'number' | 'text' => {
-    if (!val || val.trim() === '') return defaultForEmpty;
-    const trimmed = val.trim();
-    if (trimmed === '—' || trimmed === '-') return 'text';
-    if (
-      /belum ditetapkan|tahap|harmonisasi|berproses|menunggu|inventarisasi|terhenti|nihil|persiapan/i.test(
-        trimmed
-      )
-    ) {
-      return 'text';
-    }
-    const parsed = parseMetricNumber(trimmed);
-    return parsed !== null ? 'number' : 'text';
-  };
+  // Kendala & Catatan Pelaksanaan (Isu Strategis) directly connected to program detail
+  const [kendalaList, setKendalaList] = useState<KendalaDetailItem[]>([]);
 
-  const handleValueFormatChange = (newFormat: 'number' | 'text') => {
-    setValueFormat(newFormat);
-    if (newFormat === 'text') {
-      if (!formData.value || formData.value === '0') {
-        setFormData((prev) => ({ ...prev, value: '—' }));
-      }
-    } else {
-      if (formData.value === '—' || parseMetricNumber(formData.value) === null) {
-        setFormData((prev) => ({ ...prev, value: '' }));
-      }
-    }
-  };
-
-  const handleTargetFormatChange = (newFormat: 'number' | 'text') => {
-    setTargetFormat(newFormat);
-    if (newFormat === 'text') {
-      if (!formData.target) {
-        setFormData((prev) => ({ ...prev, target: 'Target: Belum Ditetapkan' }));
-      }
-    } else {
-      if (
-        formData.target === 'Target: Belum Ditetapkan' ||
-        formData.target === '—' ||
-        parseMetricNumber(formData.target) === null
-      ) {
-        setFormData((prev) => ({ ...prev, target: '' }));
-      }
-    }
-  };
+  // Users Management State
+  const [usersList, setUsersList] = useState<CmsUserItem[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<CmsUserItem | null>(null);
+  const [userFormData, setUserFormData] = useState({
+    username: '',
+    name: '',
+    email: '',
+    password: '',
+    role: 'USER' as CmsUserItem['role'],
+  });
+  const [isSavingUser, setIsSavingUser] = useState(false);
+  const [userError, setUserError] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   // Fetch cards from API
@@ -182,18 +247,21 @@ export const CmsAdminView: React.FC = () => {
     }
   };
 
-  // Fetch metadata
-  const fetchMetadata = async () => {
+  // Fetch users from API
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
     try {
-      const res = await fetch('/api/meta', { cache: 'no-store' });
+      const res = await fetch('/api/users', { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
-        if (json.data) {
-          setMetadata(json.data);
+        if (json.data && Array.isArray(json.data)) {
+          setUsersList(json.data);
         }
       }
     } catch {
-      // ignore
+      // fallback
+    } finally {
+      setLoadingUsers(false);
     }
   };
 
@@ -230,7 +298,13 @@ export const CmsAdminView: React.FC = () => {
     };
   }, []);
 
-  // Save metadata
+  useEffect(() => {
+    if (viewMode === 'users') {
+      fetchUsers();
+    }
+  }, [viewMode]);
+
+  // Save metadata (Informasi Tampilan Depan)
   const handleSaveMetadata = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingMeta(true);
@@ -241,10 +315,10 @@ export const CmsAdminView: React.FC = () => {
         body: JSON.stringify(metadata),
       });
       if (res.ok) {
-        showToast('Metadata dashboard berhasil diperbarui');
+        showToast('Informasi tampilan depan berhasil diperbarui');
         setViewMode('list');
       } else {
-        alert('Gagal menyimpan metadata');
+        alert('Gagal menyimpan informasi tampilan depan');
       }
     } catch {
       alert('Terjadi kesalahan jaringan');
@@ -273,6 +347,99 @@ export const CmsAdminView: React.FC = () => {
       }
     } catch {
       fetchAllCards();
+    }
+  };
+
+  // Toggle card inclusion in Executive Summary PDF
+  const handleToggleIncludePdf = (card: CmsCardItem) => {
+    const nextStatus = card.includeInPdf === false ? true : false;
+    const newCards = cards.map((c) => (c.id === card.id ? { ...c, includeInPdf: nextStatus } : c));
+    setCards(newCards);
+    setClientCardsCache(newCards);
+    setIsPdfDirty(true);
+
+    if (typeof window !== 'undefined') {
+      try {
+        const prev = localStorage.getItem('pmk_pdf_settings');
+        const map = prev ? JSON.parse(prev) : {};
+        map[card.id] = nextStatus;
+        if (card.slug) map[card.slug] = nextStatus;
+        localStorage.setItem('pmk_pdf_settings', JSON.stringify(map));
+      } catch {}
+    }
+
+    showToast(`"${card.title}" diubah menjadi ${nextStatus ? 'Masuk PDF' : 'Dikecualikan'}. Klik "Terapkan" untuk menyimpan.`);
+  };
+
+  // Bulk toggle cards inclusion in Executive Summary PDF
+  const handleBulkTogglePdf = (enable: boolean) => {
+    const targetCards = pdfFilteredCards.filter((c) => (c.includeInPdf !== false) !== enable);
+    if (targetCards.length === 0) {
+      showToast(
+        enable
+          ? 'Semua indikator pada filter saat ini sudah aktif masuk Ringkasan PDF.'
+          : 'Semua indikator pada filter saat ini sudah dinonaktifkan dari Ringkasan PDF.'
+      );
+      return;
+    }
+
+    const targetIds = new Set(targetCards.map((c) => c.id));
+    const newCards = cards.map((c) => (targetIds.has(c.id) ? { ...c, includeInPdf: enable } : c));
+    setCards(newCards);
+    setClientCardsCache(newCards);
+    setIsPdfDirty(true);
+
+    if (typeof window !== 'undefined') {
+      try {
+        const prev = localStorage.getItem('pmk_pdf_settings');
+        const map = prev ? JSON.parse(prev) : {};
+        targetCards.forEach((c) => {
+          map[c.id] = enable;
+          if (c.slug) map[c.slug] = enable;
+        });
+        localStorage.setItem('pmk_pdf_settings', JSON.stringify(map));
+      } catch {}
+    }
+
+    showToast(`${targetCards.length} indikator diubah. Klik "Terapkan" untuk menyimpan permanen.`);
+  };
+
+  // Apply PDF settings directly to database via batch endpoint
+  const handleApplyPdfSettings = async () => {
+    setIsApplyingPdfSettings(true);
+    try {
+      const settings: Record<string, boolean> = {};
+      cards.forEach((c) => {
+        const val = c.includeInPdf !== false;
+        settings[c.id] = val;
+        if (c.slug) settings[c.slug] = val;
+      });
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('pmk_pdf_settings', JSON.stringify(settings));
+      }
+
+      const res = await fetch('/api/cards/pdf-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Gagal menerapkan pengaturan ke server');
+      }
+
+      const activeCount = cards.filter((c) => c.includeInPdf !== false).length;
+      showToast(`Pengaturan berhasil diterapkan! ${activeCount} dari ${cards.length} indikator aktif di Ringkasan PDF.`);
+      setIsPdfDirty(false);
+      setClientCardsCache([...cards]);
+    } catch (err) {
+      console.error('Apply PDF settings error:', err);
+      const activeCount = cards.filter((c) => c.includeInPdf !== false).length;
+      showToast(`Pengaturan diterapkan ke sesi aktif! (${activeCount} indikator aktif)`);
+      setIsPdfDirty(false);
+    } finally {
+      setIsApplyingPdfSettings(false);
     }
   };
 
@@ -320,28 +487,81 @@ export const CmsAdminView: React.FC = () => {
     }
   };
 
+  // Number input handlers with automatic thousands dots
+  const handleCapaianNumberChange = (raw: string) => {
+    const formatted = formatIndonesianNumber(raw);
+    setNumberCapaian(formatted);
+    // Automatically mirror into 2026 annual row
+    setAnnualRows((prev) => ({
+      ...prev,
+      2026: { ...prev[2026], capaian: formatted },
+    }));
+  };
+
+  const handleTargetNumberChange = (raw: string) => {
+    const formatted = formatIndonesianNumber(raw);
+    setNumberTarget(formatted);
+    // Automatically mirror into 2026 annual row
+    setAnnualRows((prev) => ({
+      ...prev,
+      2026: { ...prev[2026], target: formatted },
+    }));
+  };
+
+  // Live percentage calculation based on metric type
+  const formLivePercentage = useMemo<number | null>(() => {
+    if (metricType === 'number') {
+      const c = parseFloat(unformatIndonesianNumber(numberCapaian));
+      const t = parseFloat(unformatIndonesianNumber(numberTarget));
+      if (!isNaN(c) && !isNaN(t) && t > 0) {
+        return Number(((c / t) * 100).toFixed(1));
+      }
+      return null;
+    }
+    if (metricType === 'percent') {
+      const c = parseFloat(percentCapaian.replace(',', '.'));
+      if (!isNaN(c)) return c;
+      return null;
+    }
+    return null;
+  }, [metricType, numberCapaian, numberTarget, percentCapaian]);
+
   // Open Create View
   const openCreateView = () => {
     const defaultPillar = selectedPillar !== 'all' ? selectedPillar : 'pendidikan';
     const defaultCategory = selectedCategory !== 'all' ? selectedCategory : 'PKPN';
     const isIsuStrategis = defaultCategory === 'Isu Strategis';
 
-    setValueFormat(isIsuStrategis ? 'text' : 'number');
-    setTargetFormat(isIsuStrategis ? 'text' : 'number');
+    setMetricType(isIsuStrategis ? 'text' : 'number');
+    setTargetYear('2026');
+    setNumberCapaian('');
+    setNumberTarget('');
+    setPercentCapaian('');
+    setPercentTarget('100');
+    setTextCapaian(isIsuStrategis ? '—' : '');
+    setTextTarget(isIsuStrategis ? 'Target: Belum Ditetapkan' : '');
 
     setFormData({
       pillarId: defaultPillar,
       category: defaultCategory,
       title: '',
-      value: isIsuStrategis ? '—' : '',
       unit: '',
       status: isIsuStrategis ? 'Menunggu Data Realisasi' : 'Realisasi 2026',
-      target: isIsuStrategis ? 'Target: Belum Ditetapkan' : '',
       subtext: '',
       description: '',
       picKementerian: '',
       isActive: true,
     });
+
+    setAnnualRows({
+      2025: { target: '', capaian: '' },
+      2026: { target: '', capaian: '' },
+      2027: { target: '', capaian: '' },
+      2028: { target: '', capaian: '' },
+      2029: { target: '', capaian: '' },
+    });
+
+    setKendalaList([]);
     setEditingCardId(null);
     setViewMode('create');
   };
@@ -349,8 +569,37 @@ export const CmsAdminView: React.FC = () => {
   // Open Edit View
   const openEditView = (card: CmsCardItem) => {
     setEditingCardId(card.id);
-    setValueFormat(detectMetricFormat(card.value, 'text'));
-    setTargetFormat(detectMetricFormat(card.target, 'text'));
+
+    // Detect metric type
+    const isPercent = card.unit === '%' || card.value.includes('%');
+    const isMilestone = card.isMilestone || card.value === '—' || !/\d/.test(card.value);
+
+    let detectedType: MetricType = 'number';
+    if (isPercent) {
+      detectedType = 'percent';
+    } else if (isMilestone) {
+      detectedType = 'text';
+    }
+
+    setMetricType(detectedType);
+
+    // Extract numbers or text
+    if (detectedType === 'number') {
+      const cleanVal = formatIndonesianNumber(card.value);
+      setNumberCapaian(cleanVal);
+
+      // Extract target number from string like "Target 2026: 80.282 Satuan Pendidikan"
+      const tDigits = card.target.replace(/[^0-9.]/g, '').split('.')[0] ? card.target.match(/[\d.]+/)?.[0] || '' : '';
+      setNumberTarget(tDigits ? formatIndonesianNumber(tDigits) : '');
+    } else if (detectedType === 'percent') {
+      const cleanVal = card.value.replace('%', '').trim();
+      setPercentCapaian(cleanVal);
+      const cleanTgt = card.target.replace(/[^0-9,.]/g, '').trim() || '100';
+      setPercentTarget(cleanTgt);
+    } else {
+      setTextCapaian(card.value);
+      setTextTarget(card.target);
+    }
 
     setFormData({
       id: card.id,
@@ -358,45 +607,62 @@ export const CmsAdminView: React.FC = () => {
       pillarId: card.pillarId,
       category: card.category,
       title: card.title,
-      value: card.value,
       unit: card.unit || '',
       status: card.status,
-      target: card.target,
       subtext: card.subtext || '',
       description: card.description || '',
       picKementerian: card.picKementerian || '',
       isActive: card.isActive,
     });
+
+    // Extract annual targets if available
+    const rawAnnual = (card.annualTargets as Record<string, { target: string; capaian: string }>) || {};
+    setAnnualRows({
+      2025: rawAnnual[2025] || { target: '', capaian: '' },
+      2026: rawAnnual[2026] || {
+        target: detectedType === 'number' ? formatIndonesianNumber(card.target) : card.target,
+        capaian: detectedType === 'number' ? formatIndonesianNumber(card.value) : card.value,
+      },
+      2027: rawAnnual[2027] || { target: '', capaian: '' },
+      2028: rawAnnual[2028] || { target: '', capaian: '' },
+      2029: rawAnnual[2029] || { target: '', capaian: '' },
+    });
+
+    // Extract kendala list
+    const rawKendala = (card.kendalaList as KendalaDetailItem[]) || [];
+    setKendalaList(rawKendala);
+
     setViewMode('edit');
   };
 
-  // Template pre-fill handler
-  const handleSelectTemplate = (slugOrId: string) => {
-    if (!slugOrId) return;
-    const templateCard = cards.find((c) => c.slug === slugOrId || c.id === slugOrId);
-    if (!templateCard) return;
-
-    setValueFormat(detectMetricFormat(templateCard.value, 'text'));
-    setTargetFormat(detectMetricFormat(templateCard.target, 'text'));
-
-    setFormData((prev) => ({
+  // Add / Remove Kendala Item
+  const handleAddKendala = () => {
+    setKendalaList((prev) => [
       ...prev,
-      pillarId: templateCard.pillarId,
-      category: templateCard.category,
-      title: `${templateCard.title} (Salinan)`,
-      value: templateCard.value,
-      unit: templateCard.unit || '',
-      status: templateCard.status,
-      target: templateCard.target,
-      subtext: templateCard.subtext || '',
-      description: templateCard.description || '',
-      picKementerian: templateCard.picKementerian || '',
-      isActive: templateCard.isActive,
-    }));
-    showToast(`Data disalin dari "${templateCard.title}"`);
+      {
+        id: `knd_${Date.now()}`,
+        title: '',
+        kendala: '',
+        tindakLanjut: '',
+        klTerkait: formData.picKementerian || '',
+        urgensi: 'Tinggi',
+      },
+    ]);
   };
 
-  // Save Form (Create or Update)
+  const handleUpdateKendala = (index: number, field: keyof KendalaDetailItem, val: string) => {
+    setKendalaList((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: val };
+      return next;
+    });
+  };
+
+  const handleRemoveKendala = (index: number) => {
+    setKendalaList((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Save Form (Create or Update Card & Connected Details)
   const handleSaveForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) {
@@ -404,12 +670,43 @@ export const CmsAdminView: React.FC = () => {
       return;
     }
 
-    const computedPercent =
-      valueFormat === 'number' && targetFormat === 'number' ? formLivePercentage : null;
+    let finalValue = '';
+    let finalTarget = '';
+    let finalUnit = formData.unit.trim();
+    let finalIsMilestone = false;
+    let finalMilestoneContent: string | null = null;
+    let finalPercent: number | null = null;
+
+    if (metricType === 'number') {
+      finalValue = numberCapaian.trim() || '0';
+      const cleanTargetNum = numberTarget.trim();
+      finalTarget = cleanTargetNum
+        ? `Target ${targetYear}: ${cleanTargetNum}${finalUnit ? ` ${finalUnit}` : ''}`
+        : `Target ${targetYear}: Belum Ditetapkan`;
+      finalPercent = formLivePercentage;
+    } else if (metricType === 'percent') {
+      finalUnit = '%';
+      finalValue = percentCapaian.includes('%') ? percentCapaian.trim() : `${percentCapaian.trim()}%`;
+      finalTarget = `Target ${targetYear}: ${percentTarget.includes('%') ? percentTarget.trim() : `${percentTarget.trim()}%`}`;
+      finalPercent = formLivePercentage;
+    } else {
+      finalValue = textCapaian.trim() || '—';
+      finalTarget = textTarget.trim() || 'Target: Belum Ditetapkan';
+      finalIsMilestone = true;
+      finalMilestoneContent = textTarget.trim();
+      finalPercent = null;
+    }
 
     const payload = {
       ...formData,
-      percent: computedPercent,
+      value: finalValue,
+      target: finalTarget,
+      unit: finalUnit,
+      percent: finalPercent,
+      isMilestone: finalIsMilestone,
+      milestoneContent: finalMilestoneContent,
+      kendalaList: kendalaList,
+      annualTargets: annualRows,
     };
 
     setIsSaving(true);
@@ -422,16 +719,13 @@ export const CmsAdminView: React.FC = () => {
         });
         if (res.ok) {
           const json = await res.json();
-          const updated = cards.map((c) => (c.id === editingCardId ? json.data : c));
-          setCards(updated);
-          setClientCardsCache(updated);
-          showToast(`Indikator "${formData.title}" berhasil diperbarui`);
+          setCards((prev) => prev.map((c) => (c.id === editingCardId ? json.data : c)));
+          showToast(`Indikator "${formData.title}" dan rincian detail berhasil diperbarui`);
           setViewMode('list');
-          setEditingCardId(null);
         } else {
-          alert('Gagal menyimpan perubahan indikator');
+          alert('Gagal memperbarui indikator');
         }
-      } else if (viewMode === 'create') {
+      } else {
         const res = await fetch('/api/cards', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -439,64 +733,190 @@ export const CmsAdminView: React.FC = () => {
         });
         if (res.ok) {
           const json = await res.json();
-          const updated = [...cards, json.data];
-          setCards(updated);
-          setClientCardsCache(updated);
-          showToast(`Indikator baru "${formData.title}" berhasil ditambahkan`);
+          setCards((prev) => [json.data, ...prev]);
+          showToast(`Indikator "${formData.title}" dan rincian detail berhasil ditambahkan`);
           setViewMode('list');
         } else {
-          alert('Gagal menambahkan indikator baru');
+          alert('Gagal membuat indikator baru');
         }
       }
     } catch {
-      alert('Terjadi kesalahan jaringan saat menyimpan data');
+      alert('Terjadi kesalahan jaringan');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Live percentage calculation in form
-  const formLivePercentage =
-    valueFormat === 'text' || targetFormat === 'text'
-      ? null
-      : calculatePercentage(formData.value, formData.target);
+  // User Management actions
+  const openCreateUserModal = () => {
+    setEditingUser(null);
+    setUserFormData({
+      username: '',
+      name: '',
+      email: '',
+      password: '',
+      role: 'USER',
+    });
+    setUserError(null);
+    setUserModalOpen(true);
+  };
 
-  // Filtered cards list
+  const openEditUserModal = (u: CmsUserItem) => {
+    setEditingUser(u);
+    setUserFormData({
+      username: u.username,
+      name: u.name,
+      email: u.email || '',
+      password: '',
+      role: u.role,
+    });
+    setUserError(null);
+    setUserModalOpen(true);
+  };
+
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUserError(null);
+
+    if (!userFormData.name.trim()) {
+      setUserError('Nama lengkap wajib diisi.');
+      return;
+    }
+
+    if (!editingUser && !userFormData.username.trim()) {
+      setUserError('Username wajib diisi.');
+      return;
+    }
+
+    if (!editingUser && (!userFormData.password || userFormData.password.length < 6)) {
+      setUserError('Password wajib diisi minimal 6 karakter.');
+      return;
+    }
+
+    setIsSavingUser(true);
+    try {
+      if (editingUser) {
+        const res = await fetch(`/api/users/${editingUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: userFormData.name.trim(),
+            email: userFormData.email.trim() || null,
+            role: userFormData.role,
+            ...(userFormData.password ? { password: userFormData.password } : {}),
+          }),
+        });
+
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Gagal mengubah data pengguna');
+
+        setUsersList((prev) => prev.map((u) => (u.id === editingUser.id ? json.data : u)));
+        showToast(`Akun pengguna @${editingUser.username} berhasil diperbarui`);
+        setUserModalOpen(false);
+      } else {
+        const res = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: userFormData.username.trim().toLowerCase(),
+            name: userFormData.name.trim(),
+            email: userFormData.email.trim() || null,
+            password: userFormData.password,
+            role: userFormData.role,
+          }),
+        });
+
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Gagal membuat pengguna baru');
+
+        setUsersList((prev) => [...prev, json.data]);
+        showToast(`Akun pengguna @${json.data.username} berhasil dibuat`);
+        setUserModalOpen(false);
+      }
+    } catch (err: unknown) {
+      setUserError(err instanceof Error ? err.message : 'Terjadi kesalahan sistem');
+    } finally {
+      setIsSavingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async (u: CmsUserItem) => {
+    if (!confirm(`Hapus akun pengguna "${u.name}" (@${u.username})?`)) return;
+
+    try {
+      const res = await fetch(`/api/users/${u.id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || 'Gagal menghapus pengguna');
+        return;
+      }
+      setUsersList((prev) => prev.filter((item) => item.id !== u.id));
+      showToast(`Akun @${u.username} berhasil dihapus`);
+    } catch {
+      alert('Terjadi kesalahan jaringan saat menghapus pengguna');
+    }
+  };
+
+  // Filtered Cards
   const filteredCards = useMemo(() => {
-    return cards.filter((c) => {
-      if (selectedPillar !== 'all' && c.pillarId !== selectedPillar) return false;
-      if (selectedCategory !== 'all' && c.category !== selectedCategory) return false;
-      if (searchQuery.trim()) {
+    return cards.filter((card) => {
+      if (selectedPillar !== 'all' && card.pillarId !== selectedPillar) return false;
+      if (selectedCategory !== 'all' && card.category !== selectedCategory) return false;
+      if (searchQuery.trim() !== '') {
         const q = searchQuery.toLowerCase();
-        const matchTitle = c.title.toLowerCase().includes(q);
-        const matchValue = c.value.toLowerCase().includes(q);
-        const matchTarget = c.target.toLowerCase().includes(q);
-        const matchPic = (c.picKementerian || '').toLowerCase().includes(q);
-        return matchTitle || matchValue || matchTarget || matchPic;
+        const matchesTitle = card.title.toLowerCase().includes(q);
+        const matchesPIC = (card.picKementerian || '').toLowerCase().includes(q);
+        const matchesTarget = (card.target || '').toLowerCase().includes(q);
+        const matchesUnit = (card.unit || '').toLowerCase().includes(q);
+        return matchesTitle || matchesPIC || matchesTarget || matchesUnit;
       }
       return true;
     });
   }, [cards, selectedPillar, selectedCategory, searchQuery]);
 
+  // Paginated Cards (10 items / page)
+  const totalPages = Math.max(1, Math.ceil(filteredCards.length / itemsPerPage));
+  const paginatedCards = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredCards.slice(start, start + itemsPerPage);
+  }, [filteredCards, currentPage, itemsPerPage]);
+
+  // Filtered Cards for PDF Settings
+  const pdfFilteredCards = useMemo(() => {
+    return cards.filter((card) => {
+      if (pdfPillarFilter !== 'all' && card.pillarId !== pdfPillarFilter) return false;
+      if (pdfSearchQuery.trim() !== '') {
+        const q = pdfSearchQuery.toLowerCase();
+        const matchesTitle = card.title.toLowerCase().includes(q);
+        const matchesSubtext = (card.subtext || '').toLowerCase().includes(q);
+        const matchesPIC = (card.picKementerian || '').toLowerCase().includes(q);
+        const matchesTarget = (card.target || '').toLowerCase().includes(q);
+        return matchesTitle || matchesSubtext || matchesPIC || matchesTarget;
+      }
+      return true;
+    });
+  }, [cards, pdfPillarFilter, pdfSearchQuery]);
+
+  const totalPdfCards = cards.length;
+  const includedPdfCount = cards.filter((c) => c.includeInPdf !== false).length;
+  const excludedPdfCount = totalPdfCards - includedPdfCount;
+
   // Pillar counts
   const pillarCounts = useMemo(() => {
     const counts: Record<PillarTab, number> = {
       all: cards.length,
-      pendidikan: cards.filter((c) => c.pillarId === 'pendidikan').length,
-      kesehatan: cards.filter((c) => c.pillarId === 'kesehatan').length,
-      bencana: cards.filter((c) => c.pillarId === 'bencana').length,
-      kemiskinan: cards.filter((c) => c.pillarId === 'kemiskinan').length,
+      pendidikan: 0,
+      kesehatan: 0,
+      bencana: 0,
+      kemiskinan: 0,
     };
+    cards.forEach((c) => {
+      if (counts[c.pillarId] !== undefined) {
+        counts[c.pillarId]++;
+      }
+    });
     return counts;
   }, [cards]);
-
-  // Stats for the active view
-  const stats = useMemo(() => {
-    const total = filteredCards.length;
-    const active = filteredCards.filter((c) => c.isActive).length;
-    const hidden = total - active;
-    return { total, active, hidden };
-  }, [filteredCards]);
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row font-sans text-slate-900 antialiased">
@@ -509,14 +929,20 @@ export const CmsAdminView: React.FC = () => {
       )}
 
       {/* =================================================================== */}
-      {/* 1. SLATE CMS SIDEBAR (Sticky Navigation, Always Visible On Scroll) */}
+      {/* 1. CMS SIDEBAR (Clean, Official Logo, No Administrator PMK box)      */}
       {/* =================================================================== */}
       <aside className="w-full md:w-72 bg-[#0f172a] text-slate-200 flex flex-col shrink-0 border-r border-slate-800/80 md:sticky md:top-0 md:h-screen md:max-h-screen z-40">
-        {/* Sidebar Brand Header */}
+        {/* Sidebar Brand Header with Official Emblem */}
         <div className="p-6 border-b border-slate-800/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#4F83CC] flex items-center justify-center text-white font-extrabold text-sm shadow-xs">
-              PMK
+            <div className="w-10 h-10 rounded-full bg-white/10 p-0.5 flex items-center justify-center shrink-0 border border-white/10 shadow-xs overflow-hidden">
+              <Image
+                src="/images/logo-pmk-garuda.png"
+                alt="Logo Kemenko PMK"
+                width={38}
+                height={38}
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <div className="font-extrabold text-sm tracking-tight text-white leading-tight">
@@ -538,27 +964,9 @@ export const CmsAdminView: React.FC = () => {
           </button>
         </div>
 
-        {/* Admin Profile Box */}
-        <div className="p-4 mx-4 my-4 bg-slate-800/50 rounded-xl border border-slate-700/60 flex items-center gap-3 shrink-0">
-          <div className="w-9 h-9 rounded-lg bg-[#4F83CC] text-white font-bold text-xs flex items-center justify-center shrink-0">
-            AP
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-bold text-white truncate">
-              {user?.name || 'Administrator PMK'}
-            </div>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">
-                ADMINISTRATOR
-              </span>
-            </div>
-          </div>
-        </div>
-
         {/* Sidebar Navigation Items */}
-        <div className={`flex-1 px-4 space-y-6 overflow-y-auto min-h-0 ${mobileSidebarOpen ? 'block' : 'hidden md:block'}`}>
-          {/* Group 1: Pilar Indikator */}
+        <div className={`flex-1 px-4 py-5 space-y-6 overflow-y-auto min-h-0 ${mobileSidebarOpen ? 'block' : 'hidden md:block'}`}>
+          {/* Group 1: Kelola Indikator Pilar */}
           <div className="space-y-1">
             <div className="px-3 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               Kelola Indikator Pilar
@@ -578,7 +986,7 @@ export const CmsAdminView: React.FC = () => {
                     setViewMode('list');
                     setMobileSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
                     isActive
                       ? 'bg-[#4F83CC] text-white shadow-xs font-bold'
                       : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
@@ -589,7 +997,7 @@ export const CmsAdminView: React.FC = () => {
                     <span>{cfg.label}</span>
                   </div>
                   <span
-                    className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
                       isActive ? 'bg-[#3b6eb3] text-white' : 'bg-slate-800 text-slate-400'
                     }`}
                   >
@@ -600,7 +1008,7 @@ export const CmsAdminView: React.FC = () => {
             })}
           </div>
 
-          {/* Group 2: Pengaturan Sistem */}
+          {/* Group 2: Konfigurasi */}
           <div className="space-y-1 pt-4 border-t border-slate-800/80">
             <div className="px-3 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               Konfigurasi
@@ -612,14 +1020,46 @@ export const CmsAdminView: React.FC = () => {
                 setViewMode('metadata');
                 setMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
                 viewMode === 'metadata'
                   ? 'bg-[#4F83CC] text-white shadow-xs font-bold'
                   : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
               }`}
             >
               <Sliders className="h-4 w-4 shrink-0 stroke-[1.75]" />
-              <span>Metadata Dashboard</span>
+              <span>Informasi Tampilan Depan</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('pdf-settings');
+                setMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                viewMode === 'pdf-settings'
+                  ? 'bg-[#4F83CC] text-white shadow-xs font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+              }`}
+            >
+              <FileDown className="h-4 w-4 shrink-0 stroke-[1.75]" />
+              <span>Pengaturan Unduh Ringkasan</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('users');
+                setMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                viewMode === 'users'
+                  ? 'bg-[#4F83CC] text-white shadow-xs font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+              }`}
+            >
+              <Users className="h-4 w-4 shrink-0 stroke-[1.75]" />
+              <span>Manajemen Pengguna</span>
             </button>
           </div>
 
@@ -631,7 +1071,7 @@ export const CmsAdminView: React.FC = () => {
 
             <Link
               href="/dashboard/eksekutif?view=ikhtisar"
-              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer"
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2.5">
                 <ExternalLink className="h-4 w-4 shrink-0 text-slate-400 stroke-[1.75]" />
@@ -646,7 +1086,7 @@ export const CmsAdminView: React.FC = () => {
                 await logout();
                 window.location.href = '/login';
               }}
-              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-rose-400 hover:bg-rose-950/30 hover:text-rose-300 transition-colors cursor-pointer"
+              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-950/30 hover:text-rose-300 transition-colors cursor-pointer"
             >
               <LogOut className="h-4 w-4 shrink-0 stroke-[1.75]" />
               <span>Keluar dari CMS</span>
@@ -661,7 +1101,7 @@ export const CmsAdminView: React.FC = () => {
       </aside>
 
       {/* =================================================================== */}
-      {/* 2. MAIN CMS CONTENT AREA (8pt Grid Rhythm & Exact Height Standards) */}
+      {/* 2. MAIN CMS CONTENT AREA                                            */}
       {/* =================================================================== */}
       <main className="flex-1 flex flex-col min-w-0 bg-slate-100 min-h-screen">
         {/* TOP ADMINISTRATIVE HEADER BAR */}
@@ -670,9 +1110,13 @@ export const CmsAdminView: React.FC = () => {
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
               <span>CMS Administrator</span>
               <span>/</span>
-              <span className="text-[#4F83CC] font-bold capitalize">
+              <span className="text-[#4F83CC] font-bold">
                 {viewMode === 'metadata'
-                  ? 'Metadata Dashboard'
+                  ? 'Informasi Tampilan Depan'
+                  : viewMode === 'pdf-settings'
+                  ? 'Pengaturan Unduh Ringkasan'
+                  : viewMode === 'users'
+                  ? 'Manajemen Pengguna'
                   : viewMode === 'create'
                   ? 'Tambah Indikator Baru'
                   : viewMode === 'edit'
@@ -684,24 +1128,28 @@ export const CmsAdminView: React.FC = () => {
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               {viewMode === 'metadata'
-                ? 'Pengaturan Metadata Dashboard'
+                ? 'Pengaturan Informasi Halaman Depan'
+                : viewMode === 'pdf-settings'
+                ? 'Pengaturan Indikator Ringkasan Eksekutif (PDF)'
+                : viewMode === 'users'
+                ? 'Kelola Akun & Hak Akses Pengguna'
                 : viewMode === 'create'
                 ? 'Tambah Indikator Program Baru'
                 : viewMode === 'edit'
                 ? `Edit: ${formData.title}`
-                : `Manajemen Indikator (${stats.total} Program)`}
+                : `Manajemen Indikator (${filteredCards.length} Program)`}
             </h1>
           </div>
 
-          {/* Action Button Set (Strict 40px Height Standard for Primary Buttons) */}
+          {/* Action Button Set */}
           <div className="flex flex-wrap items-center gap-2">
-            {viewMode === 'list' ? (
+            {viewMode === 'list' && (
               <>
                 <button
                   type="button"
                   onClick={handleResetDefault}
                   title="Sinkronisasi ulang jika data terhapus atau kosong"
-                  className="h-10 px-4 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-2xs transition-colors"
+                  className="h-10 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-2xs transition-colors"
                 >
                   <RotateCcw className="h-4 w-4 text-slate-500 stroke-[1.75]" />
                   <span>Sinkronisasi Data Master</span>
@@ -710,17 +1158,72 @@ export const CmsAdminView: React.FC = () => {
                 <button
                   type="button"
                   onClick={openCreateView}
-                  className="h-10 px-4 rounded-lg bg-[#4F83CC] hover:bg-[#3f72bb] text-white text-xs font-bold flex items-center gap-2 shadow-xs cursor-pointer transition-colors"
+                  className="h-10 px-4 rounded-xl bg-[#4F83CC] hover:bg-[#3f72bb] text-white text-xs font-bold flex items-center gap-2 shadow-xs cursor-pointer transition-colors"
                 >
                   <Plus className="h-4 w-4 stroke-[2]" />
                   <span>Tambah Indikator Baru</span>
                 </button>
               </>
-            ) : (
+            )}
+
+            {viewMode === 'pdf-settings' && (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isApplyingPdfSettings}
+                  onClick={handleApplyPdfSettings}
+                  className={`h-10 px-4 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs cursor-pointer transition-all ${
+                    isPdfDirty
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white ring-2 ring-blue-400 ring-offset-2 animate-pulse'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  } disabled:opacity-50`}
+                  title="Terapkan dan simpan semua perubahan ke database & dokumen unduhan PDF"
+                >
+                  {isApplyingPdfSettings ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Menerapkan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCheck className="h-4 w-4 stroke-[2.5]" />
+                      <span>{isPdfDirty ? 'Terapkan Perubahan' : 'Terapkan Pengaturan Unduhan'}</span>
+                    </>
+                  )}
+                </button>
+
+                <ExecutivePdfButton
+                  cards={cards}
+                  currentPillar={pdfPillarFilter !== 'all' ? pdfPillarFilter : undefined}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className="h-10 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-2xs transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4 stroke-[1.75]" />
+                  <span>Kembali ke Daftar</span>
+                </button>
+              </div>
+            )}
+
+            {viewMode === 'users' && (
+              <button
+                type="button"
+                onClick={openCreateUserModal}
+                className="h-10 px-4 rounded-xl bg-[#4F83CC] hover:bg-[#3f72bb] text-white text-xs font-bold flex items-center gap-2 shadow-xs cursor-pointer transition-colors"
+              >
+                <UserPlus className="h-4 w-4" />
+                <span>Tambah Pengguna Baru</span>
+              </button>
+            )}
+
+            {(viewMode === 'create' || viewMode === 'edit' || viewMode === 'metadata') && (
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
-                className="h-10 px-4 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-2xs transition-colors"
+                className="h-10 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-2xs transition-colors"
               >
                 <ArrowLeft className="h-4 w-4 stroke-[1.75]" />
                 <span>Kembali ke Daftar</span>
@@ -732,66 +1235,66 @@ export const CmsAdminView: React.FC = () => {
         {/* WORKSPACE CONTENT ROUTER */}
         <div className="flex-1 p-6 space-y-6">
           {/* =============================================================== */}
-          {/* VIEW MODE A: LIST TABLE                                         */}
+          {/* VIEW MODE A: LIST TABLE (De-nested, 10 Items / Page Pagination) */}
           {/* =============================================================== */}
           {viewMode === 'list' && (
-            <div className="space-y-6">
-              {/* Filter Tabs & Search Bar */}
-              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-                {/* Category Tabs (Clean & Solid) */}
-                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+              {/* Unified Table Header with Filters & Search (No extra card-in-card) */}
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                {/* Category Filter Chips */}
+                <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80">
                   <button
                     type="button"
                     onClick={() => setSelectedCategory('all')}
-                    className={`h-8 px-3 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                    className={`h-8 px-4 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       selectedCategory === 'all'
-                        ? 'bg-[#4F83CC] text-white shadow-2xs'
+                        ? 'bg-white text-slate-900 shadow-xs'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    Semua ({cards.filter((c) => selectedPillar === 'all' || c.pillarId === selectedPillar).length})
+                    Semua
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setSelectedCategory('PKPN')}
-                    className={`h-8 px-3 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                    className={`h-8 px-4 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       selectedCategory === 'PKPN'
-                        ? 'bg-[#4F83CC] text-white shadow-2xs'
+                        ? 'bg-white text-slate-900 shadow-xs'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    PKPN ({cards.filter((c) => (selectedPillar === 'all' || c.pillarId === selectedPillar) && c.category === 'PKPN').length})
+                    PKPN
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setSelectedCategory('Isu Strategis')}
-                    className={`h-8 px-3 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                    className={`h-8 px-4 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       selectedCategory === 'Isu Strategis'
-                        ? 'bg-[#4F83CC] text-white shadow-2xs'
+                        ? 'bg-white text-slate-900 shadow-xs'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    Isu Strategis ({cards.filter((c) => (selectedPillar === 'all' || c.pillarId === selectedPillar) && c.category === 'Isu Strategis').length})
+                    Isu Strategis
                   </button>
                 </div>
 
-                {/* Quick Search Input (40px Height) */}
+                {/* Quick Search Bar */}
                 <div className="relative w-full md:w-80">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 stroke-[1.75]" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 stroke-[1.75]" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Cari indikator, K/L, target..."
-                    className="h-10 w-full pl-9 pr-8 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                    className="h-10 w-full pl-10 pr-8 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
                   />
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
                     >
                       ✕
                     </button>
@@ -800,150 +1303,1306 @@ export const CmsAdminView: React.FC = () => {
               </div>
 
               {/* Data Table */}
-              <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+                      <th className="py-3 px-4 w-12 text-center">No</th>
+                      <th className="py-3 px-4 min-w-[220px]">Program / Indikator</th>
+                      <th className="py-3 px-4 w-36">Pilar</th>
+                      <th className="py-3 px-4 w-36">Realisasi</th>
+                      <th className="py-3 px-4 w-40">Target</th>
+                      <th className="py-3 px-4 w-24 text-center">Progres</th>
+                      <th className="py-3 px-4 w-28 text-center">Status</th>
+                      <th className="py-3 px-4 w-24 text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-slate-500">
+                          <Loader2 className="h-6 w-6 animate-spin mx-auto text-[#4F83CC] mb-2" />
+                          <span>Memuat data indikator...</span>
+                        </td>
+                      </tr>
+                    ) : filteredCards.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-slate-500 space-y-3">
+                          <p className="font-semibold">Tidak ada indikator yang sesuai kriteria pencarian.</p>
+                          <button
+                            type="button"
+                            onClick={handleResetDefault}
+                            className="h-10 px-4 rounded-xl bg-[#4F83CC] text-white font-bold text-xs hover:bg-[#3f72bb] cursor-pointer"
+                          >
+                            Muat Ulang 28 Data Master Resmi
+                          </button>
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedCards.map((card, idx) => {
+                        const calculatedPct = calculatePercentage(card.value, card.target);
+                        const displayPct = card.percent !== null && card.percent !== undefined ? card.percent : calculatedPct;
+                        const rowNumber = (currentPage - 1) * itemsPerPage + idx + 1;
+
+                        return (
+                          <tr key={card.id} className="hover:bg-slate-50/80 transition-colors">
+                            {/* Numbering */}
+                            <td className="py-3.5 px-4 text-center text-slate-400 font-medium">
+                              {rowNumber}
+                            </td>
+
+                            {/* Title & PIC */}
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-slate-900 leading-snug">
+                                {card.title}
+                              </div>
+                              <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                                <span className="font-semibold text-slate-600">{card.picKementerian || 'Kemenko PMK'}</span>
+                                <span>&bull;</span>
+                                <span className="text-slate-400 font-mono text-[10px]">{card.slug}</span>
+                              </div>
+                            </td>
+
+                            {/* Pillar */}
+                            <td className="py-3.5 px-4">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 capitalize border border-slate-200">
+                                {card.pillarId}
+                              </span>
+                            </td>
+
+                            {/* Value / Realisasi */}
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-slate-900 tabular-nums">
+                                {card.value} {card.unit && !card.value.includes(card.unit) ? card.unit : ''}
+                              </div>
+                            </td>
+
+                            {/* Target */}
+                            <td className="py-3.5 px-4 text-slate-700">
+                              <div className="line-clamp-2 leading-relaxed">
+                                {card.target}
+                              </div>
+                            </td>
+
+                            {/* Percentage / Progress */}
+                            <td className="py-3.5 px-4 text-center">
+                              {displayPct !== null ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                                  {displayPct}%
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 font-bold">—</span>
+                              )}
+                            </td>
+
+                            {/* Status Toggle */}
+                            <td className="py-3.5 px-4 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleActive(card)}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer transition-colors ${
+                                  card.isActive
+                                    ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                                    : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                                }`}
+                              >
+                                {card.isActive ? (
+                                  <>
+                                    <Eye className="h-3 w-3" />
+                                    <span>Aktif</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <EyeOff className="h-3 w-3" />
+                                    <span>Nonaktif</span>
+                                  </>
+                                )}
+                              </button>
+                            </td>
+
+                            {/* Actions */}
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditView(card)}
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                  title="Edit Indikator & Rincian Detail"
+                                >
+                                  <Pencil className="h-3.5 w-3.5 stroke-[2]" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteCard(card)}
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                  title="Hapus Indikator"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 stroke-[2]" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Footer (Exactly 10 Items / Page) */}
+              <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-600 font-medium">
+                <div>
+                  Menampilkan{' '}
+                  <span className="font-bold text-slate-900">
+                    {filteredCards.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}
+                  </span>
+                  –
+                  <span className="font-bold text-slate-900">
+                    {Math.min(currentPage * itemsPerPage, filteredCards.length)}
+                  </span>{' '}
+                  dari <span className="font-bold text-slate-900">{filteredCards.length}</span> indikator
+                </div>
+
+                <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                  <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="h-8 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                    <span>Sebelumnya</span>
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => {
+                    const isCurrent = pg === currentPage;
+                    return (
+                      <button
+                        key={pg}
+                        type="button"
+                        onClick={() => setCurrentPage(pg)}
+                        className={`h-8 w-8 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
+                          isCurrent
+                            ? 'bg-[#4F83CC] text-white shadow-xs'
+                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {pg}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="h-8 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <span>Berikutnya</span>
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* =============================================================== */}
+          {/* VIEW MODE B: CREATE / EDIT INDICATOR WITH FULL CONNECTED DETAIL */}
+          {/* =============================================================== */}
+          {(viewMode === 'create' || viewMode === 'edit') && (
+            <div className="max-w-4xl mx-auto space-y-6">
+              <form onSubmit={handleSaveForm} className="space-y-6">
+                {/* Section 1: Identitas & Klasifikasi */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+                  <h2 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center justify-between">
+                    <span>1. Identitas Program & Pilar Strategis</span>
+                    <span className="text-[11px] text-slate-400 font-medium">Langkah 1 dari 4</span>
+                  </h2>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Pilar Kemenko PMK <span className="text-rose-600">*</span>
+                      </label>
+                      <select
+                        value={formData.pillarId}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            pillarId: e.target.value as CmsCardItem['pillarId'],
+                          }))
+                        }
+                        className="h-10 w-full px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC]"
+                      >
+                        <option value="pendidikan">Pilar Pendidikan</option>
+                        <option value="kesehatan">Pilar Kesehatan</option>
+                        <option value="bencana">Pilar Kebencanaan</option>
+                        <option value="kemiskinan">Pilar Penurunan Kemiskinan</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Kategori Program <span className="text-rose-600">*</span>
+                      </label>
+                      <select
+                        value={formData.category}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            category: e.target.value as CmsCardItem['category'],
+                          }))
+                        }
+                        className="h-10 w-full px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC]"
+                      >
+                        <option value="PKPN">PKPN (Program Kerja Prioritas Nasional)</option>
+                        <option value="Isu Strategis">Isu Strategis Prioritas</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Judul Indikator / Program <span className="text-rose-600">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.title}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                      placeholder="Contoh: Revitalisasi Satuan Pendidikan"
+                      className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      K/L Penanggung Jawab (PIC Pelaksana)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.picKementerian}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, picKementerian: e.target.value }))}
+                      placeholder="Contoh: Kemendikdasmen, Kemenkes, BNPB, Kemensos"
+                      className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Section 2: Target, Capaian & Kalkulasi Sesuai Satuan */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-900">
+                        2. Target, Capaian & Kalkulasi Persentase Sesuai Satuan
+                      </h2>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Input dipisahkan spesifik sesuai satuannya. Nilai ribuan otomatis diformat dengan tanda titik.
+                      </p>
+                    </div>
+
+                    {/* Metric Type Selector */}
+                    <div className="inline-flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => setMetricType('number')}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          metricType === 'number'
+                            ? 'bg-white text-[#4F83CC] shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <Hash className="h-3.5 w-3.5" />
+                        <span>Angka / Jumlah</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMetricType('percent')}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          metricType === 'percent'
+                            ? 'bg-white text-[#4F83CC] shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <Percent className="h-3.5 w-3.5" />
+                        <span>Persen (%)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMetricType('text')}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          metricType === 'text'
+                            ? 'bg-white text-[#4F83CC] shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <Type className="h-3.5 w-3.5" />
+                        <span>Kualitatif</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* FORM FIELDS PER METRIC TYPE */}
+                  {metricType === 'number' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                            Satuan Unit <span className="text-rose-600">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={formData.unit}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, unit: e.target.value }))}
+                            placeholder="Contoh: Satuan Pendidikan, Sekolah, Jiwa"
+                            className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                            Tahun Target
+                          </label>
+                          <select
+                            value={targetYear}
+                            onChange={(e) => setTargetYear(e.target.value)}
+                            className="h-10 w-full px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC]"
+                          >
+                            <option value="2025">Tahun 2025</option>
+                            <option value="2026">Tahun 2026</option>
+                            <option value="2027">Tahun 2027</option>
+                            <option value="2028">Tahun 2028</option>
+                            <option value="2029">Tahun 2029</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                            Status Realisasi
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.status}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
+                            placeholder="Contoh: Realisasi 2026"
+                            className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                            Capaian Realisasi (Hanya Angka) <span className="text-rose-600">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            required
+                            value={numberCapaian}
+                            onChange={(e) => handleCapaianNumberChange(e.target.value)}
+                            placeholder="Contoh: 36.669"
+                            className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 tabular-nums focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                          />
+                          <p className="text-[11px] text-slate-400 mt-1">
+                            Ketik angka, tanda titik otomatis ditambahkan saat mencapai ribuan.
+                          </p>
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-xs font-bold text-slate-700">
+                              Target Kinerja (Hanya Angka) <span className="text-rose-600">*</span>
+                            </label>
+                            {formLivePercentage !== null && (
+                              <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                {formLivePercentage}% Tercapai
+                              </span>
+                            )}
+                          </div>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            required
+                            value={numberTarget}
+                            onChange={(e) => handleTargetNumberChange(e.target.value)}
+                            placeholder="Contoh: 80.282"
+                            className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 tabular-nums focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                          />
+                          <p className="text-[11px] text-slate-400 mt-1">
+                            Ketik angka target, format titik otomatis.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {metricType === 'percent' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                            Capaian Persentase (%) <span className="text-rose-600">*</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              required
+                              value={percentCapaian}
+                              onChange={(e) => setPercentCapaian(e.target.value.replace(/[^0-9,.]/g, ''))}
+                              placeholder="Contoh: 45,7 atau 75"
+                              className="h-10 w-full pl-3.5 pr-8 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 tabular-nums focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                              %
+                            </span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                            Target Persentase (%) <span className="text-rose-600">*</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              required
+                              value={percentTarget}
+                              onChange={(e) => setPercentTarget(e.target.value.replace(/[^0-9,.]/g, ''))}
+                              placeholder="Contoh: 100"
+                              className="h-10 w-full pl-3.5 pr-8 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 tabular-nums focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                              %
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {metricType === 'text' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                            Status / Realisasi Berjalan <span className="text-rose-600">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={textCapaian}
+                            onChange={(e) => setTextCapaian(e.target.value)}
+                            placeholder="Contoh: — atau Dalam Proses Penyiapan"
+                            className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                            Target Milestone / Jadwal <span className="text-rose-600">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={textTarget}
+                            onChange={(e) => setTextTarget(e.target.value)}
+                            placeholder="Contoh: Peluncuran 1 Studio Pusat pada Nov 2026"
+                            className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 3: Rincian Target & Realisasi Tahunan (2025–2029) */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-900">
+                        3. Rincian Target & Capaian Tahunan (2025–2029)
+                      </h2>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Tabel ini langsung tampil pada halaman detail indikator program.
+                      </p>
+                    </div>
+                    <span className="text-[11px] text-slate-400 font-medium">Langkah 3 dari 4</span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
+                      <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                        <tr>
+                          <th className="py-2.5 px-4 w-28">Tahun</th>
+                          <th className="py-2.5 px-4">Target (T)</th>
+                          <th className="py-2.5 px-4">Capaian Realisasi (C)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium">
+                        {[2025, 2026, 2027, 2028, 2029].map((yr) => (
+                          <tr key={yr} className="hover:bg-slate-50/50">
+                            <td className="py-2.5 px-4 font-bold text-slate-900">
+                              Tahun {yr} {yr === 2026 && <span className="text-[10px] text-blue-600 font-semibold">(Berjalan)</span>}
+                            </td>
+                            <td className="py-2.5 px-4">
+                              <input
+                                type="text"
+                                value={annualRows[yr]?.target || ''}
+                                onChange={(e) => {
+                                  const val = metricType === 'number' ? formatIndonesianNumber(e.target.value) : e.target.value;
+                                  setAnnualRows((prev) => ({
+                                    ...prev,
+                                    [yr]: { ...prev[yr], target: val },
+                                  }));
+                                }}
+                                placeholder={yr === 2026 ? numberTarget || 'Target tahun 2026' : 'Target tahunan'}
+                                className="h-9 w-full px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
+                              />
+                            </td>
+                            <td className="py-2.5 px-4">
+                              <input
+                                type="text"
+                                value={annualRows[yr]?.capaian || ''}
+                                onChange={(e) => {
+                                  const val = metricType === 'number' ? formatIndonesianNumber(e.target.value) : e.target.value;
+                                  setAnnualRows((prev) => ({
+                                    ...prev,
+                                    [yr]: { ...prev[yr], capaian: val },
+                                  }));
+                                }}
+                                placeholder={yr === 2026 ? numberCapaian || 'Realisasi tahun 2026' : '—'}
+                                className="h-9 w-full px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Section 4: Kendala & Catatan Pelaksanaan (Isu Strategis) */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-900">
+                        4. Kendala & Catatan Pelaksanaan (Isu Strategis)
+                      </h2>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Daftar kendala ini otomatis muncul pada popover kartu dan halaman detail program.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddKendala}
+                      className="h-8 px-3 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Tambah Kendala</span>
+                    </button>
+                  </div>
+
+                  {kendalaList.length === 0 ? (
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center text-xs text-slate-500">
+                      Belum ada kendala yang dicatat. Klik tombol <strong>+ Tambah Kendala</strong> jika terdapat isu pelaksanaan program.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {kendalaList.map((k, idx) => (
+                        <div
+                          key={k.id || idx}
+                          className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3 relative group"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-amber-500" />
+                              <span>Kendala #{idx + 1}</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveKendala(idx)}
+                              className="text-xs text-rose-600 hover:text-rose-800 font-semibold cursor-pointer"
+                            >
+                              Hapus Kendala
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                Ringkasan / Judul Kendala <span className="text-rose-600">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={k.title}
+                                onChange={(e) => handleUpdateKendala(idx, 'title', e.target.value)}
+                                placeholder="Contoh: Usulan Anggaran Belanja Tambahan (ABT)"
+                                className="h-9 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                K/L Terkait
+                              </label>
+                              <input
+                                type="text"
+                                value={k.klTerkait || ''}
+                                onChange={(e) => handleUpdateKendala(idx, 'klTerkait', e.target.value)}
+                                placeholder="Contoh: Kemenkeu, Kemenag"
+                                className="h-9 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                              Uraian Lengkap Kendala <span className="text-rose-600">*</span>
+                            </label>
+                            <textarea
+                              rows={2}
+                              required
+                              value={k.kendala}
+                              onChange={(e) => handleUpdateKendala(idx, 'kendala', e.target.value)}
+                              placeholder="Jelaskan kendala operasional, administratif, atau regulasi yang dihadapi..."
+                              className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                              Tindak Lanjut / Rekomendasi Orkestrasi PMK
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={k.tindakLanjut}
+                              onChange={(e) => handleUpdateKendala(idx, 'tindakLanjut', e.target.value)}
+                              placeholder="Langkah koordinasi dan tindak lanjut penyelesaian..."
+                              className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 5: Keterangan & Deskripsi Lengkap Kebijakan */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+                  <h2 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">
+                    5. Keterangan & Deskripsi Lengkap Kebijakan
+                  </h2>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Keterangan Ringkas (Subtext pada Kartu)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={formData.subtext}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, subtext: e.target.value }))}
+                      placeholder="Keterangan singkat indikator..."
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Deskripsi Lengkap Kebijakan / Program
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={formData.description}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                      placeholder="Uraian rinci dasar pelaksanaan dan kebijakan pengawalan Kemenko PMK..."
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] transition-all"
+                    />
+                  </div>
+
+                  {/* Toggle Aktif */}
+                  <div className="pt-2 flex items-center justify-between">
+                    <div>
+                      <label htmlFor="card-is-active" className="text-xs font-bold text-slate-900 block cursor-pointer">
+                        Tampilkan di Dashboard Utama
+                      </label>
+                      <span className="text-[11px] text-slate-500">
+                        Indikator akan langsung ditampilkan pada ikhtisar dan detail dashboard eksekutif.
+                      </span>
+                    </div>
+                    <input
+                      id="card-is-active"
+                      type="checkbox"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))}
+                      className="h-5 w-5 accent-[#4F83CC] rounded-md cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Form Action Buttons */}
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('list')}
+                    className="h-10 px-5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    Batal
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="h-10 px-6 rounded-xl bg-[#4F83CC] hover:bg-[#3f72bb] active:bg-[#33609f] disabled:bg-slate-300 text-white text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Menyimpan ke Database...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-4 w-4 stroke-[2]" />
+                        <span>Simpan Indikator & Detail Program</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* =============================================================== */}
+          {/* VIEW MODE C: INFORMASI TAMPILAN DEPAN (METADATA SETTINGS)        */}
+          {/* =============================================================== */}
+          {viewMode === 'metadata' && (
+            <div className="max-w-3xl mx-auto space-y-6">
+              <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className="h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4 stroke-[1.75]" />
+                  <span>Kembali ke Daftar</span>
+                </button>
+
+                <div className="text-xs font-semibold text-slate-500">
+                  Konfigurasi: <span className="text-[#4F83CC] font-bold">Informasi Tampilan Depan</span>
+                </div>
+              </div>
+
+              <form onSubmit={handleSaveMetadata} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+                <div className="border-b border-slate-100 pb-3">
+                  <h2 className="text-sm font-bold text-slate-900">
+                    Pengaturan Informasi Tampilan Halaman Depan
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Informasi ini ditampilkan pada judul utama, subjudul, dan tanggal cutoff laporan eksekutif.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Judul Utama Dashboard
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={metadata.title}
+                    onChange={(e) => setMetadata((prev) => ({ ...prev, title: e.target.value }))}
+                    className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Subjudul / Instansi
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={metadata.subtitle}
+                    onChange={(e) => setMetadata((prev) => ({ ...prev, subtitle: e.target.value }))}
+                    className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Tanggal Cutoff Data
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={metadata.cutoffDate}
+                      onChange={(e) => setMetadata((prev) => ({ ...prev, cutoffDate: e.target.value }))}
+                      className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Sebutan Jabatan Menteri
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={metadata.ministerTitle}
+                      onChange={(e) => setMetadata((prev) => ({ ...prev, ministerTitle: e.target.value }))}
+                      className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={isSavingMeta}
+                    className="h-10 px-6 rounded-xl bg-[#4F83CC] hover:bg-[#3f72bb] text-white text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    {isSavingMeta ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Menyimpan...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-4 w-4" />
+                        <span>Simpan Pengaturan Tampilan Depan</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* =============================================================== */}
+          {/* VIEW MODE D: MANAJEMEN PENGGUNA (USER MANAGEMENT)                */}
+          {/* =============================================================== */}
+          {viewMode === 'users' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+                <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-900">Daftar Akun Pengguna Terdaftar</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Kelola identitas, kata sandi, dan hak akses pengguna sistem eksekutif Kemenko PMK.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openCreateUserModal}
+                    className="h-9 px-4 rounded-xl bg-[#4F83CC] hover:bg-[#3f72bb] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors self-start sm:self-auto"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Tambah Pengguna</span>
+                  </button>
+                </div>
+
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
-                    {/* Table Header: Lowered Contrast (Muted Medium Gray for Clear Data Hierarchy) */}
                     <thead>
                       <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
                         <th className="py-3 px-4 w-12 text-center">No</th>
-                        <th className="py-3 px-4 min-w-[220px]">Program / Indikator</th>
-                        <th className="py-3 px-4 w-36">Pilar & Kategori</th>
-                        <th className="py-3 px-4 w-36">Capaian Realisasi</th>
-                        <th className="py-3 px-4 w-40">Target Kinerja</th>
-                        <th className="py-3 px-4 w-24 text-center">Capaian %</th>
-                        <th className="py-3 px-4 w-32 text-center">Visibilitas</th>
+                        <th className="py-3 px-4 min-w-[180px]">Nama Lengkap</th>
+                        <th className="py-3 px-4 min-w-[140px]">Username</th>
+                        <th className="py-3 px-4 min-w-[180px]">Email Kedinasan</th>
+                        <th className="py-3 px-4 min-w-[160px]">Peran / Role</th>
                         <th className="py-3 px-4 w-28 text-right">Aksi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
-                      {loading ? (
+                      {loadingUsers ? (
                         <tr>
-                          <td colSpan={8} className="py-12 text-center text-slate-500">
+                          <td colSpan={6} className="py-12 text-center text-slate-500">
                             <Loader2 className="h-6 w-6 animate-spin mx-auto text-[#4F83CC] mb-2" />
-                            <span>Memuat data indikator...</span>
+                            <span>Memuat data pengguna...</span>
                           </td>
                         </tr>
-                      ) : filteredCards.length === 0 ? (
+                      ) : usersList.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="py-12 text-center text-slate-500 space-y-3">
-                            <p className="font-semibold">Tidak ada indikator yang sesuai kriteria pencarian.</p>
-                            <button
-                              type="button"
-                              onClick={handleResetDefault}
-                              className="h-10 px-4 rounded-lg bg-[#4F83CC] text-white font-bold text-xs hover:bg-[#3f72bb] cursor-pointer"
-                            >
-                              Muat Ulang 28 Data Master Resmi
-                            </button>
+                          <td colSpan={6} className="py-12 text-center text-slate-500">
+                            Belum ada data pengguna yang tersimpan di database.
                           </td>
                         </tr>
                       ) : (
-                        filteredCards.map((card, idx) => {
-                          const calculatedPct = calculatePercentage(card.value, card.target);
-                          const displayPct = card.percent !== null && card.percent !== undefined ? card.percent : calculatedPct;
+                        usersList.map((u, idx) => {
+                          const roleMeta = ROLE_OPTIONS.find((r) => r.value === u.role) || {
+                            label: u.role,
+                            badge: 'bg-slate-100 text-slate-800 border-slate-200',
+                          };
 
                           return (
-                            <tr key={card.id} className="hover:bg-slate-50/80 transition-colors">
-                              {/* Numbering */}
-                              <td className="py-3 px-4 text-center text-slate-400 font-medium">
+                            <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-3.5 px-4 text-center text-slate-400 font-medium">
                                 {idx + 1}
                               </td>
-
-                              {/* Title & PIC (High Contrast Black Data) */}
-                              <td className="py-3 px-4">
-                                <div className="font-bold text-slate-900 text-sm leading-snug">
-                                  {card.title}
-                                </div>
-                                <div className="text-[11px] text-slate-500 mt-0.5">
-                                  PIC: <span className="text-slate-700 font-medium">{card.picKementerian || 'Kemenko PMK'}</span>
-                                </div>
+                              <td className="py-3.5 px-4 font-bold text-slate-900">
+                                {u.name}
                               </td>
-
-                              {/* Pilar & Category (Clean Typography - Redundant Chips Removed) */}
-                              <td className="py-3 px-4">
-                                <div className="font-semibold text-slate-900 capitalize text-xs">
-                                  {card.pillarId}
-                                </div>
-                                <div className="text-[11px] text-slate-500 mt-0.5">
-                                  {card.category}
-                                </div>
+                              <td className="py-3.5 px-4 font-mono text-slate-700">
+                                @{u.username}
                               </td>
-
-                              {/* Realisasi (High Contrast Black Data) */}
-                              <td className="py-3 px-4">
-                                <div className="font-extrabold text-slate-900 text-sm">
-                                  {card.value} {card.unit}
-                                </div>
-                                <div className="text-[11px] text-slate-500 mt-0.5">
-                                  {card.status}
-                                </div>
+                              <td className="py-3.5 px-4 text-slate-600">
+                                {u.email || '—'}
                               </td>
-
-                              {/* Target */}
-                              <td className="py-3 px-4">
-                                <div className="text-xs font-medium text-slate-800 line-clamp-2" title={card.target}>
-                                  {card.target}
-                                </div>
+                              <td className="py-3.5 px-4">
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${roleMeta.badge}`}>
+                                  {roleMeta.label}
+                                </span>
                               </td>
-
-                              {/* Percentage (Clean Text - Chunky Pill Removed) */}
-                              <td className="py-3 px-4 text-center">
-                                {displayPct !== null ? (
-                                  <span className="font-bold text-slate-900 text-sm">
-                                    {displayPct}%
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-300 font-medium">—</span>
-                                )}
-                              </td>
-
-                              {/* Toggle Visibility (Strict 32px Height Inline Button) */}
-                              <td className="py-3 px-4 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleActive(card)}
-                                  title={card.isActive ? 'Klik untuk sembunyikan' : 'Klik untuk tampilkan'}
-                                  className={`h-8 px-3 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
-                                    card.isActive
-                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80 hover:bg-emerald-100/70'
-                                      : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200/80'
-                                  }`}
-                                >
-                                  {card.isActive ? (
-                                    <>
-                                      <Eye className="h-3.5 w-3.5 stroke-[1.75]" />
-                                      <span>Tampil</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <EyeOff className="h-3.5 w-3.5 stroke-[1.75]" />
-                                      <span>Sembunyi</span>
-                                    </>
-                                  )}
-                                </button>
-                              </td>
-
-                              {/* Row Actions (Strict 32px Height Inline Buttons) */}
-                              <td className="py-3 px-4 text-right">
+                              <td className="py-3.5 px-4 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
                                   <button
                                     type="button"
-                                    onClick={() => openEditView(card)}
-                                    className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                                    title="Edit Indikator"
+                                    onClick={() => openEditUserModal(u)}
+                                    className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                    title="Edit Akun Pengguna"
                                   >
-                                    <Pencil className="h-3.5 w-3.5 stroke-[1.75]" />
-                                    <span>Edit</span>
+                                    <Pencil className="h-3.5 w-3.5 stroke-[2]" />
                                   </button>
+                                  {u.username !== 'admin' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteUser(u)}
+                                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                      title="Hapus Akun Pengguna"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5 stroke-[2]" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
 
+          {/* VIEW: PENGATURAN UNDUH RINGKASAN (PDF SETTINGS) */}
+          {viewMode === 'pdf-settings' && (
+            <div className="space-y-6">
+              {/* Executive Stat Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                  <div className="flex items-center justify-between text-slate-500 mb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Total Indikator</span>
+                    <Layers className="h-4 w-4 text-slate-400 stroke-[1.75]" />
+                  </div>
+                  <div className="text-2xl font-black text-slate-900">{totalPdfCards}</div>
+                  <p className="text-[11px] text-slate-500 mt-1">Seluruh indikator program pada 4 pilar</p>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border border-emerald-200 shadow-2xs bg-emerald-50/20">
+                  <div className="flex items-center justify-between text-emerald-700 mb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Masuk Ringkasan (ON)</span>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 stroke-[2]" />
+                  </div>
+                  <div className="text-2xl font-black text-emerald-700">{includedPdfCount}</div>
+                  <p className="text-[11px] text-emerald-600 mt-1">Indikator disertakan saat unduh PDF</p>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                  <div className="flex items-center justify-between text-slate-500 mb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Dikecualikan (OFF)</span>
+                    <EyeOff className="h-4 w-4 text-slate-400 stroke-[1.75]" />
+                  </div>
+                  <div className="text-2xl font-black text-slate-600">{excludedPdfCount}</div>
+                  <p className="text-[11px] text-slate-500 mt-1">Tidak dicantumkan dalam lembar ringkasan</p>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border border-blue-200 shadow-2xs bg-blue-50/20">
+                  <div className="flex items-center justify-between text-blue-700 mb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Cakupan Ringkasan</span>
+                    <Percent className="h-4 w-4 text-blue-600 stroke-[2]" />
+                  </div>
+                  <div className="text-2xl font-black text-blue-700">
+                    {totalPdfCards > 0 ? Math.round((includedPdfCount / totalPdfCards) * 100) : 0}%
+                  </div>
+                  <p className="text-[11px] text-blue-600 mt-1">Proporsi indikator terpilih dalam dokumen</p>
+                </div>
+              </div>
+
+              {/* Unsaved Changes Banner */}
+              {isPdfDirty && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-blue-900 shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
+                    </span>
+                    <span className="font-semibold">
+                      Anda telah mengubah pilihan indikator ringkasan. Klik tombol <strong>Terapkan Pengaturan Unduhan</strong> untuk mengunci perubahan ini ke dokumen PDF.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isApplyingPdfSettings}
+                    onClick={handleApplyPdfSettings}
+                    className="h-8 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer disabled:opacity-50"
+                  >
+                    {isApplyingPdfSettings ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <CheckCheck className="h-3.5 w-3.5 stroke-[2.5]" />
+                    )}
+                    <span>Terapkan Sekarang</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Main Table Container */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+                {/* Header & Filter Controls */}
+                <div className="p-4 sm:p-5 border-b border-slate-100 space-y-4">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <FileDown className="h-4 w-4 text-[#4F83CC]" />
+                        <span>Daftar Indikator Ringkasan Eksekutif</span>
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Gunakan tombol toggle pada setiap indikator untuk menentukan data apa saja yang masuk ke dalam ringkasan PDF yang diunduh.
+                      </p>
+                    </div>
+
+                    {/* Bulk Actions & Tombol Terapkan */}
+                    <div className="flex flex-wrap items-center gap-2 self-start md:self-auto shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleBulkTogglePdf(true)}
+                        className="h-8 px-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        title="Aktifkan seluruh indikator pada filter saat ini"
+                      >
+                        <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                        <span>Aktifkan Semua (ON)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleBulkTogglePdf(false)}
+                        className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        title="Nonaktifkan seluruh indikator pada filter saat ini"
+                      >
+                        <X className="h-3.5 w-3.5 stroke-[2.5]" />
+                        <span>Nonaktifkan Semua (OFF)</span>
+                      </button>
+
+                      {/* Tombol Terapkan di Header Tabel */}
+                      <button
+                        type="button"
+                        disabled={isApplyingPdfSettings}
+                        onClick={handleApplyPdfSettings}
+                        className={`h-8 px-3.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
+                          isPdfDirty
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white ring-2 ring-blue-400 ring-offset-1 font-extrabold'
+                            : 'bg-slate-900 hover:bg-slate-800 text-white'
+                        } disabled:opacity-50`}
+                        title="Simpan dan terapkan pengaturan indikator ke dokumen ringkasan PDF"
+                      >
+                        {isApplyingPdfSettings ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <CheckCheck className="h-3.5 w-3.5 stroke-[2.5]" />
+                        )}
+                        <span>{isApplyingPdfSettings ? 'Menerapkan...' : 'Terapkan Pengaturan Unduhan'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Filter Pills & Search */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+                    {/* Pillar Filters */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {PILLAR_NAV_CONFIGS.map((p) => {
+                        const isSelected = pdfPillarFilter === p.id;
+                        const count =
+                          p.id === 'all'
+                            ? cards.length
+                            : cards.filter((c) => c.pillarId === p.id).length;
+                        const included =
+                          p.id === 'all'
+                            ? cards.filter((c) => c.includeInPdf !== false).length
+                            : cards.filter((c) => c.pillarId === p.id && c.includeInPdf !== false).length;
+
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setPdfPillarFilter(p.id)}
+                            className={`h-8 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-blue-600 text-white shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                            }`}
+                          >
+                            <span>{p.label}</span>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
+                                isSelected
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-white text-slate-600 border border-slate-200'
+                              }`}
+                            >
+                              {included}/{count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Search Input */}
+                    <div className="relative min-w-[220px]">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={pdfSearchQuery}
+                        onChange={(e) => setPdfSearchQuery(e.target.value)}
+                        placeholder="Cari program / PIC..."
+                        className="h-8 w-full pl-8 pr-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:border-blue-500 transition-colors"
+                      />
+                      {pdfSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setPdfSearchQuery('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table of Indicators */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+                        <th className="py-3 px-4 w-12 text-center">No</th>
+                        <th className="py-3 px-4 min-w-[260px]">Indikator Program Prioritas</th>
+                        <th className="py-3 px-4 w-36">Pilar</th>
+                        <th className="py-3 px-4 w-44">Target & Realisasi 2026</th>
+                        <th className="py-3 px-4 w-56 text-center">Status di Ringkasan PDF</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {pdfFilteredCards.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-12 text-center text-slate-500">
+                            Tidak ada indikator yang sesuai dengan filter pencarian.
+                          </td>
+                        </tr>
+                      ) : (
+                        pdfFilteredCards.map((card, idx) => {
+                          const isIncluded = card.includeInPdf !== false;
+                          const pilarBadge =
+                            card.pillarId === 'pendidikan'
+                              ? { label: 'Pendidikan', badge: 'bg-blue-50 text-blue-700 border-blue-200' }
+                              : card.pillarId === 'kesehatan'
+                              ? { label: 'Kesehatan', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+                              : card.pillarId === 'bencana'
+                              ? { label: 'Kebencanaan', badge: 'bg-amber-50 text-amber-800 border-amber-200' }
+                              : { label: 'Kemiskinan', badge: 'bg-rose-50 text-rose-700 border-rose-200' };
+
+                          return (
+                            <tr
+                              key={card.id}
+                              className={`transition-colors ${
+                                isIncluded ? 'hover:bg-slate-50/80' : 'bg-slate-50/40 opacity-75 hover:opacity-100 hover:bg-slate-50'
+                              }`}
+                            >
+                              <td className="py-3.5 px-4 text-center text-slate-400 font-medium">
+                                {idx + 1}
+                              </td>
+
+                              <td className="py-3.5 px-4">
+                                <div className="space-y-0.5">
+                                  <div className="font-bold text-slate-900 leading-snug">
+                                    {card.title}
+                                  </div>
+                                  {card.subtext && (
+                                    <div className="text-[11px] text-slate-500 line-clamp-1">
+                                      {card.subtext}
+                                    </div>
+                                  )}
+                                  {card.picKementerian && (
+                                    <div className="text-[10px] text-slate-400 font-medium">
+                                      PIC: {card.picKementerian}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+
+                              <td className="py-3.5 px-4">
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${pilarBadge.badge}`}
+                                >
+                                  {pilarBadge.label}
+                                </span>
+                              </td>
+
+                              <td className="py-3.5 px-4 text-slate-700">
+                                <div className="space-y-0.5 text-xs">
+                                  <div className="font-bold text-slate-900">
+                                    {card.value} <span className="text-[11px] font-normal text-slate-500">{card.unit}</span>
+                                  </div>
+                                  <div className="text-[11px] text-slate-500">
+                                    {card.target.replace(/^Target(\s*2026)?:\s*/i, 'Target: ')}
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td className="py-3.5 px-4">
+                                <div className="flex items-center justify-center gap-3">
+                                  {/* Toggle Switch */}
                                   <button
                                     type="button"
-                                    onClick={() => handleDeleteCard(card)}
-                                    className="h-8 w-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 inline-flex items-center justify-center transition-colors cursor-pointer"
-                                    title="Hapus Indikator"
+                                    role="switch"
+                                    aria-checked={isIncluded}
+                                    onClick={() => handleToggleIncludePdf(card)}
+                                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                                      isIncluded ? 'bg-blue-600' : 'bg-slate-300'
+                                    }`}
+                                    title={isIncluded ? 'Klik untuk mengeluarkan dari PDF' : 'Klik untuk memasukkan ke PDF'}
                                   >
-                                    <Trash2 className="h-3.5 w-3.5 stroke-[1.75]" />
+                                    <span
+                                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                                        isIncluded ? 'translate-x-5' : 'translate-x-0'
+                                      }`}
+                                    />
                                   </button>
+
+                                  {/* Status Label Badge */}
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors select-none ${
+                                      isIncluded
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                                    }`}
+                                  >
+                                    {isIncluded ? (
+                                      <>
+                                        <Check className="h-3 w-3 text-emerald-600 stroke-[3]" />
+                                        <span>Masuk PDF</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <X className="h-3 w-3 text-slate-400 stroke-[2.5]" />
+                                        <span>Dikecualikan</span>
+                                      </>
+                                    )}
+                                  </span>
                                 </div>
                               </td>
                             </tr>
@@ -954,586 +2613,163 @@ export const CmsAdminView: React.FC = () => {
                   </table>
                 </div>
 
-                {/* Table Footer info (Concise - No Redundant Sentences) */}
-                <div className="bg-slate-50/80 border-t border-slate-200 px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 font-medium gap-2">
+                {/* Table Footer Stats */}
+                <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
                   <div>
-                    Total: <strong className="text-slate-800">{filteredCards.length}</strong> indikator
+                    Menampilkan <span className="font-bold text-slate-800">{pdfFilteredCards.length}</span> indikator (dari total {cards.length} indikator)
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span>Tampil: <strong className="text-emerald-700">{stats.active}</strong></span>
-                    <span>Sembunyi: <strong className="text-slate-600">{stats.hidden}</strong></span>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span>Masuk Ringkasan: <strong className="text-slate-800">{pdfFilteredCards.filter((c) => c.includeInPdf !== false).length}</strong></span>
+                    <span className="mx-1">·</span>
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                    <span>Dikecualikan: <strong className="text-slate-800">{pdfFilteredCards.filter((c) => c.includeInPdf === false).length}</strong></span>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* =============================================================== */}
-          {/* VIEW MODE B: CREATE OR EDIT FORM (DEDICATED FULL-PAGE, NO POPUP)*/}
-          {/* =============================================================== */}
-          {(viewMode === 'create' || viewMode === 'edit') && (
-            <div className="max-w-4xl mx-auto space-y-6">
-              {/* Back Button Banner */}
-              <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => setViewMode('list')}
-                  className="h-10 px-4 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors"
-                >
-                  <ArrowLeft className="h-4 w-4 stroke-[1.75]" />
-                  <span>Kembali ke Daftar</span>
-                </button>
-
-                <div className="text-xs font-semibold text-slate-500">
-                  Mode: <span className="text-[#4F83CC] font-bold uppercase">{viewMode}</span>
-                </div>
-              </div>
-
-              {/* Template Selector Box (Pre-fill with existing data) */}
-              {viewMode === 'create' && (
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-800">
-                    <Copy className="h-4 w-4 text-[#4F83CC] stroke-[1.75]" />
-                    <span>Salin dari Data yang Ada (Opsional):</span>
-                  </div>
-                  <select
-                    onChange={(e) => handleSelectTemplate(e.target.value)}
-                    className="h-10 w-full px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] cursor-pointer"
-                  >
-                    <option value="">-- Pilih Indikator untuk Salin Format --</option>
-                    {cards.map((c) => (
-                      <option key={c.id} value={c.slug || c.id}>
-                        [{c.pillarId.toUpperCase()}] {c.title} — (Target: {c.target}, Realisasi: {c.value})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Main Form */}
-              <form onSubmit={handleSaveForm} className="space-y-6">
-                {/* Section 1: Identitas & Klasifikasi */}
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
-                  <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">
-                    1. Identitas & Pilar Program
-                  </h3>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-2">
-                        Pilar Prioritas PMK <span className="text-rose-600">*</span>
-                      </label>
-                      <select
-                        value={formData.pillarId}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            pillarId: e.target.value as CmsCardItem['pillarId'],
-                          }))
-                        }
-                        className="h-10 w-full px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC]"
-                      >
-                        <option value="pendidikan">Pendidikan</option>
-                        <option value="kesehatan">Kesehatan</option>
-                        <option value="bencana">Kebencanaan</option>
-                        <option value="kemiskinan">Penurunan Kemiskinan</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-2">
-                        Kategori Agenda <span className="text-rose-600">*</span>
-                      </label>
-                      <select
-                        value={formData.category}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            category: e.target.value as CmsCardItem['category'],
-                          }))
-                        }
-                        className="h-10 w-full px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC]"
-                      >
-                        <option value="PKPN">PKPN (Program Kerja Prioritas Nasional)</option>
-                        <option value="Isu Strategis">Isu Strategis Prioritas</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2">
-                      Judul Indikator / Program <span className="text-rose-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.title}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                      placeholder="Contoh: Revitalisasi Satuan Pendidikan"
-                      className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2">
-                      K/L Penanggung Jawab (PIC)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.picKementerian}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, picKementerian: e.target.value }))}
-                      placeholder="Contoh: Kemendikdasmen, Kemenkes, BNPB, Kemensos"
-                      className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* Section 2: Target, Realisasi & Kalkulasi Otomatis */}
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-1">
-                    <h3 className="text-sm font-bold text-slate-900">
-                      2. Target, Capaian & Kalkulasi Persentase
-                    </h3>
-                    <span className="text-[11px] text-slate-500 font-medium">
-                      Pilih format angka numerik atau tulisan deskriptif
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {/* Kolom Capaian Realisasi */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-slate-700">
-                          Capaian Realisasi <span className="text-rose-600">*</span>
-                        </label>
-                        {/* Segmented Button: Angka vs Tulisan */}
-                        <div className="inline-flex items-center p-0.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold">
-                          <button
-                            type="button"
-                            onClick={() => handleValueFormatChange('number')}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                              valueFormat === 'number'
-                                ? 'bg-white text-[#4F83CC] shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                          >
-                            <Hash className="h-3 w-3 stroke-[2.2]" />
-                            <span>Angka</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleValueFormatChange('text')}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                              valueFormat === 'text'
-                                ? 'bg-white text-[#4F83CC] shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                          >
-                            <Type className="h-3 w-3 stroke-[2.2]" />
-                            <span>Tulisan</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <input
-                        type="text"
-                        required
-                        value={formData.value}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, value: e.target.value }))}
-                        placeholder={
-                          valueFormat === 'number'
-                            ? 'Contoh: 36.669 atau 105,98'
-                            : 'Contoh: — atau Dalam Proses Harmonisasi'
-                        }
-                        className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                      />
-
-                      {/* Pintasan cepat jika format Tulisan */}
-                      {valueFormat === 'text' ? (
-                        <div className="flex items-center flex-wrap gap-1.5 pt-0.5">
-                          <span className="text-[11px] text-slate-400 font-medium mr-0.5">Pintasan:</span>
-                          <button
-                            type="button"
-                            onClick={() => setFormData((prev) => ({ ...prev, value: '—' }))}
-                            className="px-2 py-0.5 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 rounded transition-colors cursor-pointer"
-                          >
-                            — (Belum Ada)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setFormData((prev) => ({ ...prev, value: 'Dalam Proses' }))}
-                            className="px-2 py-0.5 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 rounded transition-colors cursor-pointer"
-                          >
-                            Dalam Proses
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setFormData((prev) => ({ ...prev, value: 'Terlaksana' }))}
-                            className="px-2 py-0.5 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 rounded transition-colors cursor-pointer"
-                          >
-                            Terlaksana
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="text-[11px] text-slate-500 font-normal">
-                          Mendukung angka desimal koma (105,98) atau ribuan titik (36.669)
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Kolom Target Kinerja */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-slate-700">
-                          Target Kinerja <span className="text-rose-600">*</span>
-                        </label>
-                        {/* Segmented Button: Angka vs Tulisan */}
-                        <div className="inline-flex items-center p-0.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold">
-                          <button
-                            type="button"
-                            onClick={() => handleTargetFormatChange('number')}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                              targetFormat === 'number'
-                                ? 'bg-white text-[#4F83CC] shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                          >
-                            <Hash className="h-3 w-3 stroke-[2.2]" />
-                            <span>Angka</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleTargetFormatChange('text')}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                              targetFormat === 'text'
-                                ? 'bg-white text-[#4F83CC] shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                          >
-                            <Type className="h-3 w-3 stroke-[2.2]" />
-                            <span>Tulisan</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <input
-                        type="text"
-                        required
-                        value={formData.target}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, target: e.target.value }))}
-                        placeholder={
-                          targetFormat === 'number'
-                            ? 'Contoh: 80.282 atau 100'
-                            : 'Contoh: Target: Belum Ditetapkan atau Tahap Harmonisasi'
-                        }
-                        className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                      />
-
-                      {/* Pintasan cepat jika format Tulisan */}
-                      {targetFormat === 'text' ? (
-                        <div className="flex items-center flex-wrap gap-1.5 pt-0.5">
-                          <span className="text-[11px] text-slate-400 font-medium mr-0.5">Pintasan:</span>
-                          <button
-                            type="button"
-                            onClick={() => setFormData((prev) => ({ ...prev, target: 'Target: Belum Ditetapkan' }))}
-                            className="px-2 py-0.5 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 rounded transition-colors cursor-pointer"
-                          >
-                            Target: Belum Ditetapkan
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setFormData((prev) => ({ ...prev, target: '—' }))}
-                            className="px-2 py-0.5 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 rounded transition-colors cursor-pointer"
-                          >
-                            —
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setFormData((prev) => ({ ...prev, target: 'Tahap Penyiapan 2026' }))}
-                            className="px-2 py-0.5 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 rounded transition-colors cursor-pointer"
-                          >
-                            Tahap Penyiapan 2026
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="text-[11px] text-slate-500 font-normal">
-                          Target kuantitatif numerik untuk kalkulasi rasio persentase
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Real-Time Percentage Calculator Box (Adaptive to Number vs Text) */}
-                  <div className="p-4 bg-[#0f172a] text-white rounded-xl flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-[#4F83CC] text-white rounded-lg">
-                        <Calculator className="h-5 w-5 stroke-[1.75]" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-white">
-                          {valueFormat === 'number' && targetFormat === 'number'
-                            ? 'Perhitungan Persentase Otomatis:'
-                            : 'Status Metrik Persentase:'}
-                        </div>
-                        <div className="text-xs text-slate-300 mt-0.5">
-                          {valueFormat === 'number' && targetFormat === 'number' ? (
-                            formLivePercentage !== null ? (
-                              <span>
-                                (Capaian: <strong className="text-white">{formData.value}</strong> / Target:{' '}
-                                <strong className="text-white">{formData.target}</strong>) ={' '}
-                                <span className="text-emerald-400 font-bold">{formLivePercentage}%</span>
-                              </span>
-                            ) : (
-                              'Masukkan angka capaian dan target untuk kalkulasi otomatis'
-                            )
-                          ) : (
-                            'Format Tulisan (Kualitatif) aktif — persentase metrik dinonaktifkan secara otomatis (—)'
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      className={`px-3.5 py-1.5 font-extrabold text-base rounded-lg shrink-0 ${
-                        formLivePercentage !== null
-                          ? 'bg-[#4F83CC] text-white'
-                          : 'bg-slate-800 text-slate-400 border border-slate-700'
-                      }`}
-                    >
-                      {formLivePercentage !== null ? `${formLivePercentage}%` : '—'}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-2">
-                        Satuan Unit
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.unit}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, unit: e.target.value }))}
-                        placeholder="Contoh: Satuan Pendidikan, KPM, Jiwa"
-                        className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-2">
-                        Status Realisasi Label
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.status}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
-                        placeholder="Contoh: Realisasi 2026"
-                        className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 3: Keterangan & Deskripsi */}
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
-                  <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">
-                    3. Keterangan & Deskripsi Kebijakan
-                  </h3>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2">
-                      Keterangan Ringkas (Subtext pada Kartu)
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={formData.subtext}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, subtext: e.target.value }))}
-                      placeholder="Keterangan singkat indikator..."
-                      className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2">
-                      Deskripsi Lengkap Kebijakan / Program
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={formData.description}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                      placeholder="Uraian rinci dasar pelaksanaan dan kebijakan pengawalan Kemenko PMK..."
-                      className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                    />
-                  </div>
-
-                  {/* Toggle Aktif */}
-                  <div className="pt-2 flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-                    <div>
-                      <span className="text-xs font-bold text-slate-900 block">
-                        Tampilkan di Dashboard Utama
-                      </span>
-                      <span className="text-[11px] text-slate-500">
-                        Aktifkan agar indikator ini muncul di pemantauan publik dashboard eksekutif.
-                      </span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={formData.isActive}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))}
-                      className="h-5 w-5 accent-[#4F83CC] rounded cursor-pointer"
-                    />
-                  </div>
-                </div>
-
-                {/* Solid Action Buttons (Strict 40px Height Standard) */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('list')}
-                    className="h-10 px-5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer transition-colors"
-                  >
-                    Batal
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="h-10 px-6 rounded-lg bg-[#4F83CC] hover:bg-[#3f72bb] active:bg-[#33609f] disabled:bg-slate-300 text-white text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer transition-colors"
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Menyimpan ke Database...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Check className="h-4 w-4 stroke-[2]" />
-                        <span>Simpan Indikator ke Database</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* =============================================================== */}
-          {/* VIEW MODE C: METADATA SETTINGS                                  */}
-          {/* =============================================================== */}
-          {viewMode === 'metadata' && (
-            <div className="max-w-3xl mx-auto space-y-6">
-              <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => setViewMode('list')}
-                  className="h-10 px-4 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors"
-                >
-                  <ArrowLeft className="h-4 w-4 stroke-[1.75]" />
-                  <span>Kembali ke Daftar</span>
-                </button>
-
-                <div className="text-xs font-semibold text-slate-500">
-                  Konfigurasi: <span className="text-[#4F83CC] font-bold uppercase">Metadata Dashboard</span>
-                </div>
-              </div>
-
-              <form onSubmit={handleSaveMetadata} className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
-                <div className="border-b border-slate-100 pb-3">
-                  <h3 className="text-sm font-bold text-slate-900">
-                    Konfigurasi Judul & Cutoff Dashboard
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Data ini ditampilkan pada header laporan dan ringkasan eksekutif PMK.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-2">
-                    Judul Utama Dashboard
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={metadata.title}
-                    onChange={(e) => setMetadata((prev) => ({ ...prev, title: e.target.value }))}
-                    className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-2">
-                    Subjudul / Lembaga
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={metadata.subtitle}
-                    onChange={(e) => setMetadata((prev) => ({ ...prev, subtitle: e.target.value }))}
-                    className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2">
-                      Tanggal Cutoff Data
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={metadata.cutoffDate}
-                      onChange={(e) => setMetadata((prev) => ({ ...prev, cutoffDate: e.target.value }))}
-                      placeholder="Contoh: 14 Oktober 2026"
-                      className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2">
-                      Jabatan Pimpinan
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={metadata.ministerTitle}
-                      onChange={(e) => setMetadata((prev) => ({ ...prev, ministerTitle: e.target.value }))}
-                      placeholder="Contoh: Menteri Koordinator PMK"
-                      className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('list')}
-                    className="h-10 px-5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer transition-colors"
-                  >
-                    Batal
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={isSavingMeta}
-                    className="h-10 px-6 rounded-lg bg-[#4F83CC] hover:bg-[#3f72bb] text-white text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer transition-colors"
-                  >
-                    {isSavingMeta ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Menyimpan...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Check className="h-4 w-4 stroke-[2]" />
-                        <span>Simpan Metadata</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
             </div>
           )}
         </div>
       </main>
+
+      {/* USER MANAGEMENT MODAL (CREATE / EDIT USER) */}
+      {userModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {editingUser ? `Edit Akun: @${editingUser.username}` : 'Tambah Pengguna Baru'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Tentukan identitas dan hak akses akun.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUserModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveUser} className="p-6 space-y-4">
+              {userError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold text-rose-800">
+                  {userError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Nama Lengkap & Gelar <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={userFormData.name}
+                  onChange={(e) => setUserFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Contoh: Dr. H. Ahmad Fauzi, S.E., M.Si."
+                  className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
+                />
+              </div>
+
+              {!editingUser && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Username Akun <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={userFormData.username}
+                    onChange={(e) => setUserFormData((prev) => ({ ...prev, username: e.target.value }))}
+                    placeholder="Contoh: eselon1_deputi"
+                    className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Email Kedinasan
+                </label>
+                <input
+                  type="email"
+                  value={userFormData.email}
+                  onChange={(e) => setUserFormData((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder="Contoh: deputi@kemenkopmk.go.id"
+                  className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Peran / Hak Akses Sistem <span className="text-rose-600">*</span>
+                </label>
+                <select
+                  value={userFormData.role}
+                  onChange={(e) =>
+                    setUserFormData((prev) => ({
+                      ...prev,
+                      role: e.target.value as CmsUserItem['role'],
+                    }))
+                  }
+                  className="h-10 w-full px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
+                >
+                  {ROLE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  {editingUser ? 'Reset Password (Kosongkan bila tidak diubah)' : 'Kata Sandi (Password) *'}
+                </label>
+                <input
+                  type="password"
+                  required={!editingUser}
+                  placeholder={editingUser ? 'Masukkan password baru bila ingin mereset' : 'Minimal 6 karakter'}
+                  value={userFormData.password}
+                  onChange={(e) => setUserFormData((prev) => ({ ...prev, password: e.target.value }))}
+                  className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
+                />
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setUserModalOpen(false)}
+                  className="h-10 px-4 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingUser}
+                  className="h-10 px-5 rounded-xl bg-[#4F83CC] hover:bg-[#3f72bb] text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:bg-slate-300"
+                >
+                  {isSavingUser ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4" />
+                      <span>{editingUser ? 'Simpan Perubahan' : 'Buat Akun'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -56,6 +56,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
+        aria-labelledby="auth-dialog-title"
       >
         {/* Modal Header */}
         <div className="relative bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-6 text-white text-center">
@@ -69,18 +70,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
 
           <div className="flex justify-center mb-3">
-            <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl ring-1 ring-white/20 shadow-inner">
+            <div className="p-1 bg-white/10 backdrop-blur-md rounded-full ring-1 ring-white/20 shadow-inner w-12 h-12 flex items-center justify-center overflow-hidden">
               <Image
-                src="/images/logo-kemenko-pmk-baru.png"
+                src="/images/logo-pmk-garuda.png"
                 alt="Logo Kemenko PMK"
-                width={36}
-                height={36}
-                className="object-contain"
+                width={40}
+                height={40}
+                className="w-full h-full object-contain"
               />
             </div>
           </div>
 
-          <h3 className="text-lg font-extrabold tracking-tight">{title}</h3>
+          <h3 id="auth-dialog-title" className="text-lg font-extrabold tracking-tight">{title}</h3>
           <p className="text-xs text-slate-300 mt-1 max-w-xs mx-auto leading-relaxed">
             {description}
           </p>

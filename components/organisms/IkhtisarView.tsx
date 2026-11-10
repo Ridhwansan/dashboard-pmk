@@ -72,6 +72,7 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
 }) => {
   const [activePillar, setActivePillar] = useState<PillarId>(initialPillar);
   const [selectedCategory, setSelectedCategory] = useState<string>('PKPN');
+  const [isDetailActive, setIsDetailActive] = useState<boolean>(false);
 
   const CATEGORY_OPTIONS = [
     { id: 'PKPN', label: 'PKPN', disabled: false },
@@ -81,6 +82,7 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
 
   const handleTabChange = (pillarId: PillarId) => {
     setActivePillar(pillarId);
+    setIsDetailActive(false);
     onPillarChange?.(pillarId);
   };
 
@@ -154,33 +156,36 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
         </div>
       </div>
 
-      {/* 2. SUB-FILTER KATEGORI: Tombol mandiri rapi */}
-      <div className="flex items-center gap-2 pt-0.5">
-        {CATEGORY_OPTIONS.map((cat) => {
-          const isCatActive = selectedCategory === cat.id;
-          const isDisabled = cat.disabled;
-          return (
-            <button
-              key={cat.id}
-              type="button"
-              disabled={isDisabled}
-              onClick={() => {
-                if (!isDisabled) setSelectedCategory(cat.id);
-              }}
-              title={isDisabled ? `${cat.label} (Belum Tersedia / Segera Hadir)` : cat.label}
-              className={`h-[38px] inline-flex items-center gap-1.5 px-4.5 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 whitespace-nowrap shrink-0 ${
-                isDisabled
-                  ? 'bg-slate-100/70 text-slate-400 border border-slate-200/60 cursor-not-allowed opacity-60 select-none'
-                  : isCatActive
-                  ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-300 cursor-pointer ring-1 ring-slate-300/40'
-                  : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200/80 cursor-pointer'
-              }`}
-            >
-              <span>{cat.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* 2. SUB-FILTER KATEGORI (Hanya tampil saat tidak sedang membuka detail program) */}
+      {!isDetailActive && (
+        <div className="flex items-center gap-2 pt-0.5">
+          {CATEGORY_OPTIONS.map((cat) => {
+            const isCatActive = selectedCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                disabled={cat.disabled}
+                onClick={() => {
+                  if (!cat.disabled) {
+                    setSelectedCategory(cat.id);
+                  }
+                }}
+                title={cat.disabled ? 'Program RPJMN belum aktif' : undefined}
+                className={`h-[38px] inline-flex items-center px-4.5 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 whitespace-nowrap shrink-0 ${
+                  cat.disabled
+                    ? 'bg-slate-100/70 text-slate-400 border border-slate-200/60 cursor-not-allowed select-none'
+                    : isCatActive
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-300 ring-1 ring-slate-300/40 cursor-pointer'
+                    : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200/80 cursor-pointer'
+                }`}
+              >
+                <span>{cat.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* 3. TAB CONTENT: Render each pillar page with category */}
       <div className="w-full">
@@ -188,24 +193,28 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
           <PendidikanDetailView
             onBackToHome={onBackToLanding}
             category={selectedCategory}
+            onDetailOpenChange={setIsDetailActive}
           />
         )}
         {activePillar === 'kesehatan' && (
           <KesehatanDetailView
             onBackToHome={onBackToLanding}
             category={selectedCategory}
+            onDetailOpenChange={setIsDetailActive}
           />
         )}
         {activePillar === 'bencana' && (
           <BencanaDetailView
             onBackToHome={onBackToLanding}
             category={selectedCategory}
+            onDetailOpenChange={setIsDetailActive}
           />
         )}
         {activePillar === 'kemiskinan' && (
           <KemiskinanDetailView
             onBackToHome={onBackToLanding}
             category={selectedCategory}
+            onDetailOpenChange={setIsDetailActive}
           />
         )}
       </div>

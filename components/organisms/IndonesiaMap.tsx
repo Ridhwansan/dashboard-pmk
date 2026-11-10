@@ -380,7 +380,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                 className="h-[40px] px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center gap-2 border border-slate-200/90 shrink-0"
               >
                 <RotateCcw className="h-4 w-4 text-slate-500" />
-                <span>Reset Wilayah</span>
+                <span>Reset</span>
               </button>
             )}
 
@@ -392,7 +392,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
               title="Perbesar Peta ke Layar Penuh"
             >
               <Maximize2 className="w-4 h-4 text-blue-600" />
-              <span>Layar Penuh Peta</span>
+              <span>Layar Penuh</span>
             </button>
           </div>
         </div>

@@ -14,6 +14,7 @@ export interface CmsCardItem {
   picKementerian?: string;
   order: number;
   isActive: boolean;
+  includeInPdf?: boolean;
   isMilestone?: boolean;
   milestoneContent?: string;
   annualTargets?: unknown;

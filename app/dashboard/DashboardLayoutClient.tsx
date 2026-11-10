@@ -15,14 +15,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   // Dedicated full-page layout for CMS with back-office sidebar
   const isCms = pathname.startsWith('/dashboard/cms');
 
-  // Guard: Redirect unauthenticated users to /login
+  // Guard: Hanya proteksi CMS (wajib login Administrator)
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      if (isCms) {
-        router.replace('/admin');
-      } else {
-        router.replace('/login');
-      }
+    if (!authLoading && isCms && !isAuthenticated) {
+      router.replace('/admin');
     }
   }, [authLoading, isAuthenticated, isCms, router]);
 
