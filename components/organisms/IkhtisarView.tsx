@@ -105,77 +105,79 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
-      {/* 1. TOP HEADER: Single Card containing Context, Download PDF, 4 Pillar Tabs, and Sub-filters Underneath */}
-      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs space-y-4">
-        {/* Top Row: Title on Left, Unduh Ringkasan PDF on Right */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-tight">
-                Ikhtisar 4 Pilar Prioritas PMK
-              </h2>
-              <p className="text-sm text-slate-500 font-normal">
-                Pemantauan kinerja target dan realisasi
-              </p>
+      {/* 1. TOP HEADER: Single Card containing Context, Download PDF, 4 Pillar Tabs, and Sub-filters Underneath (Hidden when viewing program detail) */}
+      {!isDetailActive && (
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs space-y-4">
+          {/* Top Row: Title on Left, Unduh Ringkasan PDF on Right */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-tight">
+                  Ikhtisar 4 Pilar Prioritas PMK
+                </h2>
+                <p className="text-sm text-slate-500 font-normal">
+                  Pemantauan kinerja target dan realisasi
+                </p>
+              </div>
+            </div>
+
+            {/* Unduh Ringkasan PDF stays at the top right of this card */}
+            <div className="self-end sm:self-auto shrink-0">
+              <ExecutivePdfButton currentPillar={activePillar} />
             </div>
           </div>
 
-          {/* Unduh Ringkasan PDF stays at the top right of this card */}
-          <div className="self-end sm:self-auto shrink-0">
-            <ExecutivePdfButton currentPillar={activePillar} />
+          {/* Bottom Row: Menu pilihan pilar di bawah judul ikhtisar sebagai tombol rapi */}
+          <div className="border-t border-slate-100 pt-3.5">
+            <nav
+              role="tablist"
+              aria-label="Pilih Tab Pilar"
+              className="flex items-center gap-2.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden max-w-full"
+            >
+              {PILLAR_TABS.map((tab, index) => {
+                const isActive = activePillar === tab.id;
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    id={`tab-${tab.id}`}
+                    type="button"
+                    role="tab"
+                    tabIndex={isActive ? 0 : -1}
+                    aria-selected={isActive}
+                    aria-controls={`panel-${tab.id}`}
+                    onClick={() => handleTabChange(tab.id)}
+                    onKeyDown={(e) => handleTabKeyDown(e, index)}
+                    style={
+                      isActive
+                        ? { backgroundColor: tab.brandColor, color: '#ffffff', borderColor: tab.brandColor }
+                        : undefined
+                    }
+                    className={`min-h-[44px] h-[44px] inline-flex items-center gap-2.5 px-4.5 sm:px-5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400 focus-visible:outline-hidden ${
+                      isActive
+                        ? `${tab.activeBg} font-bold shadow-2xs`
+                        : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50 border border-slate-200/90 shadow-2xs'
+                    }`}
+                  >
+                    <Icon
+                      className={`h-4 w-4 shrink-0 transition-colors ${
+                        isActive ? 'text-white' : tab.inactiveIconColor
+                      }`}
+                      style={!isActive ? { color: tab.brandColor } : { color: '#ffffff' }}
+                    />
+                    <span
+                      className={isActive ? 'text-white' : 'text-slate-800'}
+                      style={isActive ? { color: '#ffffff' } : undefined}
+                    >
+                      {tab.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
           </div>
         </div>
-
-        {/* Bottom Row: Menu pilihan pilar di bawah judul ikhtisar sebagai tombol rapi */}
-        <div className="border-t border-slate-100 pt-3.5">
-          <nav
-            role="tablist"
-            aria-label="Pilih Tab Pilar"
-            className="flex items-center gap-2.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden max-w-full"
-          >
-            {PILLAR_TABS.map((tab, index) => {
-              const isActive = activePillar === tab.id;
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  id={`tab-${tab.id}`}
-                  type="button"
-                  role="tab"
-                  tabIndex={isActive ? 0 : -1}
-                  aria-selected={isActive}
-                  aria-controls={`panel-${tab.id}`}
-                  onClick={() => handleTabChange(tab.id)}
-                  onKeyDown={(e) => handleTabKeyDown(e, index)}
-                  style={
-                    isActive
-                      ? { backgroundColor: tab.brandColor, color: '#ffffff', borderColor: tab.brandColor }
-                      : undefined
-                  }
-                  className={`min-h-[44px] h-[44px] inline-flex items-center gap-2.5 px-4.5 sm:px-5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400 focus-visible:outline-hidden ${
-                    isActive
-                      ? `${tab.activeBg} font-bold shadow-2xs`
-                      : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50 border border-slate-200/90 shadow-2xs'
-                  }`}
-                >
-                  <Icon
-                    className={`h-4 w-4 shrink-0 transition-colors ${
-                      isActive ? 'text-white' : tab.inactiveIconColor
-                    }`}
-                    style={!isActive ? { color: tab.brandColor } : { color: '#ffffff' }}
-                  />
-                  <span
-                    className={isActive ? 'text-white' : 'text-slate-800'}
-                    style={isActive ? { color: '#ffffff' } : undefined}
-                  >
-                    {tab.label}
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-      </div>
+      )}
 
       {/* 2. TAB CONTENT: Render each pillar page with category and category changer inside hero banner */}
       <div

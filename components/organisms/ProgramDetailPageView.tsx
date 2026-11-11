@@ -225,8 +225,9 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
     return currentProgram;
   }, [isMbg3b, activeMbgTab, currentProgram]);
 
-  // Default view is 'bulanan' or 'timeseries' or 'tahunan'
+  // Default view is 'tahunan' with 'tabel' mode
   const [tableType, setTableType] = useState<'tahunan' | 'bulanan' | 'timeseries'>('tahunan');
+  const [displayMode, setDisplayMode] = useState<'grafik' | 'tabel'>('tabel');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedMonth, setSelectedMonth] = useState<number>(0); // 0 = Semua Bulan
   const [hoveredAnnualIdx, setHoveredAnnualIdx] = useState<number | null>(null);
@@ -438,6 +439,41 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
     if (pctMatch) return `${pctMatch[1]}%`;
     return '—';
   }, [effectiveProgram, activeAnnualRow, summaryMetrics]);
+
+  // Gap calculation: Sisa sasaran yang belum tercapai (Unik & Non-redundant)
+  const sisaSasaranInfo = useMemo(() => {
+    const tNum = parseMetricValue(cleanTarget2026);
+    const cNum = parseMetricValue(effectiveProgram.currentValue);
+
+    if (tNum !== null && cNum !== null && tNum > 0) {
+      if (cNum >= tNum) {
+        return {
+          label: 'Status Sasaran',
+          value: 'Target Terlampaui',
+          subtext: `Tercapai ${percentDisplay} dari sasaran rencana aksi`,
+          isCompleted: true,
+        };
+      }
+      const sisa = tNum - cNum;
+      const sisaFormatted = effectiveProgram.unit
+        ? `${sisa.toLocaleString('id-ID')} ${effectiveProgram.unit}`
+        : sisa.toLocaleString('id-ID');
+      const sisaPct = Math.round((sisa / tNum) * 1000) / 10;
+      return {
+        label: 'Sisa Sasaran (Gap)',
+        value: sisaFormatted,
+        subtext: `${sisaPct}% sasaran 2026 belum terealisasi`,
+        isCompleted: false,
+      };
+    }
+
+    return {
+      label: 'Status Pelaksanaan',
+      value: effectiveProgram.status || 'Berjalan Sesuai Rencana',
+      subtext: 'Data capaian terverifikasi berkala',
+      isCompleted: false,
+    };
+  }, [cleanTarget2026, effectiveProgram.currentValue, effectiveProgram.unit, effectiveProgram.status, percentDisplay]);
 
   // Dynamic resolution of kendala list
   const resolvedKendalaList: KendalaDetailItem[] = useMemo(() => {
@@ -689,7 +725,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500 bg-white px-4 py-2.5 rounded-xl border border-slate-200/90 shadow-2xs">
           <span>Ikhtisar</span>
           <span className="text-slate-300">/</span>
-          <span>Pilar {category === 'PKPN' ? `PKPN ${effectiveProgram.pillarTitle}` : effectiveProgram.pillarTitle}</span>
+          <span>{category && category !== 'Semua' ? `${category} ` : ''}{effectiveProgram.pillarTitle.replace(/^Pilar\s+/i, '')}</span>
           <span className="text-slate-300">/</span>
           <span className="text-slate-900 font-bold truncate max-w-[280px]">{effectiveProgram.title}</span>
         </div>
@@ -778,191 +814,270 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           </p>
         </div>
 
-        {/* 3 Prominent KPI Stat Cards for Focus */}
+        {/* 3 Prominent KPI Stat Cards: Target, Realisasi & Capaian (Integrated), Sisa Sasaran/Gap */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-          {/* Card 1: Target 2026 (Clean without redundant prefix) */}
-          <div className="bg-slate-50/70 rounded-xl p-5 border border-slate-200/90 space-y-1.5 shadow-2xs">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-              Target 2026
-            </span>
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 block tracking-tight tabular-nums">
-              {cleanTarget2026}
-            </span>
-            <span className="text-xs text-slate-500 font-normal block">
+          {/* Card 1: Target Sasaran 2026 */}
+          <div className="bg-slate-50/80 rounded-xl p-5 border border-slate-200/90 space-y-1.5 shadow-2xs flex flex-col justify-between">
+            <div>
+              <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
+                Target Sasaran (2026)
+              </span>
+              <span className="text-2xl sm:text-3xl font-bold text-slate-900 block tracking-tight tabular-nums mt-1">
+                {cleanTarget2026}
+              </span>
+            </div>
+            <span className="text-xs text-slate-600 font-normal block pt-1">
               Sasaran rencana aksi nasional
             </span>
           </div>
 
-          {/* Card 2: Realisasi Berjalan */}
-          <div className="bg-blue-50/50 rounded-xl p-5 border border-blue-200/80 space-y-1.5 shadow-2xs">
-            <span className="text-[11px] font-bold text-blue-900/80 uppercase tracking-wider block">
-              Realisasi Berjalan
-            </span>
-            <span className="text-2xl sm:text-3xl font-bold text-blue-900 block tracking-tight tabular-nums">
-              {(() => {
-                const val = effectiveProgram.currentValue;
-                if (!val || val === '—') return '—';
-                if (val.toLowerCase() === 'terhenti') return 'Terhenti';
-                if (effectiveProgram.unit && val.includes(effectiveProgram.unit)) return val;
-                if (val.includes('%')) return val;
-                return effectiveProgram.unit ? `${val} ${effectiveProgram.unit}` : val;
-              })()}
-            </span>
-            <span className="text-xs text-blue-700/80 font-normal block">
-              {percentNumber2026 !== null ? `Capaian saat ini: ${percentNumber2026}% dari target` : 'Data terverifikasi berkala'}
-            </span>
-          </div>
-
-          {/* Card 3: Persentase Capaian with Mini Visual Progress */}
-          <div className="bg-emerald-50/50 rounded-xl p-5 border border-emerald-200/80 space-y-1.5 shadow-2xs flex flex-col justify-between">
+          {/* Card 2: Realisasi & Persentase Capaian (Terpadu) */}
+          <div className="bg-blue-50/60 rounded-xl p-5 border border-blue-200/80 space-y-2 shadow-2xs flex flex-col justify-between">
             <div>
-              <span className="text-[11px] font-bold text-emerald-900/80 uppercase tracking-wider block">
-                Persentase Capaian
-              </span>
-              <span className="text-2xl sm:text-3xl font-bold text-emerald-800 block tracking-tight tabular-nums">
-                {percentDisplay}
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-blue-950 uppercase tracking-wider block">
+                  Realisasi Berjalan
+                </span>
+                {percentDisplay !== '—' && (
+                  <span className="text-xs font-extrabold text-blue-700 bg-white px-2 py-0.5 rounded-md border border-blue-200 shadow-2xs">
+                    {percentDisplay}
+                  </span>
+                )}
+              </div>
+              <span className="text-2xl sm:text-3xl font-bold text-blue-950 block tracking-tight tabular-nums mt-1">
+                {(() => {
+                  const val = effectiveProgram.currentValue;
+                  if (!val || val === '—') return '—';
+                  if (val.toLowerCase() === 'terhenti') return 'Terhenti';
+                  if (effectiveProgram.unit && val.includes(effectiveProgram.unit)) return val;
+                  if (val.includes('%')) return val;
+                  return effectiveProgram.unit ? `${val} ${effectiveProgram.unit}` : val;
+                })()}
               </span>
             </div>
+
             {percentNumber2026 !== null && (
-              <div className="pt-2">
+              <div className="pt-1">
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-emerald-200/60 rounded-full overflow-hidden">
+                  <div className="flex-1 h-2 bg-blue-200/70 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-emerald-600 rounded-full transition-all duration-300"
+                      className="h-full bg-blue-600 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, Math.max(0, percentNumber2026))}%` }}
                     />
                   </div>
-                  <span className="text-[11px] font-bold text-emerald-800 tabular-nums shrink-0">
+                  <span className="text-[11px] font-bold text-blue-900 tabular-nums shrink-0">
                     {percentNumber2026}%
                   </span>
                 </div>
               </div>
             )}
           </div>
+
+          {/* Card 3: Sisa Sasaran / Gap Target (Nilai Unik & Non-redundant) */}
+          <div className={`rounded-xl p-5 border space-y-1.5 shadow-2xs flex flex-col justify-between ${
+            sisaSasaranInfo.isCompleted
+              ? 'bg-emerald-50/60 border-emerald-200/90'
+              : 'bg-amber-50/50 border-amber-200/90'
+          }`}>
+            <div>
+              <span className={`text-[11px] font-bold uppercase tracking-wider block ${
+                sisaSasaranInfo.isCompleted ? 'text-emerald-950' : 'text-amber-950'
+              }`}>
+                {sisaSasaranInfo.label}
+              </span>
+              <span className={`text-2xl sm:text-3xl font-bold block tracking-tight tabular-nums mt-1 ${
+                sisaSasaranInfo.isCompleted ? 'text-emerald-900' : 'text-amber-950'
+              }`}>
+                {sisaSasaranInfo.value}
+              </span>
+            </div>
+            <span className={`text-xs font-normal block pt-1 ${
+              sisaSasaranInfo.isCompleted ? 'text-emerald-700' : 'text-amber-800'
+            }`}>
+              {sisaSasaranInfo.subtext}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* 3. SECTION TABEL & TREN BERKALA */}
+      {/* 3. SECTION KINERJA: TABEL & GRAFIK TREN TERPADU */}
       <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs space-y-6">
-        {/* Controls Toolbar: Title on Left, Segmented Control on Right */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-          {/* Left: Dynamic Title based on active table mode */}
-          <div className="flex items-center gap-4 flex-wrap">
-            <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
-              {tableType === 'tahunan'
-                ? 'Tabel Tahunan'
-                : tableType === 'bulanan'
-                ? 'Tabel Bulanan'
-                : 'Pengkinian Data Bencana'}
+        {/* Controls Toolbar: Title on Left, Controls on Right */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          {/* Left: Dynamic Title based on active mode */}
+          <div>
+            <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
+              {displayMode === 'tabel' && tableType !== 'timeseries' ? (
+                <TableProperties className="w-5 h-5 text-blue-600 shrink-0" />
+              ) : (
+                <BarChart3 className="w-5 h-5 text-blue-600 shrink-0" />
+              )}
+              <span>
+                {tableType === 'timeseries'
+                  ? 'Pengkinian Data Bencana'
+                  : displayMode === 'grafik'
+                  ? `Grafik Tren ${tableType === 'tahunan' ? 'Tahunan (2025–2029)' : 'Bulanan'}`
+                  : `Tabel Rincian ${tableType === 'tahunan' ? 'Tahunan (2025–2029)' : 'Bulanan'}`}
+              </span>
             </h3>
-
-            {/* When bulanan or timeseries, show year/month filters */}
-            {tableType === 'bulanan' && (
-              <div className="flex items-center gap-2.5 flex-wrap">
-                {/* Filter Tahun */}
-                <div className="relative">
-                  <select
-                    id="filter-tahun-page"
-                    aria-label="Pilih Tahun"
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="h-[38px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
-                  >
-                    <option value={2026}>Tahun 2026</option>
-                    <option value={2025}>Tahun 2025</option>
-                    <option value={2027}>Tahun 2027</option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                </div>
-
-                {/* Filter Bulan (khusus Tabel Bulanan) */}
-                {tableType === 'bulanan' && (
-                  <div className="relative">
-                    <select
-                      id="filter-bulan-page"
-                      aria-label="Pilih Bulan"
-                      value={selectedMonth}
-                      onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                      className="h-[38px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
-                    >
-                      <option value={0}>Semua Bulan (12 Bulan)</option>
-                      <option value={1}>Januari</option>
-                      <option value={2}>Februari</option>
-                      <option value={3}>Maret</option>
-                      <option value={4}>April</option>
-                      <option value={5}>Mei</option>
-                      <option value={6}>Juni</option>
-                      <option value={7}>Juli</option>
-                      <option value={8}>Agustus</option>
-                      <option value={9}>September</option>
-                      <option value={10}>Oktober</option>
-                      <option value={11}>November</option>
-                      <option value={12}>Desember</option>
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  </div>
-                )}
-              </div>
-            )}
+            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-0.5">
+              {tableType === 'tahunan'
+                ? `Sasaran Target (T) vs Capaian (C) RPJMN 2025–2029 • ${activeAnnualRow.name}`
+                : tableType === 'bulanan'
+                ? `Rangkaian realisasi berjalan per bulan • ${effectiveProgram.title}`
+                : 'Pemantauan kejadian dan laporan mutakhir lapangan'}
+            </p>
           </div>
 
-          {/* Right: Segmented Control switching between Tabel Tahunan, Tabel Bulanan, Hirarki Wilayah, and Tren Berkala */}
-          <div
-            role="tablist"
-            aria-label="Pilihan Jenis Tampilan Tabel"
-            className="p-1 bg-slate-100 rounded-xl border border-slate-200/90 inline-flex items-center gap-1 self-start lg:self-auto shrink-0 shadow-2xs overflow-x-auto max-w-full"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tableType === 'tahunan'}
-              onClick={() => setTableType('tahunan')}
-              className={`h-[36px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-                tableType === 'tahunan'
-                  ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-              }`}
-            >
-              <CalendarRange className="w-4 h-4 text-slate-500" />
-              <span>Tabel Tahunan</span>
-            </button>
+          {/* Right Toolbar: Period Switcher & Format Toggle */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Filter Tahun (khusus bulanan) */}
+            {tableType === 'bulanan' && (
+              <div className="relative">
+                <select
+                  id="filter-tahun-page"
+                  aria-label="Pilih Tahun"
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className="h-[36px] appearance-none pl-3 pr-8 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                >
+                  <option value={2026}>Tahun 2026</option>
+                  <option value={2025}>Tahun 2025</option>
+                  <option value={2027}>Tahun 2027</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              </div>
+            )}
 
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tableType === 'bulanan'}
-              onClick={() => setTableType('bulanan')}
-              className={`h-[36px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-                tableType === 'bulanan'
-                  ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-              }`}
+            {/* Periode Switcher */}
+            <div
+              role="tablist"
+              aria-label="Pilihan Periode Waktu"
+              className="p-1 bg-slate-100 rounded-xl border border-slate-200/90 inline-flex items-center gap-1 shadow-2xs shrink-0"
             >
-              <TableProperties className="w-4 h-4 text-slate-500" />
-              <span>Tabel Bulanan</span>
-            </button>
-
-            {isJumlahBencana && (
               <button
                 type="button"
                 role="tab"
-                aria-selected={tableType === 'timeseries'}
-                onClick={() => setTableType('timeseries')}
-                className={`h-[36px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  tableType === 'timeseries'
+                aria-selected={tableType === 'tahunan'}
+                onClick={() => setTableType('tahunan')}
+                className={`h-[32px] px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  tableType === 'tahunan'
                     ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
-                <RefreshCw className="w-4 h-4 text-slate-500" />
-                <span>Pengkinian Data</span>
+                Tahunan
               </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tableType === 'bulanan'}
+                onClick={() => setTableType('bulanan')}
+                className={`h-[32px] px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  tableType === 'bulanan'
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                Bulanan
+              </button>
+
+              {isJumlahBencana && (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tableType === 'timeseries'}
+                  onClick={() => setTableType('timeseries')}
+                  className={`h-[32px] px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                    tableType === 'timeseries'
+                      ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  Pengkinian
+                </button>
+              )}
+            </div>
+
+            {/* Format Toggle (Grafik vs Tabel) */}
+            {tableType !== 'timeseries' && (
+              <div
+                role="tablist"
+                aria-label="Pilihan Format Tampilan"
+                className="p-1 bg-slate-100 rounded-xl border border-slate-200/90 inline-flex items-center gap-1 shadow-2xs shrink-0"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={displayMode === 'tabel'}
+                  onClick={() => setDisplayMode('tabel')}
+                  className={`h-[32px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                    displayMode === 'tabel'
+                      ? 'bg-white text-blue-700 shadow-2xs font-extrabold border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  <TableProperties className="w-3.5 h-3.5" />
+                  <span>Tabel Angka</span>
+                </button>
+
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={displayMode === 'grafik'}
+                  onClick={() => setDisplayMode('grafik')}
+                  className={`h-[32px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                    displayMode === 'grafik'
+                      ? 'bg-white text-blue-700 shadow-2xs font-extrabold border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>Grafik Tren</span>
+                </button>
+              </div>
             )}
           </div>
         </div>
 
+        {/* Legend for Grafik Mode */}
+        {tableType !== 'timeseries' && displayMode === 'grafik' && (
+          <div className="flex items-center justify-end">
+            <div className="flex items-center gap-4 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200/80 text-xs font-bold shadow-2xs">
+              {tableType === 'tahunan' ? (
+                <>
+                  <span className="flex items-center gap-2 text-blue-700">
+                    <span className="w-4 h-0.5 border-t-2 border-dashed border-blue-600 inline-block" />
+                    <span>Target (T)</span>
+                  </span>
+                  <span className="flex items-center gap-2 text-emerald-700">
+                    <span className="w-4 h-1 bg-emerald-600 inline-block rounded-full" />
+                    <span>Capaian (C)</span>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="flex items-center gap-2 text-blue-700">
+                    <span className="w-3.5 h-0.5 border-t-2 border-dashed border-blue-600 inline-block" />
+                    <span>Target Tahunan (Des 2026)</span>
+                  </span>
+                  <span className="flex items-center gap-2 text-emerald-800">
+                    <span className="w-4 h-1 bg-emerald-600 inline-block rounded-full" />
+                    <span>Realisasi Berjalan</span>
+                  </span>
+                  <span className="flex items-center gap-2 text-emerald-700">
+                    <span className="w-4 h-0.5 border-t-2 border-dashed border-emerald-600 inline-block" />
+                    <span>Proyeksi ke Target</span>
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* VIEW A: TABEL TAHUNAN (2025–2029) - TARGET & CAPAIAN RPJMN */}
-        {tableType === 'tahunan' && (
+        {tableType === 'tahunan' && displayMode === 'tabel' && (
           <div className="border border-slate-200/90 rounded-2xl overflow-hidden bg-white shadow-2xs">
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse text-xs md:text-sm">
@@ -1072,7 +1187,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         )}
 
         {/* VIEW B: TABEL BULANAN (PENYEDERHANAAN: CAPAIAN & TOTAL CAPAIAN) */}
-        {tableType === 'bulanan' && (
+        {tableType === 'bulanan' && displayMode === 'tabel' && (
           <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse text-xs md:text-sm">
@@ -1341,63 +1456,8 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
             </div>
           </div>
         )}
-      </div>
-
-      {/* 4. DEDICATED VISUALISASI GRAFIK SECTION (UNTUK TABEL TAHUNAN & BULANAN) */}
-      {tableType !== 'timeseries' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
-        {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-600 shadow-2xs shrink-0">
-              <BarChart3 className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
-                Visualisasi
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                {tableType === 'tahunan'
-                  ? `Perbandingan Target (T) vs Capaian (C) RPJMN 2025–2029 · ${activeAnnualRow.name}`
-                  : `Tren Capaian Bulanan & Total Capaian Kumulatif · ${effectiveProgram.title}`}
-              </p>
-            </div>
-          </div>
-
-          {/* Legend */}
-          <div className="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200/80 text-xs font-bold self-start sm:self-auto shadow-2xs">
-            {tableType === 'tahunan' ? (
-              <>
-                <span className="flex items-center gap-2 text-blue-700">
-                  <span className="w-4 h-0.5 border-t-2 border-dashed border-blue-600 inline-block" />
-                  <span>Target (T)</span>
-                </span>
-                <span className="flex items-center gap-2 text-emerald-700">
-                  <span className="w-4 h-1 bg-emerald-600 inline-block rounded-full" />
-                  <span>Capaian (C)</span>
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="flex items-center gap-2 text-blue-700">
-                  <span className="w-3.5 h-0.5 border-t-2 border-dashed border-blue-600 inline-block" />
-                  <span>Target Tahunan (Des 2026)</span>
-                </span>
-                <span className="flex items-center gap-2 text-emerald-800">
-                  <span className="w-4 h-1 bg-emerald-600 inline-block rounded-full" />
-                  <span>Realisasi Berjalan (s.d. Okt 2026)</span>
-                </span>
-                <span className="flex items-center gap-2 text-emerald-700">
-                  <span className="w-4 h-0.5 border-t-2 border-dashed border-emerald-600 inline-block" />
-                  <span>Proyeksi ke Target</span>
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-
         {/* GRAPH VIEW 1: ANNUAL TRAJECTORY (2025–2029) */}
-        {tableType === 'tahunan' && (
+        {tableType === 'tahunan' && displayMode === 'grafik' && (
           <div className="space-y-6">
             {isNumericAnnual ? (
               <>
@@ -1471,7 +1531,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                           x={padL - 10}
                           y={y + 3}
                           textAnchor="end"
-                          className="text-[10px] fill-slate-400 font-mono"
+                          className="text-[10px] fill-slate-600 font-semibold font-mono"
                         >
                           {val}
                         </text>
@@ -1693,7 +1753,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       )}
 
         {/* GRAPH VIEW 2: MONTHLY & TIME-SERIES TRAJECTORY (Jan - Des) */}
-        {tableType === 'bulanan' && (
+        {tableType === 'bulanan' && displayMode === 'grafik' && (
           <div className="space-y-4">
             {validMonthlyCapaian.length > 0 || validMonthlyTargets.length > 0 ? (
               <div className="relative w-full overflow-x-auto custom-scrollbar border border-slate-200/90 rounded-2xl p-4 sm:p-5 bg-gradient-to-b from-white to-slate-50/50 shadow-2xs">
@@ -1771,7 +1831,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                         x={padL - 8}
                         y={y + 3}
                         textAnchor="end"
-                        className="text-[10px] fill-slate-400 font-mono"
+                        className="text-[10px] fill-slate-600 font-semibold font-mono"
                       >
                         {val}
                       </text>
@@ -1996,7 +2056,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           </div>
         )}
       </div>
-      )}
 
       {/* 5. KENDALA PELAKSANAAN & TINDAK LANJUT */}
       <div id="kendala-section" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6 scroll-mt-6">

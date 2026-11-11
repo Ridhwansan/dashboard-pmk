@@ -7,15 +7,9 @@ import { Logo } from '@/components/atoms/Logo';
 import { LayerType, PillarId } from '@/types/dashboard';
 import { useAuth } from '@/lib/useAuth';
 import {
-  ChevronDown,
-  GraduationCap,
-  HeartPulse,
-  ShieldAlert,
-  TrendingDown,
-  Check,
-  LayoutGrid,
   BarChart3,
   Map,
+  ChevronDown,
   Sliders,
   LogOut,
   User,
@@ -32,35 +26,6 @@ interface NavbarProps {
   onSelectMasterData?: () => void;
 }
 
-interface PillarNavItem {
-  id: PillarId;
-  label: string;
-  icon: React.ReactNode;
-}
-
-const PILLARS_NAV: PillarNavItem[] = [
-  {
-    id: 'pendidikan',
-    label: 'Pendidikan',
-    icon: <GraduationCap className="h-4 w-4 text-blue-600" />,
-  },
-  {
-    id: 'kesehatan',
-    label: 'Kesehatan',
-    icon: <HeartPulse className="h-4 w-4 text-emerald-600" />,
-  },
-  {
-    id: 'bencana',
-    label: 'Kebencanaan',
-    icon: <ShieldAlert className="h-4 w-4 text-pillar-bencana" style={{ color: '#7a4b27' }} />,
-  },
-  {
-    id: 'kemiskinan',
-    label: 'Penurunan Kemiskinan',
-    icon: <TrendingDown className="h-4 w-4 text-rose-600" />,
-  },
-];
-
 export const Navbar: React.FC<NavbarProps> = ({
   selectedPillar: propSelectedPillar,
   onSelectLayer1,
@@ -72,36 +37,19 @@ export const Navbar: React.FC<NavbarProps> = ({
   const pillarParam = (searchParams.get('pillar') as PillarId) || null;
 
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
-  const [isPilarDropdownOpen, setIsPilarDropdownOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
-  const pilarDropdownRef = useRef<HTMLDivElement | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   // Active state determinations
-  const isLandingActive =
-    pathname === '/dashboard/eksekutif' && (!currentView || currentView === 'landing');
   const isIkhtisarActive =
     currentView === 'ikhtisar' || pathname.startsWith('/dashboard/pilar');
   const isProfilWilayahActive = currentView === 'profil-wilayah';
-
-  // Extract active pillar
-  const pathPillarSegment = pathname.startsWith('/dashboard/pilar/')
-    ? (pathname.split('/')[3] as PillarId)
-    : null;
-  const currentPillarId: PillarId =
-    pillarParam || pathPillarSegment || propSelectedPillar || 'pendidikan';
 
   // Close dropdowns on click outside or Escape key
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (
-        pilarDropdownRef.current &&
-        !pilarDropdownRef.current.contains(target)
-      ) {
-        setIsPilarDropdownOpen(false);
-      }
       if (
         userMenuRef.current &&
         !userMenuRef.current.contains(target)
@@ -112,7 +60,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsPilarDropdownOpen(false);
         setIsUserMenuOpen(false);
       }
     };
@@ -128,14 +75,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white border-b border-slate-200/80 px-4 lg:px-8 py-2.5 transition-colors shadow-2xs">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4 w-full">
+      <header className="sticky top-0 z-50 w-full bg-white border-b border-slate-200/80 px-4 lg:px-8 h-16 transition-colors shadow-2xs flex items-center">
+        <div className="max-w-[1600px] mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-4 w-full h-full">
           {/* 1. Left: Brand Logo & Title */}
           <div className="flex items-center justify-start shrink-0">
             <Link
               href="/dashboard/eksekutif"
               onClick={() => {
-                setIsPilarDropdownOpen(false);
                 setIsUserMenuOpen(false);
                 onSelectLayer1?.();
               }}
@@ -146,117 +92,32 @@ export const Navbar: React.FC<NavbarProps> = ({
             </Link>
           </div>
 
-          {/* 2. Center: Navigation Menus (Clean, Frameless - No Card Wrapper) */}
-          <div className="flex-1 flex items-center justify-center">
+          {/* 2. Center: Navigation Menus (True Precision Grid Center - No Dropdown) */}
+          <div className="flex items-center justify-center">
             <nav
               aria-label="Navigasi Utama Dashboard"
               className="flex items-center gap-1 sm:gap-2 shrink-0"
             >
-              {/* Menu 1: Pilihan Menu */}
+              {/* Menu 1: Ikhtisar (Direct Link - No Dropdown) */}
               <Link
-                href="/dashboard/eksekutif"
+                href="/dashboard/eksekutif?view=ikhtisar"
                 onClick={() => {
-                  setIsPilarDropdownOpen(false);
                   setIsUserMenuOpen(false);
-                  onSelectLayer1?.();
                 }}
                 className={`px-3 py-2 rounded-xl text-xs md:text-sm font-semibold transition-colors cursor-pointer flex items-center gap-2 ${
-                  isLandingActive
+                  isIkhtisarActive
                     ? 'text-blue-600 font-bold bg-blue-50/70'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
                 }`}
               >
-                <LayoutGrid className={`h-4 w-4 ${isLandingActive ? 'text-blue-600' : 'text-slate-500'}`} />
-                <span className="hidden sm:inline">Pilihan Menu</span>
-                <span className="sm:hidden">Menu</span>
+                <BarChart3 className={`h-4 w-4 ${isIkhtisarActive ? 'text-blue-600' : 'text-slate-500'}`} />
+                <span>Ikhtisar</span>
               </Link>
 
-              {/* Menu 2: Ikhtisar dengan Dropdown Terintegrasi */}
-              <div ref={pilarDropdownRef} className="relative">
-                <div
-                  className={`inline-flex items-center rounded-xl transition-colors ${
-                    isIkhtisarActive
-                      ? 'text-blue-600 font-bold bg-blue-50/70'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-                  }`}
-                >
-                  <Link
-                    href="/dashboard/eksekutif?view=ikhtisar"
-                    onClick={() => {
-                      setIsPilarDropdownOpen(false);
-                      setIsUserMenuOpen(false);
-                    }}
-                    className="pl-3 pr-1 py-2 text-xs md:text-sm font-semibold flex items-center gap-2 cursor-pointer"
-                  >
-                    <BarChart3 className={`h-4 w-4 ${isIkhtisarActive ? 'text-blue-600' : 'text-slate-500'}`} />
-                    <span>Ikhtisar</span>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => setIsPilarDropdownOpen((prev) => !prev)}
-                    aria-expanded={isPilarDropdownOpen}
-                    aria-haspopup="true"
-                    aria-label="Buka pilihan tab pilar"
-                    className="pr-2.5 pl-0.5 py-2 text-slate-400 hover:text-slate-700 cursor-pointer"
-                  >
-                    <ChevronDown
-                      className={`h-3.5 w-3.5 transition-transform duration-150 ${
-                        isPilarDropdownOpen ? 'rotate-180 text-blue-600' : ''
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {/* Dropdown for Pilar Sub-Menus */}
-                {isPilarDropdownOpen && (
-                  <div className="absolute left-1/2 -translate-x-1/2 top-full pt-2 z-50 w-56 sm:w-60 max-w-[calc(100vw-2rem)] animate-in fade-in zoom-in-95 duration-100">
-                    <div
-                      role="menu"
-                      aria-label="Pilihan Tab Pilar"
-                      className="bg-white rounded-xl border border-slate-200 shadow-xl p-2 text-xs space-y-1"
-                    >
-                      {PILLARS_NAV.map((p) => {
-                        const isCurrentPillar =
-                          isIkhtisarActive && currentPillarId === p.id;
-                        return (
-                          <Link
-                            key={p.id}
-                            href={`/dashboard/eksekutif?view=ikhtisar&pillar=${p.id}`}
-                            onClick={() => {
-                              setIsPilarDropdownOpen(false);
-                              onSelectPillar?.(p.id);
-                            }}
-                            role="menuitem"
-                            className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-left transition-colors cursor-pointer ${
-                              isCurrentPillar
-                                ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200/80'
-                                : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <span className="p-1 rounded-md bg-white border border-slate-200 shrink-0">
-                                {p.icon}
-                              </span>
-                              <span className="font-semibold text-xs text-slate-900 truncate">
-                                {p.label}
-                              </span>
-                            </div>
-                            {isCurrentPillar && (
-                              <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-                            )}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Menu 3: PKPN Wilayah */}
+              {/* Menu 2: PKPN Wilayah */}
               <Link
                 href="/dashboard/eksekutif?view=profil-wilayah"
                 onClick={() => {
-                  setIsPilarDropdownOpen(false);
                   setIsUserMenuOpen(false);
                 }}
                 className={`px-3 py-2 rounded-xl text-xs md:text-sm font-semibold transition-colors cursor-pointer flex items-center gap-2 ${
@@ -266,8 +127,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 <Map className={`h-4 w-4 ${isProfilWilayahActive ? 'text-blue-600' : 'text-slate-500'}`} />
-                <span className="hidden sm:inline">PKPN Wilayah</span>
-                <span className="sm:hidden">Wilayah</span>
+                <span>PKPN Wilayah</span>
               </Link>
             </nav>
           </div>
