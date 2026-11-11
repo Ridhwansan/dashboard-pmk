@@ -15,7 +15,7 @@
     "picKementerian": "Kemendikdasmen, Kemenag, Kementerian PUPR, Kemendagri",
     "order": 1,
     "isActive": true,
-    "includeInPdf": false,
+    "includeInPdf": true,
     "isMilestone": false,
     "monthlyData": {
       "2025": [
@@ -531,7 +531,7 @@
     "picKementerian": "Kemendikdasmen, KemenPANRB, Kemendagri, Bappenas",
     "order": 2,
     "isActive": true,
-    "includeInPdf": false,
+    "includeInPdf": true,
     "isMilestone": false,
     "monthlyData": {
       "2025": [
@@ -1047,7 +1047,7 @@
     "picKementerian": "Kemendikdasmen, Kemenkeu, Kementerian PUPR, Setneg",
     "order": 3,
     "isActive": true,
-    "includeInPdf": false,
+    "includeInPdf": true,
     "isMilestone": false,
     "monthlyData": {
       "2025": [
@@ -3030,7 +3030,7 @@
     "picKementerian": "Kemendikdasmen, Kemenag, Kemenkeu, Kemendagri",
     "order": 1,
     "isActive": true,
-    "includeInPdf": false,
+    "includeInPdf": true,
     "isMilestone": false,
     "monthlyData": {
       "2025": [
@@ -3526,7 +3526,7 @@
     "picKementerian": "Kemendikdasmen, KemenPANRB, BKN, Kemenkeu, Pemda",
     "order": 2,
     "isActive": true,
-    "includeInPdf": false,
+    "includeInPdf": true,
     "isMilestone": false,
     "monthlyData": {
       "2025": [
@@ -5983,7 +5983,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": false,
+    "kendalaList": [
+      {
+        "id": "ckg-k1",
+        "title": "Kendala: Cek Kesehatan Gratis",
+        "kendala": "Keterbatasan ketersediaan Bahan Medis Habis Pakai (BMHP) dan kesiapan fasilitas rujukan di daerah terpencil.",
+        "tindakLanjut": "Pelibatan fasilitas kesehatan TNI/Polri untuk menjangkau Indonesia bagian Timur dan percepatan rantai pasok reagen laboratorium puskesmas.",
+        "klTerkait": "Kemenkes, BPJS Kesehatan, Kemendagri, Faskes TNI/Polri",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "tb",
@@ -6477,7 +6487,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": false,
+    "kendalaList": [
+      {
+        "id": "tb-k1",
+        "title": "Kendala: Penuntasan Tuberkulosis",
+        "kendala": "Dukungan nutrisi dan isolasi bagi penderita tidak mampu serta keterbatasan anggaran penelusuran kontak erat.",
+        "tindakLanjut": "Pengajuan peningkatan alokasi anggaran penuntasan TB dari Kemenkeu serta integrasi bantuan sosial permakanan Kemensos.",
+        "klTerkait": "Kemenkes, Kemenkeu, Kemensos, Pemda",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "rsud",
@@ -6971,7 +6991,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": false,
+    "kendalaList": [
+      {
+        "id": "rsud-k1",
+        "title": "Kendala: Revitalisasi Rumah Sakit Umum Daerah (RSUD)",
+        "kendala": "Kekurangan 7 dokter spesialis dasar (Penyakit Dalam, Anak, Obsgyn, Bedah, Anestesi, Patologi Klinik, Radiologi).",
+        "tindakLanjut": "Akselerasi program dokter spesialis berbasis rumah sakit pendidikan (hospital-based) oleh Kemendiktisaintek dan Kemenkes.",
+        "klTerkait": "Kemenkes, Kemendiktisaintek, Kementerian PUPR, Pemda",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "stunting",
@@ -7465,7 +7495,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": false,
+    "kendalaList": [
+      {
+        "id": "stunting-k1",
+        "title": "Kendala: Percepatan Penurunan Stunting",
+        "kendala": "Revisi Perpres 72/2021 tentang Penurunan Stunting belum rampung disahkan.",
+        "tindakLanjut": "Percepatan harmonisasi dan pengesahan revisi Perpres Stunting dengan penguatan komando Bappenas dan sinergi MBG.",
+        "klTerkait": "Bappenas, Kemenkes, BGN, BKKBN, Kemendagri",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "mbg_3b",
@@ -7960,7 +8000,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "mbg_3b-k1",
+        "title": "Kendala: MBG Ibu Hamil, Ibu Menyusui, dan Balita (3B)",
+        "kendala": "Kepatuhan konsumsi rutin, pendataan door-to-door ibu hamil & balita di kepulauan terpencil.",
+        "tindakLanjut": "Integrasi kartu kontrol posyandu dengan layanan dapur Satuan Pelayanan Gizi BGN dan kader PKK desa.",
+        "klTerkait": "Badan Gizi Nasional (BGN), Kemenkes, Kemendagri",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "puskesmas",
@@ -8454,7 +8504,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "puskesmas-k1",
+        "title": "Kendala: Revitalisasi Puskesmas & Labkesmas",
+        "kendala": "Ruang fiskal APBN/APBD terbatas untuk alokasi fisik serentak.",
+        "tindakLanjut": "Inventarisasi ketat kelayakan dan prioritas puskesmas serta skema pembiayaan DAK Fisik terarah.",
+        "klTerkait": "Kemenkes, Kementerian PUPR, Kemenkeu",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "rs_revitalisasi",
@@ -8948,7 +9008,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "rs_revitalisasi-k1",
+        "title": "Kendala: Revitalisasi Rumah Sakit Rujukan",
+        "kendala": "Kesiapan infrastruktur bunker radioterapi dan pengadaan alkes canggih impor.",
+        "tindakLanjut": "Pengawalan kontrak tahun jamak (multi-years) dan percepatan izin ketenaganukliran BAPETEN.",
+        "klTerkait": "Kemenkes, Bappenas, Kemenkeu",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "jumlah_kejadian_bencana",
@@ -9442,7 +9512,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "jumlah_bencana-k1",
+        "title": "Kendala: Jumlah Kejadian Bencana",
+        "kendala": "Peningkatan anomali cuaca ekstrem dan aktivitas sesar aktif darat.",
+        "tindakLanjut": "Penguatan sistem peringatan dini terintegrasi (Early Warning System for All) dan edukasi kebencanaan di sekolah.",
+        "klTerkait": "BNPB, BMKG, PVMBG, Basarnas",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "huntara_sumatera",
@@ -9936,7 +10016,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "huntara-k1",
+        "title": "Kendala: Huntara Sumatera (unit)",
+        "kendala": "Keterbatasan ketersediaan air bersih dan sanitasi komunal di beberapa titik relokasi sementara.",
+        "tindakLanjut": "Penyediaan tangki air dan hidran umum oleh Kementerian PUPR bersama BNPB dan pemerintah daerah setempat.",
+        "klTerkait": "BNPB, Kemensos, Pemda, TNI",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "huntap_sumatera",
@@ -10430,7 +10520,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "huntap-k1",
+        "title": "Kendala: Rehabilitasi dan Rekonstruksi Sumatera (Huntap)",
+        "kendala": "Ketersediaan lahan relokasi clean and clear serta pembiayaan lintas kementerian/lembaga.",
+        "tindakLanjut": "RTM Satgas PRRP Sumatera untuk penetapan lokasi lahan, pembagian pendanaan, dan percepatan tender konstruksi.",
+        "klTerkait": "Satgas PRRP Sumatera, Kementerian PUPR, BNPB, ATR/BPN",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "provinsi_karhutla",
@@ -10924,7 +11024,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "provinsi_karhutla-k1",
+        "title": "Kendala: Provinsi Prioritas Terdampak Karhutla",
+        "kendala": "Kemunculan titik api (hotspot) di lahan gambut dalam yang sulit dijangkau transportasi darat.",
+        "tindakLanjut": "Optimalisasi Operasi Modifikasi Cuaca (OMC) dan pengerahan armada helikopter water bombing BNPB.",
+        "klTerkait": "Kementerian LHK, BNPB, TNI/Polri, Pemda",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "luas_karhutla",
@@ -11418,7 +11528,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "luas_karhutla-k1",
+        "title": "Kendala: Luas Karhutla yang Sudah Dipadamkan",
+        "kendala": "Keterbatasan sekat kanal dan embung penampung air di perimeter kawasan konsesi kehutanan.",
+        "tindakLanjut": "Penegakan kepatuhan sekat kanal dan kewajiban restorasi gambut bagi pengelola konsesi.",
+        "klTerkait": "Kementerian LHK, BNPB, Satgas Terpadu",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "kerugian_bencana",
@@ -11912,7 +12032,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "kerugian-k1",
+        "title": "Kendala: Kerugian Bencana (% PDB)",
+        "kendala": "Tingginya nilai aset publik yang belum terlindungi skema asuransi kebencanaan BMN.",
+        "tindakLanjut": "Perluasan cakupan Asuransi Barang Milik Negara (ABMN) dan Dana Bersama Penanggulangan Bencana (Pooling Fund).",
+        "klTerkait": "Bappenas, Kemenkeu, BNPB",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "isu_pemulihan_infrastruktur_sumatera",
@@ -13891,7 +14021,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "kemiskinan-k1",
+        "title": "Kendala: Tingkat Kemiskinan (%)",
+        "kendala": "Pemutakhiran basis data terpadu (Regsosek/P3KE) yang masih memerlukan rekonsiliasi berkala antar K/L di tingkat kabupaten/kota.",
+        "tindakLanjut": "Percepatan interoperabilitas data tunggal kemiskinan lintas kementerian bersama Bappenas, BPS, dan Kemensos.",
+        "klTerkait": "Bappenas, BPS, Kemensos, Kemenko PMK",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "kemiskinan_ekstrem",
@@ -14385,7 +14525,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "kemiskinan_ekstrem-k1",
+        "title": "Kendala: Kemiskinan Ekstrem (%)",
+        "kendala": "Residu kantong kemiskinan ekstrem di wilayah terisolir Papua dan pedalaman Nusa Tenggara.",
+        "tindakLanjut": "Paket konvergensi intervensi 3 pilar: pengurangan beban pengeluaran, peningkatan pendapatan usaha mikro, dan pemukiman layak.",
+        "klTerkait": "Kemenko PMK, Kemensos, Bappenas, Kemendagri",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "bantuan_permakanan_lansia",
@@ -14879,7 +15029,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "permakanan_lansia-k1",
+        "title": "Kendala: Permakanan / MBG Lansia",
+        "kendala": "Bantuan permakanan mandiri terhenti sejak awal 2026 karena proses peralihan anggaran ke Badan Gizi Nasional (BGN).",
+        "tindakLanjut": "RTM Orkestrasi Menko PMK dengan Kepala BGN dan Mensos untuk memastikan jatah alokasi makanan siap santap lansia dalam skema MBG.",
+        "klTerkait": "Kemensos, Badan Gizi Nasional (BGN), Kemenko PMK",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "bantuan_permakanan_disabilitas",
@@ -15373,7 +15533,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "permakanan_disabilitas-k1",
+        "title": "Kendala: Permakanan / MBG Disabilitas",
+        "kendala": "Skema pembiayaan khusus dan pelibatan pendamping sosial belum terintegrasi di dapur pelayanan MBG.",
+        "tindakLanjut": "Harmonisasi petunjuk teknis distribusi makanan ramah disabilitas dan validasi data P3KE desil 1.",
+        "klTerkait": "Kemensos, Badan Gizi Nasional (BGN), Kemenko PMK",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "cakupan_lansia_desil",
@@ -15867,7 +16037,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "cakupan_lansia_desil-k1",
+        "title": "Kendala: Cakupan Lansia Desil 1–5",
+        "kendala": "Akurasi data NIK dan domisili penerima lansia desil 1–5 di daerah kepulauan dan pelosok 3T.",
+        "tindakLanjut": "Perekaman jemput bola administrasi kependudukan oleh Ditjen Dukcapil bersama pendamping sosial desa.",
+        "klTerkait": "Kemensos, BPS, Bappenas",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "cakupan_disabilitas_desil",
@@ -16361,7 +16541,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "cakupan_disabilitas_desil-k1",
+        "title": "Kendala: Cakupan Disabilitas Desil 1–5",
+        "kendala": "Keterbatasan tenaga pendamping rehabilitasi sosial dan ragam disabilitas yang belum terpetakan lengkap di DTSEN.",
+        "tindakLanjut": "Pemberdayaan LKS dan optimalisasi Balai Sentra Kemensos untuk asesmen komprehensif.",
+        "klTerkait": "Kemensos, BPS, Bappenas",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "bos_reguler",
@@ -16855,7 +17045,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "bos_reguler-k1",
+        "title": "Kendala: Bantuan Operasional Sekolah Reguler",
+        "kendala": "Keterlambatan pelaporan pertanggungjawaban dana BOS oleh sekolah di kawasan terluar yang berpotensi menunda pencairan tahap berikutnya.",
+        "tindakLanjut": "Simplifikasi pelaporan digital melalui aplikasi ARKAS dan pendampingan teknis dinas pendidikan daerah.",
+        "klTerkait": "Kemendikdasmen, Kemenkeu",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "bop_pendidikan",
@@ -17349,7 +17549,17 @@
         }
       ]
     },
-    "includeInPdf": true
+    "includeInPdf": true,
+    "kendalaList": [
+      {
+        "id": "bop_pendidikan-k1",
+        "title": "Kendala: Bantuan Operasional Pendidikan",
+        "kendala": "Verifikasi izin operasional dan rekening bank lembaga PAUD/kesetaraan swasta non-aktif.",
+        "tindakLanjut": "Pemutakhiran berkala Dapodik PAUD bersama pemda sebelum penetapan SK alokasi.",
+        "klTerkait": "Kemendikdasmen, Kemenkeu",
+        "urgensi": "Sedang"
+      }
+    ]
   },
   {
     "id": "bos_madrasah",

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { Role } from '@prisma/client';
 import { prisma } from './prisma';
 import { calculatePercentage } from './calcPercent';
 import { INITIAL_CMS_CARDS, CmsCardItem } from '../data/initialCmsCards';
@@ -14,10 +15,174 @@ import {
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const JSON_FILE_PATH = path.join(DATA_DIR, 'cmsCardsData.json');
+const META_JSON_FILE_PATH = path.join(DATA_DIR, 'dashboardMetaData.json');
+const USERS_JSON_FILE_PATH = path.join(DATA_DIR, 'usersData.json');
 
 // Memory cache for fallback mode
 let memoryCards: CmsCardItem[] | null = null;
+let memoryMeta: DashboardMetaItem | null = null;
+let memoryUsers: FallbackUserItem[] | null = null;
 let isPrismaAvailable: boolean | null = null;
+
+export interface DashboardMetaItem {
+  title: string;
+  subtitle: string;
+  cutoffDate: string;
+  ministerTitle: string;
+}
+
+export interface FallbackUserItem {
+  id: string;
+  username: string;
+  name: string;
+  email?: string | null;
+  role: 'ADMIN' | 'USER' | 'MENKO' | 'ESELON_1' | 'ESELON_2';
+  password?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Initialize fallback Metadata JSON file if it doesn't exist
+ */
+export function ensureMetaJsonFile(): DashboardMetaItem {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(META_JSON_FILE_PATH)) {
+      fs.writeFileSync(META_JSON_FILE_PATH, JSON.stringify(DASHBOARD_META, null, 2), 'utf-8');
+      memoryMeta = { ...DASHBOARD_META };
+      return memoryMeta;
+    }
+    if (!memoryMeta) {
+      try {
+        const raw = fs.readFileSync(META_JSON_FILE_PATH, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.title === 'string') {
+          memoryMeta = parsed;
+        }
+      } catch {
+        memoryMeta = null;
+      }
+    }
+    if (!memoryMeta) {
+      memoryMeta = { ...DASHBOARD_META };
+      fs.writeFileSync(META_JSON_FILE_PATH, JSON.stringify(memoryMeta, null, 2), 'utf-8');
+    }
+    return memoryMeta;
+  } catch (error) {
+    console.error('Error reading fallback metadata JSON, using memory:', error);
+    if (!memoryMeta) {
+      memoryMeta = { ...DASHBOARD_META };
+    }
+    return memoryMeta;
+  }
+}
+
+/**
+ * Persist dashboard metadata to fallback JSON file
+ */
+export function saveMetaJsonFile(meta: DashboardMetaItem): void {
+  memoryMeta = { ...meta };
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(META_JSON_FILE_PATH, JSON.stringify(meta, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Failed to write dashboardMetaData.json:', err);
+  }
+}
+
+/**
+ * Initialize fallback Users JSON file if it doesn't exist
+ */
+export function ensureUsersJsonFile(): FallbackUserItem[] {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    const createDefaultUsers = (): FallbackUserItem[] => [
+      {
+        id: 'usr_admin_01',
+        username: 'admin',
+        name: 'Administrator PMK',
+        role: 'ADMIN',
+        email: 'admin@kemenkopmk.go.id',
+        password: process.env.ADMIN_PASSWORD || 'admin123',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'usr_user_01',
+        username: 'user',
+        name: 'Pengguna Eksekutif',
+        role: 'USER',
+        email: 'eksekutif@kemenkopmk.go.id',
+        password: process.env.USER_PASSWORD || 'user123',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ];
+
+    if (!fs.existsSync(USERS_JSON_FILE_PATH)) {
+      const def = createDefaultUsers();
+      fs.writeFileSync(USERS_JSON_FILE_PATH, JSON.stringify(def, null, 2), 'utf-8');
+      memoryUsers = def;
+      return memoryUsers;
+    }
+    if (!memoryUsers || memoryUsers.length === 0) {
+      try {
+        const raw = fs.readFileSync(USERS_JSON_FILE_PATH, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          memoryUsers = parsed;
+        }
+      } catch {
+        memoryUsers = null;
+      }
+    }
+    if (!memoryUsers || memoryUsers.length === 0) {
+      const def = createDefaultUsers();
+      fs.writeFileSync(USERS_JSON_FILE_PATH, JSON.stringify(def, null, 2), 'utf-8');
+      memoryUsers = def;
+    }
+    return memoryUsers;
+  } catch (error) {
+    console.error('Error reading fallback users JSON, using memory:', error);
+    if (!memoryUsers) {
+      memoryUsers = [
+        {
+          id: 'usr_admin_01',
+          username: 'admin',
+          name: 'Administrator PMK',
+          role: 'ADMIN',
+          email: 'admin@kemenkopmk.go.id',
+          password: process.env.ADMIN_PASSWORD || 'admin123',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+    }
+    return memoryUsers;
+  }
+}
+
+/**
+ * Persist users to fallback JSON file
+ */
+export function saveUsersJsonFile(users: FallbackUserItem[]): void {
+  memoryUsers = [...users];
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(USERS_JSON_FILE_PATH, JSON.stringify(users, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Failed to write usersData.json:', err);
+  }
+}
 
 /**
  * Check if Prisma PostgreSQL is reachable
@@ -172,7 +337,9 @@ export async function getCards(filter?: GetCardsFilter): Promise<CmsCardItem[]> 
     try {
       const where: Record<string, unknown> = {};
       if (filter?.pillarId) where.pillarId = filter.pillarId;
-      if (filter?.category) where.category = filter.category;
+      if (filter?.category && filter.category !== 'all' && filter.category !== 'Semua') {
+        where.category = filter.category;
+      }
       if (filter?.onlyActive !== false) where.isActive = true;
 
       const rows = await prisma.pillarCard.findMany({
@@ -199,7 +366,7 @@ export async function getCards(filter?: GetCardsFilter): Promise<CmsCardItem[]> 
   return allCards
     .filter((c) => {
       if (filter?.pillarId && c.pillarId !== filter.pillarId) return false;
-      if (filter?.category && c.category !== filter.category) return false;
+      if (filter?.category && filter.category !== 'all' && filter.category !== 'Semua' && c.category !== filter.category) return false;
       if (filter?.onlyActive !== false && !c.isActive) return false;
       return true;
     })
@@ -328,11 +495,11 @@ export async function updatePdfSettings(
           where: {
             OR: [{ id }, { slug: id }],
           },
-          data: { includeInPdf },
+          data: { includeInPdf } as any,
         })
       );
       const results = await prisma.$transaction(updates);
-      count = results.reduce((acc, r) => acc + r.count, 0);
+      count = results.reduce((acc: number, r: { count: number }) => acc + r.count, 0);
     } catch (err) {
       console.warn('Prisma updatePdfSettings failed, falling back to JSON:', err);
       isPrismaAvailable = false;
@@ -484,7 +651,7 @@ export async function resetCards(): Promise<CmsCardItem[]> {
 /**
  * Get Dashboard Metadata from PostgreSQL or fallback
  */
-export async function getDashboardMetadata() {
+export async function getDashboardMetadata(): Promise<DashboardMetaItem> {
   const useDb = await testPrismaConnection();
   if (useDb) {
     try {
@@ -498,10 +665,308 @@ export async function getDashboardMetadata() {
         };
       }
     } catch {
-      // fallback
+      isPrismaAvailable = false;
     }
   }
-  return DASHBOARD_META;
+  return ensureMetaJsonFile();
+}
+
+/**
+ * Update Dashboard Metadata (Informasi Tampilan Depan) in PostgreSQL and fallback JSON
+ */
+export async function updateDashboardMetadata(
+  patch: Partial<DashboardMetaItem>
+): Promise<DashboardMetaItem> {
+  const current = await getDashboardMetadata();
+  const next: DashboardMetaItem = {
+    title: patch.title !== undefined && patch.title.trim() ? patch.title.trim() : current.title,
+    subtitle: patch.subtitle !== undefined && patch.subtitle.trim() ? patch.subtitle.trim() : current.subtitle,
+    cutoffDate: patch.cutoffDate !== undefined && patch.cutoffDate.trim() ? patch.cutoffDate.trim() : current.cutoffDate,
+    ministerTitle: patch.ministerTitle !== undefined && patch.ministerTitle.trim() ? patch.ministerTitle.trim() : current.ministerTitle,
+  };
+
+  const useDb = await testPrismaConnection();
+  if (useDb) {
+    try {
+      const updated = await prisma.dashboardMeta.upsert({
+        where: { id: 'default' },
+        update: {
+          title: next.title,
+          subtitle: next.subtitle,
+          cutoffDate: next.cutoffDate,
+          ministerTitle: next.ministerTitle,
+        },
+        create: {
+          id: 'default',
+          title: next.title,
+          subtitle: next.subtitle,
+          cutoffDate: next.cutoffDate,
+          ministerTitle: next.ministerTitle,
+        },
+      });
+      saveMetaJsonFile(next);
+      return {
+        title: updated.title,
+        subtitle: updated.subtitle,
+        cutoffDate: updated.cutoffDate,
+        ministerTitle: updated.ministerTitle,
+      };
+    } catch {
+      isPrismaAvailable = false;
+    }
+  }
+
+  saveMetaJsonFile(next);
+  return next;
+}
+
+/**
+ * Get users list for CMS Admin
+ */
+export async function getUsersList(): Promise<Omit<FallbackUserItem, 'password'>[]> {
+  const useDb = await testPrismaConnection();
+  if (useDb) {
+    try {
+      const dbUsers = await prisma.user.findMany({
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          email: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+      if (Array.isArray(dbUsers) && dbUsers.length > 0) {
+        return dbUsers.map((u: { id: string; username: string; name: string; email: string | null; role: string; createdAt: Date; updatedAt: Date }) => ({
+          id: u.id,
+          username: u.username,
+          name: u.name,
+          email: u.email,
+          role: u.role as FallbackUserItem['role'],
+          createdAt: u.createdAt.toISOString(),
+          updatedAt: u.updatedAt.toISOString(),
+        }));
+      }
+    } catch {
+      isPrismaAvailable = false;
+    }
+  }
+
+  const fileUsers = ensureUsersJsonFile();
+  return fileUsers.map((u) => ({
+    id: u.id,
+    username: u.username,
+    name: u.name,
+    email: u.email || null,
+    role: u.role,
+    createdAt: u.createdAt,
+    updatedAt: u.updatedAt,
+  }));
+}
+
+/**
+ * Create a new User in PostgreSQL or fallback JSON
+ */
+export async function createNewUser(data: {
+  username: string;
+  name: string;
+  email?: string | null;
+  password: string;
+  role: FallbackUserItem['role'];
+}): Promise<Omit<FallbackUserItem, 'password'>> {
+  const cleanUsername = data.username.trim().toLowerCase();
+  const cleanEmail = data.email ? data.email.trim().toLowerCase() : null;
+
+  const useDb = await testPrismaConnection();
+  if (useDb) {
+    try {
+      const created = await prisma.user.create({
+        data: {
+          username: cleanUsername,
+          name: data.name.trim(),
+          email: cleanEmail,
+          password: data.password.trim(),
+          role: data.role as Role,
+        },
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          email: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      // Mirror to fallback file
+      const users = ensureUsersJsonFile();
+      users.push({
+        id: created.id,
+        username: created.username,
+        name: created.name,
+        email: created.email,
+        password: data.password.trim(),
+        role: data.role,
+        createdAt: created.createdAt.toISOString(),
+        updatedAt: created.updatedAt.toISOString(),
+      });
+      saveUsersJsonFile(users);
+
+      return {
+        id: created.id,
+        username: created.username,
+        name: created.name,
+        email: created.email,
+        role: created.role as FallbackUserItem['role'],
+        createdAt: created.createdAt.toISOString(),
+        updatedAt: created.updatedAt.toISOString(),
+      };
+    } catch {
+      isPrismaAvailable = false;
+    }
+  }
+
+  const users = ensureUsersJsonFile();
+  const newUser: FallbackUserItem = {
+    id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    username: cleanUsername,
+    name: data.name.trim(),
+    email: cleanEmail,
+    password: data.password.trim(),
+    role: data.role,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  users.push(newUser);
+  saveUsersJsonFile(users);
+
+  return {
+    id: newUser.id,
+    username: newUser.username,
+    name: newUser.name,
+    email: newUser.email,
+    role: newUser.role,
+    createdAt: newUser.createdAt,
+    updatedAt: newUser.updatedAt,
+  };
+}
+
+/**
+ * Update an existing User in PostgreSQL or fallback JSON
+ */
+export async function updateExistingUser(
+  id: string,
+  patch: {
+    name?: string;
+    email?: string | null;
+    role?: FallbackUserItem['role'];
+    password?: string;
+  }
+): Promise<Omit<FallbackUserItem, 'password'> | null> {
+  const useDb = await testPrismaConnection();
+  if (useDb) {
+    try {
+      const updateData: Record<string, unknown> = {};
+      if (patch.name) updateData.name = patch.name.trim();
+      if (patch.email !== undefined) updateData.email = patch.email ? patch.email.trim().toLowerCase() : null;
+      if (patch.role) updateData.role = patch.role as Role;
+      if (patch.password && patch.password.trim()) updateData.password = patch.password.trim();
+
+      const updated = await prisma.user.update({
+        where: { id },
+        data: updateData,
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          email: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      // Mirror to file
+      const fileUsers = ensureUsersJsonFile();
+      const idx = fileUsers.findIndex((u) => u.id === id);
+      if (idx !== -1) {
+        fileUsers[idx] = {
+          ...fileUsers[idx],
+          name: updated.name,
+          email: updated.email,
+          role: updated.role as FallbackUserItem['role'],
+          password: patch.password && patch.password.trim() ? patch.password.trim() : fileUsers[idx].password,
+          updatedAt: updated.updatedAt.toISOString(),
+        };
+        saveUsersJsonFile(fileUsers);
+      }
+
+      return {
+        id: updated.id,
+        username: updated.username,
+        name: updated.name,
+        email: updated.email,
+        role: updated.role as FallbackUserItem['role'],
+        createdAt: updated.createdAt.toISOString(),
+        updatedAt: updated.updatedAt.toISOString(),
+      };
+    } catch {
+      isPrismaAvailable = false;
+    }
+  }
+
+  const fileUsers = ensureUsersJsonFile();
+  const idx = fileUsers.findIndex((u) => u.id === id);
+  if (idx === -1) return null;
+
+  const target = fileUsers[idx];
+  const updatedUser: FallbackUserItem = {
+    ...target,
+    name: patch.name && patch.name.trim() ? patch.name.trim() : target.name,
+    email: patch.email !== undefined ? (patch.email ? patch.email.trim().toLowerCase() : null) : target.email,
+    role: patch.role || target.role,
+    password: patch.password && patch.password.trim() ? patch.password.trim() : target.password,
+    updatedAt: new Date().toISOString(),
+  };
+
+  fileUsers[idx] = updatedUser;
+  saveUsersJsonFile(fileUsers);
+
+  return {
+    id: updatedUser.id,
+    username: updatedUser.username,
+    name: updatedUser.name,
+    email: updatedUser.email,
+    role: updatedUser.role,
+    createdAt: updatedUser.createdAt,
+    updatedAt: updatedUser.updatedAt,
+  };
+}
+
+/**
+ * Delete a user in PostgreSQL or fallback JSON
+ */
+export async function deleteExistingUser(id: string): Promise<boolean> {
+  const useDb = await testPrismaConnection();
+  if (useDb) {
+    try {
+      await prisma.user.delete({ where: { id } });
+    } catch {
+      isPrismaAvailable = false;
+    }
+  }
+
+  const fileUsers = ensureUsersJsonFile();
+  const next = fileUsers.filter((u) => u.id !== id);
+  if (next.length !== fileUsers.length) {
+    saveUsersJsonFile(next);
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -579,7 +1044,7 @@ export async function seedPrismaDatabase(): Promise<void> {
         update: {
           password: u.password,
           name: u.user.name,
-          role: u.user.role,
+          role: u.user.role as Role,
           email: u.user.email,
         },
         create: {
@@ -587,7 +1052,7 @@ export async function seedPrismaDatabase(): Promise<void> {
           username: u.user.username,
           password: u.password,
           name: u.user.name,
-          role: u.user.role,
+          role: u.user.role as Role,
           email: u.user.email,
         },
       });

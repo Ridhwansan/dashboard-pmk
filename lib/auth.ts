@@ -130,6 +130,28 @@ export async function authenticateCredentials(
     // Database check skipped or failed
   }
 
+  // 3. Fallback to users JSON file store
+  try {
+    const { ensureUsersJsonFile } = await import('./db');
+    const fileUsers = ensureUsersJsonFile();
+    const found = fileUsers.find(
+      (u) =>
+        (u.username.toLowerCase() === cleanUsername || (u.email && u.email.toLowerCase() === cleanUsername)) &&
+        u.password === pass
+    );
+    if (found) {
+      return {
+        id: found.id,
+        username: found.username,
+        name: found.name,
+        role: found.role as UserRole,
+        email: found.email || undefined,
+      };
+    }
+  } catch {
+    // Fallback file check skipped
+  }
+
   return null;
 }
 

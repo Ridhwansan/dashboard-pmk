@@ -40,6 +40,7 @@ export async function GET(request: Request, context: RouteContext) {
       picKementerian: card.picKementerian || baselineDetail.picKementerian,
       kendalaList: card.kendalaList || baselineDetail.kendalaList,
       monthlyData: card.monthlyData || baselineDetail.monthlyData,
+      annualTargets: card.annualTargets || (baselineDetail as unknown as { annualTargets?: unknown }).annualTargets,
       updateLogs: card.updateLogs || baselineDetail.updateLogs,
     };
 

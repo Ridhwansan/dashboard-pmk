@@ -52,7 +52,7 @@ import { KendalaDetailItem } from '@/data/programDetailData';
 import { ExecutivePdfButton } from '@/components/molecules/ExecutivePdfButton';
 
 export type PillarTab = 'all' | 'pendidikan' | 'kesehatan' | 'bencana' | 'kemiskinan';
-export type CategoryFilter = 'all' | 'PKPN' | 'Isu Strategis';
+export type CategoryFilter = 'all' | 'PKPN' | 'Isu Strategis' | 'RPJMN';
 export type CmsViewMode = 'list' | 'create' | 'edit' | 'metadata' | 'users' | 'pdf-settings';
 export type MetricType = 'number' | 'percent' | 'text';
 
@@ -232,7 +232,7 @@ export const CmsAdminView: React.FC = () => {
   // Fetch cards from API
   const fetchAllCards = async () => {
     try {
-      const res = await fetch('/api/cards', { cache: 'no-store' });
+      const res = await fetch('/api/cards?all=true', { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
         if (json.data && Array.isArray(json.data)) {
@@ -270,7 +270,7 @@ export const CmsAdminView: React.FC = () => {
     const init = async () => {
       try {
         const [cardsRes, metaRes] = await Promise.all([
-          fetch('/api/cards', { cache: 'no-store' }),
+          fetch('/api/cards?all=true', { cache: 'no-store' }),
           fetch('/api/meta', { cache: 'no-store' }),
         ]);
         if (cardsRes.ok && active) {
@@ -318,10 +318,11 @@ export const CmsAdminView: React.FC = () => {
         showToast('Informasi tampilan depan berhasil diperbarui');
         setViewMode('list');
       } else {
-        alert('Gagal menyimpan informasi tampilan depan');
+        const errJson = await res.json().catch(() => null);
+        alert(errJson?.error || 'Gagal menyimpan informasi tampilan depan');
       }
     } catch {
-      alert('Terjadi kesalahan jaringan');
+      alert('Terjadi kesalahan jaringan saat menyimpan informasi tampilan depan');
     } finally {
       setIsSavingMeta(false);
     }
@@ -723,7 +724,8 @@ export const CmsAdminView: React.FC = () => {
           showToast(`Indikator "${formData.title}" dan rincian detail berhasil diperbarui`);
           setViewMode('list');
         } else {
-          alert('Gagal memperbarui indikator');
+          const errJson = await res.json().catch(() => null);
+          alert(errJson?.error || 'Gagal memperbarui indikator');
         }
       } else {
         const res = await fetch('/api/cards', {
@@ -737,7 +739,8 @@ export const CmsAdminView: React.FC = () => {
           showToast(`Indikator "${formData.title}" dan rincian detail berhasil ditambahkan`);
           setViewMode('list');
         } else {
-          alert('Gagal membuat indikator baru');
+          const errJson = await res.json().catch(() => null);
+          alert(errJson?.error || 'Gagal membuat indikator baru');
         }
       }
     } catch {
@@ -1278,6 +1281,18 @@ export const CmsAdminView: React.FC = () => {
                   >
                     Isu Strategis
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategory('RPJMN')}
+                    className={`h-8 px-4 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      selectedCategory === 'RPJMN'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    RPJMN
+                  </button>
                 </div>
 
                 {/* Quick Search Bar */}
@@ -1327,15 +1342,31 @@ export const CmsAdminView: React.FC = () => {
                       </tr>
                     ) : filteredCards.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-12 text-center text-slate-500 space-y-3">
-                          <p className="font-semibold">Tidak ada indikator yang sesuai kriteria pencarian.</p>
-                          <button
-                            type="button"
-                            onClick={handleResetDefault}
-                            className="h-10 px-4 rounded-xl bg-[#4F83CC] text-white font-bold text-xs hover:bg-[#3f72bb] cursor-pointer"
-                          >
-                            Muat Ulang 28 Data Master Resmi
-                          </button>
+                        <td colSpan={8} className="py-14 text-center space-y-3 bg-slate-50/50">
+                          <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center mx-auto text-slate-400">
+                            <FileText className="h-6 w-6 stroke-[1.75]" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="font-bold text-slate-900 text-sm">
+                              {selectedCategory === 'all'
+                                ? 'Tidak ada indikator yang sesuai kriteria pencarian.'
+                                : `Belum ada indikator terdaftar untuk kategori ${selectedCategory}.`}
+                            </p>
+                            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                              {selectedCategory === 'all'
+                                ? 'Periksa kembali kata kunci pencarian Anda atau atur ulang pilihan filter pilar.'
+                                : `Informasi belum tersedia untuk kategori ini. Anda dapat membuat indikator baru dengan menekan tombol "Tambah Indikator" di pojok kanan atas.`}
+                            </p>
+                          </div>
+                          {selectedCategory === 'all' && (
+                            <button
+                              type="button"
+                              onClick={handleResetDefault}
+                              className="h-9 px-4 rounded-xl bg-[#4F83CC] text-white font-bold text-xs hover:bg-[#3f72bb] cursor-pointer transition-colors shadow-2xs"
+                            >
+                              Muat Ulang 28 Data Master Resmi
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ) : (
@@ -1557,6 +1588,7 @@ export const CmsAdminView: React.FC = () => {
                       >
                         <option value="PKPN">PKPN (Program Kerja Prioritas Nasional)</option>
                         <option value="Isu Strategis">Isu Strategis Prioritas</option>
+                        <option value="RPJMN">RPJMN (Rencana Pembangunan Jangka Menengah Nasional)</option>
                       </select>
                     </div>
                   </div>

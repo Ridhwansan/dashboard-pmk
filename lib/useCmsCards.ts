@@ -88,7 +88,7 @@ export function useCmsCards(pillarId?: string, category?: string) {
     if (!cachedCards) return [];
     return cachedCards.filter((c) => {
       if (pillarId && c.pillarId !== pillarId) return false;
-      if (category && c.category !== category) return false;
+      if (category && category !== 'Semua' && category !== 'all' && c.category !== category) return false;
       return c.isActive;
     });
   }, [cachedCards, pillarId, category]);

@@ -12,6 +12,15 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Dashboard PMK - Executive Overview & Analytics",
   description: "Dashboard eksekutif dan pelaporan operasional PMK",
+  icons: {
+    icon: [
+      { url: '/images/logo-pmk-garuda.png', sizes: 'any' },
+      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
 };
 
 export default function RootLayout({

@@ -918,6 +918,9 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '20.544 unit',
     status: 'Capaian 2026 (99,0%)',
     subtext: 'Realisasi hampir rampung sempurna (99%) di seluruh kantong pengungsian',
+    kendala: 'Keterbatasan ketersediaan air bersih dan sanitasi komunal di beberapa titik relokasi sementara.',
+    tindakLanjut:
+      'Penyediaan tangki air dan hidran umum oleh Kementerian PUPR bersama BNPB dan pemerintah daerah setempat.',
     monthlyData: generateEmptyMonthlyData(),
   },
 
@@ -1018,6 +1021,10 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '6,5% – 7,5%',
     status: 'Posisi Maret 2026: 8,07%',
     subtext: 'Realisasi September 2025: 8,25% (turun 0,18% poin)',
+    kendala:
+      'Pemutakhiran basis data terpadu (Regsosek/P3KE) yang masih memerlukan rekonsiliasi berkala antar K/L di tingkat kabupaten/kota.',
+    tindakLanjut:
+      'Percepatan interoperabilitas data tunggal kemiskinan lintas kementerian bersama Bappenas, BPS, dan Kemensos.',
     monthlyData: generateEmptyMonthlyData(),
   },
 
@@ -1131,6 +1138,9 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '6 Provinsi Prioritas',
     status: 'Data 13 Oktober 2026',
     subtext: 'Fokus Pengendalian & Pencegahan Terpadu',
+    kendala: 'Kemunculan titik api (hotspot) di lahan gambut dalam yang sulit dijangkau transportasi darat.',
+    tindakLanjut:
+      'Optimalisasi Operasi Modifikasi Cuaca (OMC) dan pengerahan armada helikopter water bombing BNPB.',
     monthlyData: generateEmptyMonthlyData(),
   },
 
@@ -1148,6 +1158,9 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '130.097,79 Ha',
     status: 'Capaian 2026 (99,5%)',
     subtext: 'Jumlah Luas Karhutla: 130.097,79 Ha · Dalam Proses Pemadaman: 663,61 Ha',
+    kendala: 'Keterbatasan sekat kanal dan embung penampung air di perimeter kawasan konsesi kehutanan.',
+    tindakLanjut:
+      'Penegakan kepatuhan sekat kanal dan kewajiban restorasi gambut bagi pengelola konsesi.',
     monthlyData: generateEmptyMonthlyData(),
   },
 
@@ -1168,6 +1181,9 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: 'Dalam Proses Pendataan',
     status: 'Realisasi 2025: 0,66%',
     subtext: 'Target 2026: Dalam Proses Pendataan',
+    kendala: 'Akurasi data NIK dan domisili penerima lansia desil 1–5 di daerah kepulauan dan pelosok 3T.',
+    tindakLanjut:
+      'Perekaman jemput bola administrasi kependudukan oleh Ditjen Dukcapil bersama pendamping sosial desa.',
     monthlyData: generateEmptyMonthlyData(),
   },
 
@@ -1185,6 +1201,9 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: 'Dalam Proses Pendataan',
     status: 'Realisasi 2025: 0,41%',
     subtext: 'Target 2026: Dalam Proses Pendataan',
+    kendala: 'Keterbatasan tenaga pendamping rehabilitasi sosial dan ragam disabilitas yang belum terpetakan lengkap di DTSEN.',
+    tindakLanjut:
+      'Pemberdayaan LKS dan optimalisasi Balai Sentra Kemensos untuk asesmen komprehensif.',
     monthlyData: generateEmptyMonthlyData(),
   },
 
@@ -1202,6 +1221,9 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '432.716 Sekolah',
     status: 'Realisasi 2026 (99,9%)',
     subtext: 'Penyaluran Dana BOS Reguler Sekolah Dasar & Menengah',
+    kendala: 'Keterlambatan pelaporan pertanggungjawaban dana BOS oleh sekolah di kawasan terluar yang berpotensi menunda pencairan tahap berikutnya.',
+    tindakLanjut:
+      'Simplifikasi pelaporan digital melalui aplikasi ARKAS dan pendampingan teknis dinas pendidikan daerah.',
     monthlyData: generateEmptyMonthlyData(),
   },
 
@@ -1219,6 +1241,9 @@ export const PROGRAM_DETAILS_DATA: Record<string, ProgramDetailData> = {
     target2026: '406.741 Lembaga',
     status: 'Realisasi 2026',
     subtext: 'Penyaluran BOP Pendidikan Anak Usia Dini & Kesetaraan',
+    kendala: 'Verifikasi izin operasional dan rekening bank lembaga PAUD/kesetaraan swasta non-aktif.',
+    tindakLanjut:
+      'Pemutakhiran berkala Dapodik PAUD bersama pemda sebelum penetapan SK alokasi.',
     monthlyData: generateEmptyMonthlyData(),
   },
 
@@ -1435,16 +1460,37 @@ const PROGRAM_ALIASES: Record<string, string> = {
   bantuan_pendidikan_pada_kantong_kemiskinan: 'isu_bantuan_pendidikan_kantong_kemiskinan',
 };
 
+function normalizeProgramDetail(item: ProgramDetailData): ProgramDetailData {
+  if ((!item.kendalaList || item.kendalaList.length === 0) && item.kendala && item.kendala.trim() !== '') {
+    return {
+      ...item,
+      kendalaList: [
+        {
+          id: `${item.id}-k1`,
+          title: item.title ? `Kendala: ${item.title}` : 'Kendala Pelaksanaan',
+          kendala: item.kendala,
+          tindakLanjut:
+            item.tindakLanjut ||
+            'Percepatan koordinasi lintas kementerian/lembaga untuk penanganan hambatan dan percepatan realisasi target.',
+          klTerkait: item.picKementerian,
+          urgensi: 'Sedang',
+        },
+      ],
+    };
+  }
+  return item;
+}
+
 /**
  * Helper to get program detail by program ID or fallback
  */
 export function getProgramDetailData(id: string, fallbackTitle?: string, fallbackPillar?: string): ProgramDetailData {
   const resolvedId = PROGRAM_ALIASES[id] || id;
   if (PROGRAM_DETAILS_DATA[resolvedId]) {
-    return PROGRAM_DETAILS_DATA[resolvedId];
+    return normalizeProgramDetail(PROGRAM_DETAILS_DATA[resolvedId]);
   }
   if (PROGRAM_DETAILS_DATA[id]) {
-    return PROGRAM_DETAILS_DATA[id];
+    return normalizeProgramDetail(PROGRAM_DETAILS_DATA[id]);
   }
 
   // Fallback matching by title keywords if exact key doesn't match
@@ -1452,7 +1498,7 @@ export function getProgramDetailData(id: string, fallbackTitle?: string, fallbac
   for (const key of Object.keys(PROGRAM_DETAILS_DATA)) {
     const item = PROGRAM_DETAILS_DATA[key];
     if (lowerTitle.includes(item.title.toLowerCase()) || item.title.toLowerCase().includes(lowerTitle)) {
-      return item;
+      return normalizeProgramDetail(item);
     }
   }
 

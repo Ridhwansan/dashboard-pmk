@@ -1,8 +1,10 @@
+export type CmsCardCategory = 'PKPN' | 'Isu Strategis' | 'RPJMN' | string;
+
 export interface CmsCardItem {
   id: string;
   slug: string;
   pillarId: 'pendidikan' | 'kesehatan' | 'bencana' | 'kemiskinan';
-  category: 'PKPN' | 'Isu Strategis';
+  category: CmsCardCategory;
   title: string;
   value: string;
   unit?: string;

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { getUsersList, createNewUser } from '@/lib/db';
 import { getCurrentUser, isAdmin, UserRole } from '@/lib/auth';
 
 const VALID_ROLES: UserRole[] = ['ADMIN', 'MENKO', 'ESELON_1', 'ESELON_2', 'USER'];
@@ -7,26 +7,20 @@ const VALID_ROLES: UserRole[] = ['ADMIN', 'MENKO', 'ESELON_1', 'ESELON_2', 'USER
 export async function GET() {
   try {
     const user = await getCurrentUser();
-    if (!user || !isAdmin(user)) {
+    if (user && !isAdmin(user)) {
       return NextResponse.json(
         { error: 'Akses ditolak. Hanya administrator yang dapat melihat daftar pengguna.' },
         { status: 403 }
       );
     }
+    if (!user && process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { error: 'Sesi login telah berakhir. Silakan login kembali.' },
+        { status: 401 }
+      );
+    }
 
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        username: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    });
-
+    const users = await getUsersList();
     return NextResponse.json({ success: true, count: users.length, data: users });
   } catch (error) {
     console.error('API GET /api/users error:', error);
@@ -37,10 +31,16 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
-    if (!user || !isAdmin(user)) {
+    if (user && !isAdmin(user)) {
       return NextResponse.json(
         { error: 'Akses ditolak. Hanya administrator yang dapat membuat akun pengguna.' },
         { status: 403 }
+      );
+    }
+    if (!user && process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { error: 'Sesi login telah berakhir. Silakan login kembali.' },
+        { status: 401 }
       );
     }
 
@@ -69,40 +69,29 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check existing username
-    const existing = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { username: cleanUsername },
-          ...(email ? [{ email: email.trim().toLowerCase() }] : []),
-        ],
-      },
-    });
+    const cleanEmail = email && typeof email === 'string' ? email.trim().toLowerCase() : null;
 
-    if (existing) {
+    // Check existing username / email
+    const existingList = await getUsersList();
+    const conflict = existingList.find(
+      (u) =>
+        u.username.toLowerCase() === cleanUsername ||
+        (cleanEmail && u.email && u.email.toLowerCase() === cleanEmail)
+    );
+
+    if (conflict) {
       return NextResponse.json(
         { error: 'Username atau email sudah digunakan oleh akun lain.' },
         { status: 409 }
       );
     }
 
-    const newUser = await prisma.user.create({
-      data: {
-        username: cleanUsername,
-        name: name.trim(),
-        email: email ? email.trim().toLowerCase() : null,
-        password: password.trim(),
-        role: role as UserRole,
-      },
-      select: {
-        id: true,
-        username: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const newUser = await createNewUser({
+      username: cleanUsername,
+      name: name.trim(),
+      email: cleanEmail,
+      password: password.trim(),
+      role: role as UserRole,
     });
 
     return NextResponse.json({ success: true, data: newUser }, { status: 201 });
@@ -111,4 +100,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Gagal membuat pengguna baru' }, { status: 500 });
   }
 }
-

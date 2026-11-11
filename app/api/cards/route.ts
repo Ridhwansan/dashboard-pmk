@@ -5,7 +5,8 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const pillarId = searchParams.get('pillarId') || undefined;
-    const category = searchParams.get('category') || undefined;
+    const rawCategory = searchParams.get('category');
+    const category = rawCategory && rawCategory !== 'all' && rawCategory !== 'Semua' ? rawCategory : undefined;
     const all = searchParams.get('all') === 'true';
 
     const cards = await getCards({

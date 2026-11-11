@@ -7,8 +7,14 @@ declare global {
   var prisma: (PrismaClient & Record<string, any>) | undefined;
 }
 
-// Otomatis memilih database Vercel atau database lokal Laragon
-const connectionString = `${process.env.POSTGRES_DATABASE_URL_POOLED || process.env.DATABASE_URL}`;
+// Otomatis memilih database Vercel atau database lokal
+const connectionString =
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.POSTGRES_DATABASE_URL_POOLED ||
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_DATABASE_URL ||
+  'postgresql://postgres:postgres@localhost:5432/dashboard_pmk?schema=public';
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 

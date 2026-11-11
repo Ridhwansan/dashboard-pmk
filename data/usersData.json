@@ -1,0 +1,23 @@
+[
+  {
+    "id": "usr_admin_01",
+    "username": "admin",
+    "name": "Administrator PMK",
+    "email": "admin@kemenkopmk.go.id",
+    "role": "ADMIN",
+    "password": "admin123",
+    "createdAt": "2026-11-01T00:00:00.000Z",
+    "updatedAt": "2026-11-01T00:00:00.000Z"
+  },
+  {
+    "id": "usr_user_01",
+    "username": "user",
+    "name": "Pengguna Eksekutif",
+    "email": "eksekutif@kemenkopmk.go.id",
+    "role": "USER",
+    "password": "user123",
+    "createdAt": "2026-11-01T00:00:00.000Z",
+    "updatedAt": "2026-11-01T00:00:00.000Z"
+  }
+]
+

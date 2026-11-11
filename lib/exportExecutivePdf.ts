@@ -75,6 +75,7 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
 export async function generateExecutiveSummaryPdf(options?: {
   specificPillar?: Exclude<MapPillarId, 'all'>;
   cards?: CmsCardItem[];
+  meta?: { title?: string; subtitle?: string; cutoffDate?: string; ministerTitle?: string };
 }): Promise<void> {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -86,6 +87,24 @@ export async function generateExecutiveSummaryPdf(options?: {
   const pageHeight = doc.internal.pageSize.getHeight(); // ~297 mm
   const marginX = 14;
   const contentWidth = pageWidth - marginX * 2; // ~182 mm
+
+  // Fetch or use live dashboard metadata (cutoff date, title, subtitle)
+  let currentMeta = { ...DASHBOARD_META };
+  if (options?.meta) {
+    currentMeta = { ...currentMeta, ...options.meta };
+  } else if (typeof window !== 'undefined') {
+    try {
+      const metaRes = await fetch(`/api/meta?_t=${Date.now()}`, { cache: 'no-store' });
+      if (metaRes.ok) {
+        const metaJson = await metaRes.json();
+        if (metaJson.data) {
+          currentMeta = { ...currentMeta, ...metaJson.data };
+        }
+      }
+    } catch {
+      // fallback to DASHBOARD_META
+    }
+  }
 
   // Fetch or use live CMS cards to respect includeInPdf settings
   let allCards: CmsCardItem[] = options?.cards || [];
@@ -140,7 +159,7 @@ export async function generateExecutiveSummaryPdf(options?: {
   // PAGE 1: COVER & EXECUTIVE OVERVIEW
   // ==========================================
   if (isFullReport) {
-    drawExecutiveCoverPage(doc, logoImg, pageWidth, pageHeight, marginX, contentWidth, allCards);
+    drawExecutiveCoverPage(doc, logoImg, pageWidth, pageHeight, marginX, contentWidth, allCards, currentMeta);
     doc.addPage();
   }
 
@@ -176,7 +195,7 @@ export async function generateExecutiveSummaryPdf(options?: {
         marginX,
         9.5
       );
-      doc.text(`Cut-off: ${DASHBOARD_META.cutoffDate}`, pageWidth - marginX, 9.5, {
+      doc.text(`Cut-off: ${currentMeta.cutoffDate}`, pageWidth - marginX, 9.5, {
         align: 'right',
       });
     }
@@ -220,7 +239,8 @@ function drawExecutiveCoverPage(
   pageHeight: number,
   marginX: number,
   contentWidth: number,
-  cards: CmsCardItem[]
+  cards: CmsCardItem[],
+  currentMeta: { cutoffDate: string; title?: string }
 ) {
   let currentY = 16;
 
@@ -306,7 +326,7 @@ function drawExecutiveCoverPage(
   doc.setFontSize(8.5);
   doc.setTextColor(51, 65, 85);
   const statementText =
-    `Dokumen ini menyajikan ringkasan eksekutif capaian indikator kinerja utama serta rekomendasi tindak lanjut strategis lintas kementerian/lembaga pada 4 Pilar Program Prioritas Nasional (PKPN) per ${DASHBOARD_META.cutoffDate} di bawah koordinasi Kementerian Koordinator Bidang Pembangunan Manusia dan Kebudayaan. Rincian tabel capaian indikator dan matriks kendala disajikan secara komprehensif pada lembar halaman berikutnya untuk setiap pilar.`;
+    `Dokumen ini menyajikan ringkasan eksekutif capaian indikator kinerja utama serta rekomendasi tindak lanjut strategis lintas kementerian/lembaga pada 4 Pilar Program Prioritas Nasional (PKPN) per ${currentMeta.cutoffDate} di bawah koordinasi Kementerian Koordinator Bidang Pembangunan Manusia dan Kebudayaan. Rincian tabel capaian indikator dan matriks kendala disajikan secara komprehensif pada lembar halaman berikutnya untuk setiap pilar.`;
   const splitStatement = doc.splitTextToSize(statementText, contentWidth - 14);
   doc.text(splitStatement, marginX + 7, currentY + 13.5);
 
@@ -392,7 +412,7 @@ function drawExecutiveCoverPage(
   const metaCols = [
     {
       label: 'TANGGAL DATA',
-      val: `Per ${DASHBOARD_META.cutoffDate}`,
+      val: `Per ${currentMeta.cutoffDate}`,
     },
     {
       label: 'UNIT KOORDINASI',

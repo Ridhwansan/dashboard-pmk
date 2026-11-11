@@ -75,15 +75,32 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
   const [isDetailActive, setIsDetailActive] = useState<boolean>(false);
 
   const CATEGORY_OPTIONS = [
+    { id: 'Semua', label: 'Semua', disabled: false },
     { id: 'PKPN', label: 'PKPN', disabled: false },
     { id: 'Isu Strategis', label: 'Isu Strategis', disabled: false },
-    { id: 'RPJMN', label: 'RPJMN', disabled: true },
+    { id: 'RPJMN', label: 'RPJMN', disabled: false },
   ];
 
   const handleTabChange = (pillarId: PillarId) => {
     setActivePillar(pillarId);
     setIsDetailActive(false);
     onPillarChange?.(pillarId);
+  };
+
+  const handleTabKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const nextIndex = (index + 1) % PILLAR_TABS.length;
+      handleTabChange(PILLAR_TABS[nextIndex].id);
+      const nextTabEl = document.getElementById(`tab-${PILLAR_TABS[nextIndex].id}`);
+      nextTabEl?.focus();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const prevIndex = (index - 1 + PILLAR_TABS.length) % PILLAR_TABS.length;
+      handleTabChange(PILLAR_TABS[prevIndex].id);
+      const prevTabEl = document.getElementById(`tab-${PILLAR_TABS[prevIndex].id}`);
+      prevTabEl?.focus();
+    }
   };
 
   return (
@@ -94,10 +111,10 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight leading-tight">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-tight">
                 Ikhtisar 4 Pilar Prioritas PMK
               </h2>
-              <p className="text-sm text-slate-500 font-medium">
+              <p className="text-sm text-slate-500 font-normal">
                 Pemantauan kinerja target dan realisasi
               </p>
             </div>
@@ -116,24 +133,28 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
             aria-label="Pilih Tab Pilar"
             className="flex items-center gap-2.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden max-w-full"
           >
-            {PILLAR_TABS.map((tab) => {
+            {PILLAR_TABS.map((tab, index) => {
               const isActive = activePillar === tab.id;
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
+                  id={`tab-${tab.id}`}
                   type="button"
                   role="tab"
+                  tabIndex={isActive ? 0 : -1}
                   aria-selected={isActive}
+                  aria-controls={`panel-${tab.id}`}
                   onClick={() => handleTabChange(tab.id)}
+                  onKeyDown={(e) => handleTabKeyDown(e, index)}
                   style={
                     isActive
                       ? { backgroundColor: tab.brandColor, color: '#ffffff', borderColor: tab.brandColor }
                       : undefined
                   }
-                  className={`h-[40px] sm:h-[42px] inline-flex items-center gap-2 px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
+                  className={`min-h-[44px] h-[44px] inline-flex items-center gap-2.5 px-4.5 sm:px-5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400 focus-visible:outline-hidden ${
                     isActive
-                      ? `${tab.activeBg} font-extrabold shadow-sm`
+                      ? `${tab.activeBg} font-bold shadow-2xs`
                       : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50 border border-slate-200/90 shadow-2xs'
                   }`}
                 >
@@ -156,43 +177,18 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
         </div>
       </div>
 
-      {/* 2. SUB-FILTER KATEGORI (Hanya tampil saat tidak sedang membuka detail program) */}
-      {!isDetailActive && (
-        <div className="flex items-center gap-2 pt-0.5">
-          {CATEGORY_OPTIONS.map((cat) => {
-            const isCatActive = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                disabled={cat.disabled}
-                onClick={() => {
-                  if (!cat.disabled) {
-                    setSelectedCategory(cat.id);
-                  }
-                }}
-                title={cat.disabled ? 'Program RPJMN belum aktif' : undefined}
-                className={`h-[38px] inline-flex items-center px-4.5 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 whitespace-nowrap shrink-0 ${
-                  cat.disabled
-                    ? 'bg-slate-100/70 text-slate-400 border border-slate-200/60 cursor-not-allowed select-none'
-                    : isCatActive
-                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-300 ring-1 ring-slate-300/40 cursor-pointer'
-                    : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200/80 cursor-pointer'
-                }`}
-              >
-                <span>{cat.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* 3. TAB CONTENT: Render each pillar page with category */}
-      <div className="w-full">
+      {/* 2. TAB CONTENT: Render each pillar page with category and category changer inside hero banner */}
+      <div
+        id={`panel-${activePillar}`}
+        role="tabpanel"
+        aria-labelledby={`tab-${activePillar}`}
+        className="w-full focus-visible:outline-hidden"
+      >
         {activePillar === 'pendidikan' && (
           <PendidikanDetailView
             onBackToHome={onBackToLanding}
             category={selectedCategory}
+            onCategoryChange={setSelectedCategory}
             onDetailOpenChange={setIsDetailActive}
           />
         )}
@@ -200,6 +196,7 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
           <KesehatanDetailView
             onBackToHome={onBackToLanding}
             category={selectedCategory}
+            onCategoryChange={setSelectedCategory}
             onDetailOpenChange={setIsDetailActive}
           />
         )}
@@ -207,6 +204,7 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
           <BencanaDetailView
             onBackToHome={onBackToLanding}
             category={selectedCategory}
+            onCategoryChange={setSelectedCategory}
             onDetailOpenChange={setIsDetailActive}
           />
         )}
@@ -214,6 +212,7 @@ export const IkhtisarView: React.FC<IkhtisarViewProps> = ({
           <KemiskinanDetailView
             onBackToHome={onBackToLanding}
             category={selectedCategory}
+            onCategoryChange={setSelectedCategory}
             onDetailOpenChange={setIsDetailActive}
           />
         )}

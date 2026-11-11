@@ -94,6 +94,22 @@ function formatMetricWithUnit(val: string | undefined | null, unit: string): str
 }
 
 /**
+ * Format table cell value: clean numbers, stripping redundant unit suffix since unit is in the column header
+ */
+function formatTableCellValue(val: string | undefined | null, unit?: string): string {
+  if (!val || val === '—' || val === '-') return '—';
+  const trimmed = val.trim();
+  if (unit && unit.trim()) {
+    const u = unit.trim().toLowerCase();
+    if (trimmed.toLowerCase().endsWith(u)) {
+      const stripped = trimmed.slice(0, trimmed.length - unit.trim().length).trim();
+      if (stripped) return stripped;
+    }
+  }
+  return trimmed;
+}
+
+/**
  * Builds a smooth cubic bezier SVG path string from an array of coordinates
  */
 function buildSmoothPath(points: { x: number; y: number }[]): string {
@@ -251,8 +267,43 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
 
   // Resolve annual row for this specific program (only this indicator appears in the annual table)
   const annualRowForProgram = useMemo(() => {
-    return getIndicatorAnnualRow(effectiveProgram.id, effectiveProgram.pillarId);
-  }, [effectiveProgram.id, effectiveProgram.pillarId]);
+    const baseline = getIndicatorAnnualRow(effectiveProgram.id, effectiveProgram.pillarId);
+    const customAnnual = (effectiveProgram as unknown as { annualTargets?: Record<string | number, { target?: string; capaian?: string }> })?.annualTargets;
+    if (customAnnual && typeof customAnnual === 'object') {
+      const mergedYears: Record<number, { target: string; capaian: string; percent?: string }> = {
+        ...(baseline?.years || {}),
+      };
+      let hasCustom = false;
+      [2025, 2026, 2027, 2028, 2029].forEach((yr) => {
+        const entry = customAnnual[yr] || customAnnual[String(yr)];
+        if (entry && (entry.target || entry.capaian)) {
+          hasCustom = true;
+          const tVal = entry.target && entry.target.trim() ? entry.target.trim() : (mergedYears[yr]?.target || '—');
+          const cVal = entry.capaian && entry.capaian.trim() ? entry.capaian.trim() : (mergedYears[yr]?.capaian || '—');
+          let pct: string | undefined = mergedYears[yr]?.percent;
+          const tNum = parseFloat(tVal.replace(/[^0-9,.-]/g, '').replace(',', '.'));
+          const cNum = parseFloat(cVal.replace(/[^0-9,.-]/g, '').replace(',', '.'));
+          if (!isNaN(tNum) && !isNaN(cNum) && tNum > 0) {
+            pct = `${Math.round((cNum / tNum) * 1000) / 10}%`;
+          }
+          mergedYears[yr] = {
+            target: tVal,
+            capaian: cVal,
+            percent: pct,
+          };
+        }
+      });
+      if (hasCustom) {
+        return {
+          id: effectiveProgram.id,
+          name: effectiveProgram.title,
+          unit: effectiveProgram.unit,
+          years: mergedYears,
+        };
+      }
+    }
+    return baseline;
+  }, [effectiveProgram.id, effectiveProgram.pillarId, effectiveProgram]);
 
   // Fallback annual row if program is not hardcoded in agregat data
   const activeAnnualRow: AgregatIndicatorRow = useMemo(() => {
@@ -352,6 +403,41 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       avgPct: pct,
     };
   }, [rawMonths]);
+
+  // Clean target string without redundant "Target 2026:" prefix
+  const cleanTarget2026 = useMemo(() => {
+    const t = effectiveProgram.target2026 || '';
+    const stripped = t.replace(/^Target\s*(\d{4})?\s*:\s*/i, '').trim();
+    return stripped || t || '—';
+  }, [effectiveProgram.target2026]);
+
+  // Unified numerical percentage for 2026
+  const percentNumber2026 = useMemo(() => {
+    if (effectiveProgram.currentValue?.toLowerCase() === 'terhenti') return 0;
+    const annualMetric = activeAnnualRow.years[2026];
+    if (annualMetric?.percent) {
+      const parsed = parseFloat(annualMetric.percent.replace(/[^0-9,.-]/g, '').replace(',', '.'));
+      if (!isNaN(parsed)) return parsed;
+    }
+    if (summaryMetrics.avgPct > 0) return summaryMetrics.avgPct;
+    const pctMatch = effectiveProgram.status?.match(/(\d+(?:[.,]\d+)?)\s*%/);
+    if (pctMatch) {
+      const parsed = parseFloat(pctMatch[1].replace(',', '.'));
+      if (!isNaN(parsed)) return parsed;
+    }
+    return null;
+  }, [effectiveProgram, activeAnnualRow, summaryMetrics]);
+
+  // Display percentage string
+  const percentDisplay = useMemo(() => {
+    if (effectiveProgram.currentValue?.toLowerCase() === 'terhenti') return '0% (Terhenti)';
+    const annualMetric = activeAnnualRow.years[2026];
+    if (annualMetric?.percent) return annualMetric.percent;
+    if (summaryMetrics.avgPct > 0) return `${summaryMetrics.avgPct}%`;
+    const pctMatch = effectiveProgram.status?.match(/(\d+(?:[.,]\d+)?)\s*%/);
+    if (pctMatch) return `${pctMatch[1]}%`;
+    return '—';
+  }, [effectiveProgram, activeAnnualRow, summaryMetrics]);
 
   // Dynamic resolution of kendala list
   const resolvedKendalaList: KendalaDetailItem[] = useMemo(() => {
@@ -593,14 +679,14 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         <button
           type="button"
           onClick={onBack}
-          className="h-[44px] inline-flex items-center gap-2.5 px-5 rounded-2xl text-xs sm:text-sm font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs transition-all cursor-pointer"
+          className="h-[44px] inline-flex items-center gap-2.5 px-4.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden"
         >
           <ArrowLeft className="w-4.5 h-4.5 text-slate-500" />
           <span>Kembali ke Daftar Program</span>
         </button>
 
         {/* Clear Breadcrumb Context */}
-        <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500 bg-white px-4 py-2.5 rounded-2xl border border-slate-200/80 shadow-2xs">
+        <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500 bg-white px-4 py-2.5 rounded-xl border border-slate-200/90 shadow-2xs">
           <span>Ikhtisar</span>
           <span className="text-slate-300">/</span>
           <span>Pilar {category === 'PKPN' ? `PKPN ${effectiveProgram.pillarTitle}` : effectiveProgram.pillarTitle}</span>
@@ -610,7 +696,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       </div>
 
       {/* 2. PROGRAM OVERVIEW & 3 FOCUSED KPI STAT CARDS */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
+      <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs space-y-6">
         {/* MBG 3B SUB-INDICATOR SEGMENTED CONTROL */}
         {isMbg3b && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
@@ -683,8 +769,8 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           </div>
         )}
 
-        <div className="space-y-3">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
+        <div className="space-y-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight leading-tight">
             {effectiveProgram.title}
           </h1>
           <p className="text-sm sm:text-base text-slate-600 font-normal leading-relaxed max-w-4xl">
@@ -693,23 +779,26 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         </div>
 
         {/* 3 Prominent KPI Stat Cards for Focus */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-          {/* Card 1: Target 2026 */}
-          <div className="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80 space-y-2 shadow-2xs">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+          {/* Card 1: Target 2026 (Clean without redundant prefix) */}
+          <div className="bg-slate-50/70 rounded-xl p-5 border border-slate-200/90 space-y-1.5 shadow-2xs">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
               Target 2026
             </span>
-            <span className="text-xl sm:text-2xl font-black text-slate-900 block tracking-tight">
-              {effectiveProgram.target2026}
+            <span className="text-2xl sm:text-3xl font-bold text-slate-900 block tracking-tight tabular-nums">
+              {cleanTarget2026}
+            </span>
+            <span className="text-xs text-slate-500 font-normal block">
+              Sasaran rencana aksi nasional
             </span>
           </div>
 
           {/* Card 2: Realisasi Berjalan */}
-          <div className="bg-blue-50/40 rounded-2xl p-5 border border-blue-200/70 space-y-2 shadow-2xs">
-            <span className="text-[11px] font-bold text-blue-900/70 uppercase tracking-wider block">
+          <div className="bg-blue-50/50 rounded-xl p-5 border border-blue-200/80 space-y-1.5 shadow-2xs">
+            <span className="text-[11px] font-bold text-blue-900/80 uppercase tracking-wider block">
               Realisasi Berjalan
             </span>
-            <span className="text-xl sm:text-2xl font-black text-blue-900 block tracking-tight">
+            <span className="text-2xl sm:text-3xl font-bold text-blue-900 block tracking-tight tabular-nums">
               {(() => {
                 const val = effectiveProgram.currentValue;
                 if (!val || val === '—') return '—';
@@ -719,30 +808,42 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                 return effectiveProgram.unit ? `${val} ${effectiveProgram.unit}` : val;
               })()}
             </span>
+            <span className="text-xs text-blue-700/80 font-normal block">
+              {percentNumber2026 !== null ? `Capaian saat ini: ${percentNumber2026}% dari target` : 'Data terverifikasi berkala'}
+            </span>
           </div>
 
-          {/* Card 3: Persentase Capaian */}
-          <div className="bg-emerald-50/40 rounded-2xl p-5 border border-emerald-200/70 space-y-2 shadow-2xs">
-            <span className="text-[11px] font-bold text-emerald-900/70 uppercase tracking-wider block">
-              Persentase Capaian
-            </span>
-            <span className="text-xl sm:text-2xl font-black text-emerald-700 block tracking-tight">
-              {(() => {
-                if (effectiveProgram.currentValue?.toLowerCase() === 'terhenti') return '0% (Terhenti)';
-                const annualMetric = activeAnnualRow.years[2026];
-                if (annualMetric?.percent) return annualMetric.percent;
-                if (summaryMetrics.avgPct > 0) return `${summaryMetrics.avgPct}%`;
-                const pctMatch = effectiveProgram.status?.match(/(\d+(?:[.,]\d+)?)\s*%/);
-                if (pctMatch) return `${pctMatch[1]}%`;
-                return '—';
-              })()}
-            </span>
+          {/* Card 3: Persentase Capaian with Mini Visual Progress */}
+          <div className="bg-emerald-50/50 rounded-xl p-5 border border-emerald-200/80 space-y-1.5 shadow-2xs flex flex-col justify-between">
+            <div>
+              <span className="text-[11px] font-bold text-emerald-900/80 uppercase tracking-wider block">
+                Persentase Capaian
+              </span>
+              <span className="text-2xl sm:text-3xl font-bold text-emerald-800 block tracking-tight tabular-nums">
+                {percentDisplay}
+              </span>
+            </div>
+            {percentNumber2026 !== null && (
+              <div className="pt-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 bg-emerald-200/60 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-600 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, Math.max(0, percentNumber2026))}%` }}
+                    />
+                  </div>
+                  <span className="text-[11px] font-bold text-emerald-800 tabular-nums shrink-0">
+                    {percentNumber2026}%
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* 3. SECTION TABEL & TREN BERKALA */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
+      <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs space-y-6">
         {/* Controls Toolbar: Title on Left, Segmented Control on Right */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
           {/* Left: Dynamic Title based on active table mode */}
@@ -862,21 +963,21 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
 
         {/* VIEW A: TABEL TAHUNAN (2025–2029) - TARGET & CAPAIAN RPJMN */}
         {tableType === 'tahunan' && (
-          <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+          <div className="border border-slate-200/90 rounded-2xl overflow-hidden bg-white shadow-2xs">
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse text-xs md:text-sm">
                 <thead>
-                  <tr className="bg-slate-100/90 text-slate-900 font-bold border-b border-slate-200">
-                    <th className="py-3.5 px-4 min-w-[140px] border-r border-slate-200">
+                  <tr className="bg-slate-50 text-slate-800 font-bold border-b border-slate-200/90">
+                    <th className="py-3.5 px-4 min-w-[170px] border-r border-slate-200/80">
                       Periode / Tahun
                     </th>
-                    <th className="py-3.5 px-4 text-right min-w-[140px] border-r border-slate-200 font-bold text-slate-900">
-                      Target (T)
+                    <th className="py-3.5 px-4 text-right min-w-[150px] border-r border-slate-200/80 font-bold text-slate-900">
+                      Target {activeAnnualRow.unit ? `(${activeAnnualRow.unit})` : '(T)'}
                     </th>
-                    <th className="py-3.5 px-4 text-right min-w-[140px] border-r border-slate-200 font-bold text-slate-900">
-                      Capaian (C)
+                    <th className="py-3.5 px-4 text-right min-w-[150px] border-r border-slate-200/80 font-bold text-slate-900">
+                      Capaian {activeAnnualRow.unit ? `(${activeAnnualRow.unit})` : '(C)'}
                     </th>
-                    <th className="py-3.5 px-4 text-center min-w-[120px] font-bold text-slate-900">
+                    <th className="py-3.5 px-4 text-center min-w-[160px] font-bold text-slate-900">
                       % Capaian
                     </th>
                   </tr>
@@ -900,43 +1001,65 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                       }
                     }
 
+                    const cleanTargetVal = formatTableCellValue(metric.target, activeAnnualRow.unit);
+                    const cleanCapaianVal = formatTableCellValue(metric.capaian, activeAnnualRow.unit);
+
                     return (
                       <tr
                         key={yr}
                         className={`group relative hover:bg-slate-50/80 transition-colors ${
-                          isCutoff ? 'bg-blue-50/30 font-semibold' : ''
+                          isCutoff ? 'bg-blue-50/40 font-semibold' : ''
                         }`}
                       >
                         <td className="py-3.5 px-4 text-slate-900 font-bold border-r border-slate-100">
-                          Tahun {yr}
+                          <div className="flex items-center gap-2">
+                            <span>Tahun {yr}</span>
+                            {isCutoff && (
+                              <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-100/80 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-md shrink-0">
+                                Tahun Berjalan
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Target */}
                         <td className="py-3.5 px-4 text-right text-slate-800 tabular-nums font-semibold border-r border-slate-100">
-                          {formatMetricWithUnit(metric.target, activeAnnualRow.unit)}
+                          {cleanTargetVal}
                         </td>
 
                         {/* Capaian */}
                         <td className="py-3.5 px-4 text-right tabular-nums font-bold text-slate-900 border-r border-slate-100">
-                          {formatMetricWithUnit(metric.capaian, activeAnnualRow.unit)}
+                          {cleanCapaianVal}
                         </td>
 
                         {/* % Capaian */}
                         <td className="py-3.5 px-4 text-center tabular-nums">
                           {hasCapaian && pctVal !== null ? (
-                            <span
-                              className={`font-bold ${
-                                pctVal >= 95
-                                  ? 'text-emerald-700'
-                                  : pctVal >= 75
-                                  ? 'text-slate-800'
-                                  : 'text-amber-700'
-                              }`}
-                            >
-                              {pctVal}%
-                            </span>
+                            <div className="inline-flex items-center gap-2 justify-center">
+                              <span
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                                  pctVal >= 100
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80'
+                                    : pctVal >= 75
+                                    ? 'bg-blue-50 text-blue-800 border-blue-200/80'
+                                    : 'bg-amber-50 text-amber-900 border-amber-200/80'
+                                }`}
+                              >
+                                <span
+                                  className={`w-1.5 h-1.5 rounded-full ${
+                                    pctVal >= 100 ? 'bg-emerald-600' : pctVal >= 75 ? 'bg-blue-600' : 'bg-amber-500'
+                                  }`}
+                                />
+                                <span>{pctVal}%</span>
+                              </span>
+                              {pctVal >= 100 && (
+                                <span className="hidden lg:inline-block text-[11px] font-semibold text-emerald-700">
+                                  Melampaui Target
+                                </span>
+                              )}
+                            </div>
                           ) : (
-                            <span className="text-slate-300">—</span>
+                            <span className="text-slate-300 font-normal">—</span>
                           )}
                         </td>
                       </tr>
