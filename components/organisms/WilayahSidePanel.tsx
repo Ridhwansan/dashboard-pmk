@@ -95,6 +95,7 @@ function cleanCapaianDisplay(raw: string): string {
 
 export const WilayahSidePanel: React.FC<WilayahSidePanelProps> = ({
   wilayah,
+  selectedYear = 2026,
   onResetNasional,
   className = '',
 }) => {
@@ -227,7 +228,7 @@ export const WilayahSidePanel: React.FC<WilayahSidePanelProps> = ({
                         <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
                           <div className="flex items-start justify-between gap-2.5">
                             <span className="text-[11px] font-semibold text-slate-500 shrink-0">
-                              Target
+                              Target {selectedYear}
                             </span>
                             <span
                               className="text-xs font-semibold text-slate-800 text-right leading-relaxed break-words flex-1 tabular-nums"
@@ -272,7 +273,7 @@ export const WilayahSidePanel: React.FC<WilayahSidePanelProps> = ({
       {/* 3. MINIMAL CLEAN FOOTNOTE                                 */}
       {/* ======================================================== */}
       <div className="px-3.5 py-2 border-t border-slate-100 bg-slate-50/60 text-[11px] font-semibold text-slate-600 text-center shrink-0">
-        Posisi s.d. Oktober 2026 · Kemenko PMK
+        Posisi Data Tahun {selectedYear} · Kemenko PMK
       </div>
     </aside>
   );

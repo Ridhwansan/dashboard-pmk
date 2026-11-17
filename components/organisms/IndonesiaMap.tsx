@@ -1,13 +1,11 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   WilayahData,
   NASIONAL_DATA,
   PROVINSI_DATA,
   KABKOTA_DATA,
-  KECAMATAN_DATA,
-  DESA_DATA,
 } from '@/data/wilayahData';
 import { MapPillarId } from '@/data/mapIndicators';
 import { AVAILABLE_YEARS, PeriodYear } from '@/data/pillarAgregatData';
@@ -18,7 +16,6 @@ import {
   ChevronDown,
   Maximize2,
   Minimize2,
-  MapPin,
 } from 'lucide-react';
 
 interface IndonesiaMapProps {
@@ -31,12 +28,7 @@ interface IndonesiaMapProps {
 
 export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   className = '',
-  onSelectPillar,
-  initialPillar = 'pendidikan',
-  onBackToLanding,
-  onSwitchToIkhtisar,
 }) => {
-  const wilayahInfoRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Sync Leaflet map canvas and lock body scroll when entering/exiting fullscreen
@@ -71,19 +63,9 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   // 2. Cascading Territory Filter States (default: Nasional / 38 Provinsi)
   const [selectedProvinsiId, setSelectedProvinsiId] = useState<string>('nasional');
   const [selectedKabKotaId, setSelectedKabKotaId] = useState<string>('');
-  const [selectedKecamatanId, setSelectedKecamatanId] = useState<string>('');
-  const [selectedDesaId, setSelectedDesaId] = useState<string>('');
 
-  // 3. Resolve Active Territory Object
+  // 3. Resolve Active Territory Object (Kecamatan & Desa are disabled)
   const currentWilayah: WilayahData = useMemo(() => {
-    if (selectedDesaId) {
-      const found = DESA_DATA.find((d) => d.id === selectedDesaId);
-      if (found) return found;
-    }
-    if (selectedKecamatanId) {
-      const found = KECAMATAN_DATA.find((k) => k.id === selectedKecamatanId);
-      if (found) return found;
-    }
     if (selectedKabKotaId) {
       const found = KABKOTA_DATA.find((k) => k.id === selectedKabKotaId);
       if (found) return found;
@@ -93,7 +75,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
       if (found) return found;
     }
     return NASIONAL_DATA;
-  }, [selectedProvinsiId, selectedKabKotaId, selectedKecamatanId, selectedDesaId]);
+  }, [selectedProvinsiId, selectedKabKotaId]);
 
   // 4. Territory cascading choices
   const availableKabKota = useMemo(() => {
@@ -101,24 +83,8 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
     return KABKOTA_DATA.filter((k) => k.parentProvinsiId === selectedProvinsiId);
   }, [selectedProvinsiId]);
 
-  const availableKecamatan = useMemo(() => {
-    if (!selectedKabKotaId) return [];
-    return KECAMATAN_DATA.filter((k) => k.parentKabKotaId === selectedKabKotaId);
-  }, [selectedKabKotaId]);
-
-  const availableDesa = useMemo(() => {
-    if (!selectedKecamatanId) return [];
-    return DESA_DATA.filter((d) => d.parentKecamatanId === selectedKecamatanId);
-  }, [selectedKecamatanId]);
-
-  // 5. Boundaries for GeoJSON mapping
+  // 5. Boundaries for GeoJSON mapping (Kecamatan & Desa disabled)
   const activeBoundaries = useMemo(() => {
-    if (selectedKecamatanId && availableDesa.length > 0) {
-      return availableDesa;
-    }
-    if (selectedKabKotaId && availableKecamatan.length > 0) {
-      return availableKecamatan;
-    }
     if (
       selectedProvinsiId &&
       (selectedProvinsiId === 'dki-jakarta' || selectedProvinsiId === 'jawa-barat') &&
@@ -131,61 +97,30 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
       return prov ? [prov] : [];
     }
     return PROVINSI_DATA;
-  }, [
-    selectedProvinsiId,
-    selectedKabKotaId,
-    selectedKecamatanId,
-    availableKabKota,
-    availableKecamatan,
-    availableDesa,
-  ]);
+  }, [selectedProvinsiId, availableKabKota]);
 
   // Handlers for sequential region filtering
   const handleProvinsiChange = (provId: string) => {
     setSelectedProvinsiId(provId);
     setSelectedKabKotaId('');
-    setSelectedKecamatanId('');
-    setSelectedDesaId('');
   };
 
   const handleKabKotaChange = (kabKotaId: string) => {
     setSelectedKabKotaId(kabKotaId);
-    setSelectedKecamatanId('');
-    setSelectedDesaId('');
-  };
-
-  const handleKecamatanChange = (kecId: string) => {
-    setSelectedKecamatanId(kecId);
-    setSelectedDesaId('');
-  };
-
-  const handleDesaChange = (desaId: string) => {
-    setSelectedDesaId(desaId);
   };
 
   const handleResetNasional = () => {
     setSelectedProvinsiId('nasional');
     setSelectedKabKotaId('');
-    setSelectedKecamatanId('');
-    setSelectedDesaId('');
   };
 
-  // Direct selection from Map Boundary Click
+  // Direct selection from Map Boundary Click (drill-down stops at kab/kota; kecamatan & desa disabled)
   const handleBoundaryClick = (wilayah: WilayahData) => {
     if (wilayah.level === 'provinsi') {
       handleProvinsiChange(wilayah.id);
     } else if (wilayah.level === 'kabupaten') {
       if (wilayah.parentProvinsiId) setSelectedProvinsiId(wilayah.parentProvinsiId);
       handleKabKotaChange(wilayah.id);
-    } else if (wilayah.level === 'kecamatan') {
-      if (wilayah.parentProvinsiId) setSelectedProvinsiId(wilayah.parentProvinsiId);
-      if (wilayah.parentKabKotaId) setSelectedKabKotaId(wilayah.parentKabKotaId);
-      handleKecamatanChange(wilayah.id);
-    } else if (wilayah.level === 'desa') {
-      if (wilayah.parentProvinsiId) setSelectedProvinsiId(wilayah.parentProvinsiId);
-      if (wilayah.parentKabKotaId) setSelectedKabKotaId(wilayah.parentKabKotaId);
-      if (wilayah.parentKecamatanId) setSelectedKecamatanId(wilayah.parentKecamatanId);
-      handleDesaChange(wilayah.id);
     }
   };
 
@@ -258,7 +193,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                   value={selectedKabKotaId}
                   disabled={!isDetailSupported}
                   onChange={(e) => handleKabKotaChange(e.target.value)}
-                  className={`h-[40px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-semibold rounded-xl border transition-all truncate w-36 sm:w-44 ${
+                  className={`h-[40px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-semibold rounded-xl border transition-all truncate w-44 sm:w-52 ${
                     !isDetailSupported
                       ? 'bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed'
                       : 'bg-slate-50 hover:bg-white text-slate-900 border-slate-200/90 hover:border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer'
@@ -267,9 +202,9 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                   <option value="">
                     {!isDetailSupported
                       ? selectedProvinsiId === 'nasional'
-                        ? 'Kab/Kota'
-                        : 'Detail s.d. Provinsi'
-                      : 'Pilih Kab/Kota'}
+                        ? 'Pilih Provinsi Dulu'
+                        : 'Kab/Kota Belum Tersedia'
+                      : 'Semua Kab/Kota'}
                   </option>
                   {availableKabKota.map((kab) => (
                     <option key={kab.id} value={kab.id}>
@@ -284,64 +219,30 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                 />
               </div>
 
-              {/* Dropdown 3: Kecamatan */}
-              <div className="relative">
+              {/* Dropdown 3: Kecamatan (Dinonaktifkan) */}
+              <div className="relative" title="Level Kecamatan dinonaktifkan sementara">
                 <select
                   id="filter-kecamatan"
-                  aria-label="Pilih Kecamatan"
-                  value={selectedKecamatanId}
-                  disabled={!selectedKabKotaId}
-                  onChange={(e) => handleKecamatanChange(e.target.value)}
-                  className={`h-[40px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-semibold rounded-xl border transition-all truncate w-32 sm:w-40 ${
-                    !selectedKabKotaId
-                      ? 'bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed'
-                      : 'bg-slate-50 hover:bg-white text-slate-900 border-slate-200/90 hover:border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer'
-                  }`}
+                  aria-label="Pilih Kecamatan (Nonaktif)"
+                  disabled={true}
+                  className="h-[40px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-semibold rounded-xl border transition-all truncate w-36 sm:w-44 bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed select-none"
                 >
-                  <option value="">
-                    {!selectedKabKotaId ? 'Kecamatan' : 'Pilih Kecamatan'}
-                  </option>
-                  {availableKecamatan.map((kec) => (
-                    <option key={kec.id} value={kec.id}>
-                      {kec.name} {kec.isPrioritas ? '• Prioritas' : ''}
-                    </option>
-                  ))}
+                  <option value="">Kecamatan (Nonaktif)</option>
                 </select>
-                <ChevronDown
-                  className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
-                    !selectedKabKotaId ? 'text-slate-300' : 'text-slate-400'
-                  }`}
-                />
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
               </div>
 
-              {/* Dropdown 4: Desa */}
-              <div className="relative">
+              {/* Dropdown 4: Desa (Dinonaktifkan) */}
+              <div className="relative" title="Level Desa dinonaktifkan sementara">
                 <select
                   id="filter-desa"
-                  aria-label="Pilih Desa atau Kelurahan"
-                  value={selectedDesaId}
-                  disabled={!selectedKecamatanId}
-                  onChange={(e) => handleDesaChange(e.target.value)}
-                  className={`h-[40px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-semibold rounded-xl border transition-all truncate w-32 sm:w-40 ${
-                    !selectedKecamatanId
-                      ? 'bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed'
-                      : 'bg-slate-50 hover:bg-white text-slate-900 border-slate-200/90 hover:border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white cursor-pointer'
-                  }`}
+                  aria-label="Pilih Desa atau Kelurahan (Nonaktif)"
+                  disabled={true}
+                  className="h-[40px] appearance-none pl-3.5 pr-9 text-xs sm:text-sm font-semibold rounded-xl border transition-all truncate w-36 sm:w-44 bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed select-none"
                 >
-                  <option value="">
-                    {!selectedKecamatanId ? 'Desa/Kel' : 'Pilih Desa'}
-                  </option>
-                  {availableDesa.map((desa) => (
-                    <option key={desa.id} value={desa.id}>
-                      {desa.name} {desa.isPrioritas ? '• Prioritas' : ''}
-                    </option>
-                  ))}
+                  <option value="">Desa/Kel (Nonaktif)</option>
                 </select>
-                <ChevronDown
-                  className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
-                    !selectedKecamatanId ? 'text-slate-300' : 'text-slate-400'
-                  }`}
-                />
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
               </div>
             </div>
           </div>
@@ -442,37 +343,89 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
             className="absolute top-4 right-4 z-[1000] w-80 sm:w-96 max-h-[calc(100vh-2rem)] flex flex-col gap-2.5 pointer-events-auto"
           >
             {/* Header: Lokus Dropdown Selector & Exit Fullscreen Button */}
-            <div className="bg-white/95 backdrop-blur-md rounded-2xl p-2.5 sm:p-3 border border-slate-200/90 shadow-xl flex items-center justify-between gap-2 shrink-0">
-              <div className="relative flex-1 min-w-0">
-                <select
-                  id="fullscreen-wilayah-filter"
-                  aria-label="Pilih Wilayah Peta"
-                  value={selectedProvinsiId}
-                  onChange={(e) => handleProvinsiChange(e.target.value)}
-                  className="w-full h-[36px] appearance-none pl-3 pr-8 text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-900 border border-slate-200 hover:border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none transition-all cursor-pointer truncate shadow-2xs"
+            <div className="bg-white/95 backdrop-blur-md rounded-2xl p-2.5 sm:p-3 border border-slate-200/90 shadow-xl flex flex-col gap-2 shrink-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-800">Filter Lokus Spasial</span>
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreen(false)}
+                  className="h-[32px] px-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+                  title="Keluar Layar Penuh (ESC)"
                 >
-                  <option value="nasional">Seluruh Indonesia (38 Prov)</option>
-                  {PROVINSI_DATA.map((prov) => (
-                    <option key={prov.id} value={prov.id}>
-                      {prov.name} {prov.isPrioritas ? '• Prioritas' : ''}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Minimize2 className="w-3.5 h-3.5 text-white" />
+                  <span className="hidden sm:inline">Keluar</span>
+                  <kbd className="text-[10px] bg-slate-800 px-1 py-0.5 rounded text-slate-300">
+                    ESC
+                  </kbd>
+                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setIsFullscreen(false)}
-                className="h-[36px] px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
-                title="Keluar Layar Penuh (ESC)"
-              >
-                <Minimize2 className="w-3.5 h-3.5 text-white" />
-                <span className="hidden sm:inline">Keluar</span>
-                <kbd className="text-[10px] bg-slate-800 px-1 py-0.5 rounded text-slate-300">
-                  ESC
-                </kbd>
-              </button>
+              <div className="space-y-1.5">
+                {/* Dropdown Provinsi */}
+                <div className="relative">
+                  <select
+                    id="fullscreen-provinsi-filter"
+                    aria-label="Pilih Provinsi Peta"
+                    value={selectedProvinsiId}
+                    onChange={(e) => handleProvinsiChange(e.target.value)}
+                    className="w-full h-[36px] appearance-none pl-3 pr-8 text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-900 border border-slate-200 hover:border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none transition-all cursor-pointer truncate shadow-2xs"
+                  >
+                    <option value="nasional">Seluruh Indonesia (38 Prov)</option>
+                    {PROVINSI_DATA.map((prov) => (
+                      <option key={prov.id} value={prov.id}>
+                        {prov.name} {prov.isPrioritas ? '• Prioritas' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                </div>
+
+                {/* Dropdown Kab/Kota */}
+                <div className="relative">
+                  <select
+                    id="fullscreen-kabkota-filter"
+                    aria-label="Pilih Kabupaten atau Kota Peta"
+                    value={selectedKabKotaId}
+                    disabled={!isDetailSupported}
+                    onChange={(e) => handleKabKotaChange(e.target.value)}
+                    className={`w-full h-[36px] appearance-none pl-3 pr-8 text-xs font-bold rounded-xl border transition-all truncate shadow-2xs ${
+                      !isDetailSupported
+                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                        : 'bg-slate-50 hover:bg-slate-100 text-slate-900 border-slate-200 hover:border-slate-300 focus:ring-2 focus:ring-blue-600 cursor-pointer'
+                    }`}
+                  >
+                    <option value="">
+                      {!isDetailSupported
+                        ? selectedProvinsiId === 'nasional'
+                          ? 'Pilih Provinsi Dulu'
+                          : 'Kab/Kota Belum Tersedia'
+                        : 'Semua Kab/Kota'}
+                    </option>
+                    {availableKabKota.map((kab) => (
+                      <option key={kab.id} value={kab.id}>
+                        {kab.name} {kab.isPrioritas ? '• Prioritas' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                      !isDetailSupported ? 'text-slate-300' : 'text-slate-400'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              {/* Reset shortcut if in province/kabkota */}
+              {selectedProvinsiId !== 'nasional' && (
+                <button
+                  type="button"
+                  onClick={handleResetNasional}
+                  className="w-full h-[30px] rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3 text-slate-500" />
+                  <span>Kembali ke Seluruh Indonesia</span>
+                </button>
+              )}
             </div>
 
             {/* Same 4-Pillar Card Section (WilayahSidePanel) */}

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import type { GeoJsonObject, Feature } from 'geojson';
 import {
   WilayahData,
@@ -194,13 +195,14 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
         attributionControl: false,
       });
 
-      // OpenStreetMap basemap
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      // Full version standard OpenStreetMap basemap (Free, full geospatial coverage, no API key required)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
+        subdomains: ['a', 'b', 'c'],
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(map);
 
-      // Minimalist attribution
+      // Clean minimalist attribution
       L.control
         .attribution({
           position: 'bottomright',
@@ -209,6 +211,11 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
         .addTo(map);
 
       mapInstanceRef.current = map;
+
+      // Ensure Leaflet calculates container dimensions correctly on mount
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
     }
 
     // Auto-resize observer and container mouseleave handler
@@ -260,16 +267,11 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
     let isCancelled = false;
 
     // Determine target GeoJSON based on active navigation hierarchy
+    // Note: Drill-down stops at 'kabupaten' level (kecamatan & desa are disabled)
     let geojsonUrl = '/indonesia-provinces-fine.geojson';
-    let currentLevel: 'nasional' | 'provinsi' | 'kabupaten' | 'kecamatan' = 'nasional';
+    let currentLevel: 'nasional' | 'provinsi' | 'kabupaten' = 'nasional';
 
     if (
-      selectedWilayah.id === 'cianjur' ||
-      selectedWilayah.parentKabKotaId === 'cianjur'
-    ) {
-      geojsonUrl = '/cianjur-kec-all.geojson';
-      currentLevel = 'kecamatan';
-    } else if (
       selectedWilayah.id === 'jawa-barat' ||
       selectedWilayah.parentProvinsiId === 'jawa-barat'
     ) {
@@ -676,6 +678,25 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
             animate: true,
             duration: 0.9,
           });
+        } else if (selectedWilayah.level === 'provinsi' && currentLevel === 'kabupaten') {
+          // When a province with kab/kota is active, fit camera to all its kabupaten
+          if (typeof newLayer.getBounds === 'function') {
+            const totalBounds = newLayer.getBounds();
+            if (totalBounds.isValid()) {
+              mapInstanceRef.current.fitBounds(totalBounds, {
+                padding: [35, 35],
+                maxZoom: selectedWilayah.zoom,
+                animate: true,
+                duration: 1.0,
+              });
+            } else {
+              mapInstanceRef.current.flyTo(
+                [selectedWilayah.lat, selectedWilayah.lng],
+                selectedWilayah.zoom,
+                { duration: 1.0 }
+              );
+            }
+          }
         } else {
           // Find matching layer to fit bounds precisely
           let foundBounds: L.LatLngBounds | null = null;
@@ -735,7 +756,7 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
   const activeWilayahIndVal = indicatorDef ? indicatorDef.getValue(selectedWilayah) : null;
 
   return (
-    <div className="relative w-full h-full min-h-[500px] lg:min-h-[580px] xl:min-h-[620px] rounded-2xl overflow-hidden border border-slate-200/90 bg-[#cde2e4] shadow-xs">
+    <div className="relative w-full h-full min-h-[500px] lg:min-h-[580px] xl:min-h-[620px] rounded-2xl overflow-hidden border border-slate-200/90 bg-slate-100 shadow-xs">
       {/* 1. Map Canvas */}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
@@ -894,8 +915,12 @@ export const LeafletBlindMap: React.FC<LeafletBlindMapProps> = ({
           </div>
           <p className="text-[11px] text-slate-600 leading-relaxed">
             {selectedWilayah.level === 'nasional'
-              ? 'Klik wilayah provinsi pada peta untuk memuat data capaian 4 pilar dan rincian seluruh indikator daerah tersebut.'
-              : `Menampilkan profil wilayah ${selectedWilayah.name} (Kode BPS: ${selectedWilayah.kodeBps}).`}
+              ? 'Klik wilayah provinsi pada peta atau gunakan filter di atas untuk melihat capaian 4 pilar daerah.'
+              : selectedWilayah.level === 'provinsi'
+              ? (selectedWilayah.id === 'jawa-barat' || selectedWilayah.id === 'dki-jakarta')
+                ? `Menampilkan ${selectedWilayah.name}. Klik salah satu kabupaten/kota pada peta atau pilih dari dropdown filter.`
+                : `Menampilkan ${selectedWilayah.name} (Kode BPS: ${selectedWilayah.kodeBps}).`
+              : `Menampilkan ${selectedWilayah.name} (Kode BPS: ${selectedWilayah.kodeBps}).`}
           </p>
         </div>
       )}
