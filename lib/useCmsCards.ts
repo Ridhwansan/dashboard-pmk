@@ -15,11 +15,22 @@ function emitCacheUpdate() {
 /**
  * Fetch all cards once from the database API and store in memory
  */
-export async function fetchCardsFromDatabase(): Promise<CmsCardItem[]> {
-  if (clientCardsCache) return clientCardsCache;
+export async function fetchCardsFromDatabase(forceRefresh?: boolean): Promise<CmsCardItem[]> {
+  if (forceRefresh) {
+    clientCardsCache = null;
+  } else if (clientCardsCache) {
+    return clientCardsCache;
+  }
   if (activeFetchPromise) return activeFetchPromise;
 
-  activeFetchPromise = fetch('/api/cards?all=true', { cache: 'no-store' })
+  const timestamp = Date.now();
+  activeFetchPromise = fetch(`/api/cards?all=true&_t=${timestamp}`, {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    },
+  })
     .then(async (res) => {
       if (res.ok) {
         const json = await res.json();
@@ -43,6 +54,14 @@ export async function fetchCardsFromDatabase(): Promise<CmsCardItem[]> {
 }
 
 /**
+ * Invalidate the client cache and notify all listeners to refetch
+ */
+export function invalidateClientCardsCache() {
+  clientCardsCache = null;
+  emitCacheUpdate();
+}
+
+/**
  * Manually update the global client cache (e.g. from CMS admin)
  */
 export function setClientCardsCache(cards: CmsCardItem[]) {
@@ -62,6 +81,13 @@ export function useCmsCards(pillarId?: string, category?: string) {
     const handleUpdate = () => {
       if (isSubscribed) {
         setCachedCards(clientCardsCache);
+        if (!clientCardsCache) {
+          fetchCardsFromDatabase().then((data) => {
+            if (isSubscribed) {
+              setCachedCards(data);
+            }
+          });
+        }
       }
     };
 
@@ -96,7 +122,7 @@ export function useCmsCards(pillarId?: string, category?: string) {
   const refresh = useCallback(async () => {
     clientCardsCache = null;
     setCachedCards(null);
-    await fetchCardsFromDatabase();
+    await fetchCardsFromDatabase(true);
   }, []);
 
   return { cards, loading, refresh };

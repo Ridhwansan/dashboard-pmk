@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { getCardById, updateCard } from '@/lib/db';
 import { getProgramDetailData } from '@/data/programDetailData';
 import { getCurrentUser, isAdmin } from '@/lib/auth';
@@ -20,7 +19,16 @@ export async function GET(request: Request, context: RouteContext) {
 
     if (!card) {
       if (baselineDetail) {
-        return NextResponse.json({ success: true, data: baselineDetail });
+        return NextResponse.json(
+          { success: true, data: baselineDetail },
+          {
+            headers: {
+              'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+              Pragma: 'no-cache',
+              Expires: '0',
+            },
+          }
+        );
       }
       return NextResponse.json({ error: 'Program tidak ditemukan' }, { status: 404 });
     }
@@ -42,9 +50,22 @@ export async function GET(request: Request, context: RouteContext) {
       monthlyData: card.monthlyData || baselineDetail.monthlyData,
       annualTargets: card.annualTargets || (baselineDetail as unknown as { annualTargets?: unknown }).annualTargets,
       updateLogs: card.updateLogs || baselineDetail.updateLogs,
+      detailBlocks:
+        card.detailBlocks && Array.isArray(card.detailBlocks) && card.detailBlocks.length > 0
+          ? card.detailBlocks
+          : baselineDetail.detailBlocks,
     };
 
-    return NextResponse.json({ success: true, data: mergedData });
+    return NextResponse.json(
+      { success: true, data: mergedData },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+      }
+    );
   } catch (error) {
     console.error('API GET /api/programs/[id] error:', error);
     return NextResponse.json({ error: 'Gagal memuat detail program' }, { status: 500 });
@@ -71,9 +92,19 @@ export async function PUT(request: Request, context: RouteContext) {
       monthlyData: body.monthlyData,
       annualTargets: body.annualTargets,
       updateLogs: body.updateLogs,
+      detailBlocks: body.detailBlocks,
     });
 
-    return NextResponse.json({ success: true, data: updated });
+    return NextResponse.json(
+      { success: true, data: updated },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+      }
+    );
   } catch (error) {
     console.error('API PUT /api/programs/[id] error:', error);
     return NextResponse.json({ error: 'Gagal memperbarui detail program di database' }, { status: 500 });

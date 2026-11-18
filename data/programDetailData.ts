@@ -1,3 +1,6 @@
+import { DetailBlockConfig } from '@/types/cms';
+import { getDefaultDetailBlocks } from '@/data/defaultIndicatorBlocks';
+
 export interface MonthlyDataPoint {
   month: number;
   monthName: string;
@@ -63,6 +66,7 @@ export interface ProgramDetailData {
   kendalaList?: KendalaDetailItem[];
   monthlyData: Record<number, MonthlyDataPoint[]>;
   updateLogs?: DataUpdateLogItem[];
+  detailBlocks?: DetailBlockConfig[];
 }
 
 const MONTH_NAMES = [
@@ -1461,9 +1465,11 @@ const PROGRAM_ALIASES: Record<string, string> = {
 };
 
 function normalizeProgramDetail(item: ProgramDetailData): ProgramDetailData {
+  const blocks = item.detailBlocks && item.detailBlocks.length > 0 ? item.detailBlocks : getDefaultDetailBlocks(item.id, item as any);
   if ((!item.kendalaList || item.kendalaList.length === 0) && item.kendala && item.kendala.trim() !== '') {
     return {
       ...item,
+      detailBlocks: blocks,
       kendalaList: [
         {
           id: `${item.id}-k1`,
@@ -1478,7 +1484,10 @@ function normalizeProgramDetail(item: ProgramDetailData): ProgramDetailData {
       ],
     };
   }
-  return item;
+  return {
+    ...item,
+    detailBlocks: blocks,
+  };
 }
 
 /**
@@ -1504,7 +1513,7 @@ export function getProgramDetailData(id: string, fallbackTitle?: string, fallbac
 
   // Generic fallback if completely unknown
   const safePillar = (fallbackPillar || 'pendidikan') as 'pendidikan' | 'kesehatan' | 'bencana' | 'kemiskinan';
-  return {
+  const fallbackItem: ProgramDetailData = {
     id,
     title: fallbackTitle || id,
     pillarId: safePillar,
@@ -1516,6 +1525,10 @@ export function getProgramDetailData(id: string, fallbackTitle?: string, fallbac
     target2026: '—',
     status: 'Capaian 2026',
     monthlyData: generateEmptyMonthlyData(),
+  };
+  return {
+    ...fallbackItem,
+    detailBlocks: getDefaultDetailBlocks(id, fallbackItem as any),
   };
 }
 

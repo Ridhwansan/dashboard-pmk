@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronRight, X } from 'lucide-react';
 import { ProgramDetailPageView } from './ProgramDetailPageView';
 import { ProgramDetailData, KendalaDetailItem, MonthlyDataPoint, DataUpdateLogItem, getProgramDetailData } from '@/data/programDetailData';
+import { getDefaultDetailBlocks } from '@/data/defaultIndicatorBlocks';
 import { useCmsCards } from '@/lib/useCmsCards';
 
 interface PendidikanDetailViewProps {
@@ -72,6 +73,10 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
           kendalaList: (selectedCard.kendalaList as KendalaDetailItem[]) || [],
           monthlyData: (selectedCard.monthlyData as Record<number, MonthlyDataPoint[]>) || {},
           updateLogs: (selectedCard.updateLogs as DataUpdateLogItem[]) || [],
+          detailBlocks:
+            selectedCard.detailBlocks && selectedCard.detailBlocks.length > 0
+              ? selectedCard.detailBlocks
+              : getDefaultDetailBlocks(selectedCard.slug || selectedCard.id, selectedCard),
         }
       : getProgramDetailData(selectedProgramId, undefined, 'pendidikan');
 
@@ -263,7 +268,7 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
           {widgetCards.map((card) => {
-            const kendalaList = (card.kendalaList && (card.kendalaList as any[]).length > 0)
+            const kendalaList = (card.kendalaList && Array.isArray(card.kendalaList) && card.kendalaList.length > 0)
               ? (card.kendalaList as Array<{ title?: string; kendala?: string; tindakLanjut?: string }>)
               : (() => {
                   const detail = getProgramDetailData(card.id, card.title, 'pendidikan');

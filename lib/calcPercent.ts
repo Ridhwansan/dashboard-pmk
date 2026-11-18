@@ -24,7 +24,7 @@ export function parseMetricNumber(val: string | number | null | undefined): numb
   const strippedWords = withoutParens
     .replace(/^(target\s*(20\d\d)?\s*:?|realisasi\s*(20\d\d)?\s*:?|capaian\s*:?)/i, '')
     .replace(
-      /(satuan\s*pendidikan|satdik|sekolah|unit|orang|jiwa|kpm|persen|poin|ha|rs|rsud|kasus|lembaga|juta|jt|penerima|desa|kabupaten|kota|lokasi|kab\/kota)/gi,
+      /(satuan\s*pendidikan|satdik|sekolah|unit|orang|jiwa|kpm|persen|poin|ha|rs|rsud|kasus|lembaga|juta|jt|miliar|mil|triliun|tril|ribu|rb|penerima|desa|kabupaten|kota|lokasi|kab\/kota)/gi,
       ''
     )
     .trim();

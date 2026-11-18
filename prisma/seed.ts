@@ -86,6 +86,7 @@ export async function seedAllData() {
         kendalaList: (detail.kendalaList as object) || null,
         monthlyData: (detail.monthlyData as object) || null,
         updateLogs: (detail.updateLogs as object) || null,
+        detailBlocks: (detail.detailBlocks as object) || null,
       },
       create: {
         id: card.id,
@@ -108,6 +109,7 @@ export async function seedAllData() {
         kendalaList: (detail.kendalaList as object) || null,
         monthlyData: (detail.monthlyData as object) || null,
         updateLogs: (detail.updateLogs as object) || null,
+        detailBlocks: (detail.detailBlocks as object) || null,
       },
     });
     cardCount++;

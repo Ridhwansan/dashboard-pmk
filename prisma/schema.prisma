@@ -62,6 +62,7 @@ model PillarCard {
   monthlyData      Json?    // Realisasi bulanan
   kendalaList      Json?    // Daftar kendala & tindak lanjut
   updateLogs       Json?    // Audit trails / log pembaruan
+  detailBlocks     Json?    // Modular dynamic layout blocks configuration & data
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

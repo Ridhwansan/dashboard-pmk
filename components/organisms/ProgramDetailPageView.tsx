@@ -5,12 +5,10 @@ import {
   ArrowLeft,
   ChevronDown,
   TableProperties,
-  CalendarRange,
   BarChart3,
   AlertCircle,
   CheckCircle2,
   Clock,
-  RefreshCw,
 } from 'lucide-react';
 import { ProgramDetailData, KendalaDetailItem, getProgramDetailData } from '@/data/programDetailData';
 import { PENGKINIAN_BENCANA_DATA, BENCANA_RINGKASAN_UTAMA } from '@/data/bencanaPengkinianData';
@@ -19,6 +17,7 @@ import {
   getIndicatorAnnualRow,
   AVAILABLE_YEARS,
 } from '@/data/pillarAgregatData';
+import { IndicatorBlockRenderer } from '@/components/molecules/indicator-blocks/IndicatorBlockRenderer';
 
 interface ProgramDetailPageViewProps {
   program: ProgramDetailData;
@@ -152,18 +151,25 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   initialSection,
   highlightKendalaId,
 }) => {
-  const [currentProgram, setCurrentProgram] = useState<ProgramDetailData>(program);
+  const [dbProgram, setDbProgram] = useState<ProgramDetailData | null>(null);
 
-  // Sync program detail from database API
+  // Sync program detail from database API with cache-busting
   useEffect(() => {
     let active = true;
     const fetchDbDetail = async () => {
       try {
-        const res = await fetch(`/api/programs/${program.id}`);
+        const timestamp = Date.now();
+        const res = await fetch(`/api/programs/${program.id}?_t=${timestamp}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            Pragma: 'no-cache',
+          },
+        });
         if (res.ok) {
           const json = await res.json();
           if (active && json.data) {
-            setCurrentProgram(json.data);
+            setDbProgram(json.data);
           }
         }
       } catch {
@@ -175,6 +181,8 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       active = false;
     };
   }, [program.id]);
+
+  const currentProgram = dbProgram && dbProgram.id === program.id ? dbProgram : program;
 
   // Always scroll to top when entering program detail unless kendala is targeted
   useEffect(() => {
@@ -232,6 +240,9 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   const [selectedMonth, setSelectedMonth] = useState<number>(0); // 0 = Semua Bulan
   const [hoveredAnnualIdx, setHoveredAnnualIdx] = useState<number | null>(null);
   const [hoveredMonthlyIdx, setHoveredMonthlyIdx] = useState<number | null>(null);
+  const hasDetailBlocks = Boolean(
+    effectiveProgram.detailBlocks && effectiveProgram.detailBlocks.length > 0
+  );
   const isJumlahBencana = effectiveProgram.id === 'jumlah_bencana';
   const [bencanaReport, setBencanaReport] = useState<{
     ringkasanUtama: typeof BENCANA_RINGKASAN_UTAMA;
@@ -304,7 +315,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       }
     }
     return baseline;
-  }, [effectiveProgram.id, effectiveProgram.pillarId, effectiveProgram]);
+  }, [effectiveProgram]);
 
   // Fallback annual row if program is not hardcoded in agregat data
   const activeAnnualRow: AgregatIndicatorRow = useMemo(() => {
@@ -814,9 +825,10 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           </p>
         </div>
 
-        {/* 3 Prominent KPI Stat Cards: Target, Realisasi & Capaian (Integrated), Sisa Sasaran/Gap */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-          {/* Card 1: Target Sasaran 2026 */}
+        {/* 3 Prominent KPI Stat Cards: Only displayed when not using dynamic modular blocks */}
+        {!hasDetailBlocks && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+            {/* Card 1: Target Sasaran 2026 */}
           <div className="bg-slate-50/80 rounded-xl p-5 border border-slate-200/90 space-y-1.5 shadow-2xs flex flex-col justify-between">
             <div>
               <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
@@ -898,10 +910,15 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
             </span>
           </div>
         </div>
+        )}
       </div>
 
-      {/* 3. SECTION KINERJA: TABEL & GRAFIK TREN TERPADU */}
-      <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs space-y-6">
+      {/* 3. MODULAR DYNAMIC BLOCKS OR FALLBACK KINERJA SECTION */}
+      {hasDetailBlocks ? (
+        <IndicatorBlockRenderer blocks={effectiveProgram.detailBlocks!} />
+      ) : (
+        /* 3. SECTION KINERJA: TABEL & GRAFIK TREN TERPADU */
+        <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs space-y-6">
         {/* Controls Toolbar: Title on Left, Controls on Right */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
           {/* Left: Dynamic Title based on active mode */}
@@ -931,22 +948,49 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
 
           {/* Right Toolbar: Period Switcher & Format Toggle */}
           <div className="flex items-center gap-2.5 flex-wrap">
-            {/* Filter Tahun (khusus bulanan) */}
+            {/* Filter Tahun & Bulan (khusus bulanan) */}
             {tableType === 'bulanan' && (
-              <div className="relative">
-                <select
-                  id="filter-tahun-page"
-                  aria-label="Pilih Tahun"
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className="h-[36px] appearance-none pl-3 pr-8 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
-                >
-                  <option value={2026}>Tahun 2026</option>
-                  <option value={2025}>Tahun 2025</option>
-                  <option value={2027}>Tahun 2027</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-              </div>
+              <>
+                <div className="relative">
+                  <select
+                    id="filter-tahun-page"
+                    aria-label="Pilih Tahun"
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className="h-[36px] appearance-none pl-3 pr-8 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                  >
+                    <option value={2026}>Tahun 2026</option>
+                    <option value={2025}>Tahun 2025</option>
+                    <option value={2027}>Tahun 2027</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                </div>
+
+                <div className="relative">
+                  <select
+                    id="filter-bulan-page"
+                    aria-label="Pilih Bulan"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    className="h-[36px] appearance-none pl-3 pr-8 text-xs sm:text-sm font-bold bg-slate-50 hover:bg-white text-slate-900 border border-slate-200/90 hover:border-slate-300 rounded-xl cursor-pointer shadow-2xs transition-all focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                  >
+                    <option value={0}>Semua Bulan</option>
+                    <option value={1}>Januari</option>
+                    <option value={2}>Februari</option>
+                    <option value={3}>Maret</option>
+                    <option value={4}>April</option>
+                    <option value={5}>Mei</option>
+                    <option value={6}>Juni</option>
+                    <option value={7}>Juli</option>
+                    <option value={8}>Agustus</option>
+                    <option value={9}>September</option>
+                    <option value={10}>Oktober</option>
+                    <option value={11}>November</option>
+                    <option value={12}>Desember</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                </div>
+              </>
             )}
 
             {/* Periode Switcher */}
@@ -2056,6 +2100,7 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           </div>
         )}
       </div>
+      )}
 
       {/* 5. KENDALA PELAKSANAAN & TINDAK LANJUT */}
       <div id="kendala-section" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6 scroll-mt-6">

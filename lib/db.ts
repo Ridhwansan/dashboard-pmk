@@ -5,6 +5,7 @@ import { prisma } from './prisma';
 import { calculatePercentage } from './calcPercent';
 import { INITIAL_CMS_CARDS, CmsCardItem } from '../data/initialCmsCards';
 import { getProgramDetailData } from '../data/programDetailData';
+import { getDefaultDetailBlocks } from '../data/defaultIndicatorBlocks';
 import { DEFAULT_USERS } from './auth';
 import { DASHBOARD_META } from '../data/dashboardData';
 import { SUG_LOCATIONS, SugLocation } from '../data/mapIndicators';
@@ -20,6 +21,7 @@ const USERS_JSON_FILE_PATH = path.join(DATA_DIR, 'usersData.json');
 
 // Memory cache for fallback mode
 let memoryCards: CmsCardItem[] | null = null;
+let lastJsonMtime: number = 0;
 let memoryMeta: DashboardMetaItem | null = null;
 let memoryUsers: FallbackUserItem[] | null = null;
 let isPrismaAvailable: boolean | null = null;
@@ -217,21 +219,46 @@ export function ensureJsonFile(): CmsCardItem[] {
           kendalaList: card.kendalaList || detail.kendalaList,
           monthlyData: card.monthlyData || detail.monthlyData,
           updateLogs: card.updateLogs || detail.updateLogs,
+          detailBlocks: card.detailBlocks || detail.detailBlocks,
         };
       });
 
     if (!fs.existsSync(JSON_FILE_PATH)) {
       const enriched = createEnriched();
       fs.writeFileSync(JSON_FILE_PATH, JSON.stringify(enriched, null, 2), 'utf-8');
+      lastJsonMtime = fs.statSync(JSON_FILE_PATH).mtimeMs;
       memoryCards = enriched;
       return memoryCards;
     }
-    if (!memoryCards || memoryCards.length === 0) {
+
+    const currentMtime = fs.statSync(JSON_FILE_PATH).mtimeMs;
+    if (!memoryCards || memoryCards.length === 0 || currentMtime !== lastJsonMtime) {
+      lastJsonMtime = currentMtime;
       try {
         const raw = fs.readFileSync(JSON_FILE_PATH, 'utf-8');
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          memoryCards = parsed;
+          let hasMissingBlocks = false;
+          memoryCards = parsed.map((c) => {
+            if (!c.detailBlocks || c.detailBlocks.length === 0) {
+              hasMissingBlocks = true;
+              const detail = getProgramDetailData(c.slug || c.id, c.title, c.pillarId);
+              const blocks =
+                detail?.detailBlocks && detail.detailBlocks.length > 0
+                  ? detail.detailBlocks
+                  : getDefaultDetailBlocks(c.slug || c.id, c);
+              return { ...c, detailBlocks: blocks };
+            }
+            return c;
+          });
+          if (hasMissingBlocks) {
+            try {
+              fs.writeFileSync(JSON_FILE_PATH, JSON.stringify(memoryCards, null, 2), 'utf-8');
+              lastJsonMtime = fs.statSync(JSON_FILE_PATH).mtimeMs;
+            } catch (err) {
+              console.error('Failed to sync detailBlocks to cmsCardsData.json:', err);
+            }
+          }
         }
       } catch {
         memoryCards = null;
@@ -240,6 +267,7 @@ export function ensureJsonFile(): CmsCardItem[] {
     if (!memoryCards || memoryCards.length === 0) {
       const enriched = createEnriched();
       fs.writeFileSync(JSON_FILE_PATH, JSON.stringify(enriched, null, 2), 'utf-8');
+      lastJsonMtime = fs.statSync(JSON_FILE_PATH).mtimeMs;
       memoryCards = enriched;
     }
     return memoryCards;
@@ -269,6 +297,7 @@ function saveJsonFile(cards: CmsCardItem[]): void {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
     fs.writeFileSync(JSON_FILE_PATH, JSON.stringify(cards, null, 2), 'utf-8');
+    lastJsonMtime = fs.statSync(JSON_FILE_PATH).mtimeMs;
   } catch (error) {
     console.error('Error writing fallback JSON file:', error);
   }
@@ -324,6 +353,10 @@ function toCmsCardItem(r: any): CmsCardItem {
     monthlyData: r.monthlyData || undefined,
     kendalaList: r.kendalaList || undefined,
     updateLogs: r.updateLogs || undefined,
+    detailBlocks:
+      r.detailBlocks && Array.isArray(r.detailBlocks) && r.detailBlocks.length > 0
+        ? r.detailBlocks
+        : getDefaultDetailBlocks(r.slug || r.id, r),
   };
 }
 
@@ -447,6 +480,7 @@ export async function updateCard(
         monthlyData: toJsonInput(updated.monthlyData),
         kendalaList: toJsonInput(updated.kendalaList),
         updateLogs: toJsonInput(updated.updateLogs),
+        detailBlocks: toJsonInput(updated.detailBlocks),
       };
 
       const r = await prisma.pillarCard.update({
@@ -495,7 +529,7 @@ export async function updatePdfSettings(
           where: {
             OR: [{ id }, { slug: id }],
           },
-          data: { includeInPdf } as any,
+          data: { includeInPdf },
         })
       );
       const results = await prisma.$transaction(updates);
@@ -539,11 +573,17 @@ export async function createCard(
       ? card.percent
       : calculatePercentage(card.value, card.target);
 
+  const detailBlocks =
+    card.detailBlocks && card.detailBlocks.length > 0
+      ? card.detailBlocks
+      : getDefaultDetailBlocks(slug, card);
+
   const newCard: CmsCardItem = {
     ...card,
     id,
     slug,
     percent,
+    detailBlocks,
   };
 
   const useDb = await testPrismaConnection();
@@ -572,6 +612,7 @@ export async function createCard(
         monthlyData: toJsonInput(newCard.monthlyData),
         kendalaList: toJsonInput(newCard.kendalaList),
         updateLogs: toJsonInput(newCard.updateLogs),
+        detailBlocks: toJsonInput(newCard.detailBlocks),
       };
 
       const r = await prisma.pillarCard.create({
@@ -1095,6 +1136,7 @@ export async function seedPrismaDatabase(): Promise<void> {
         kendalaList: toJsonInput(detail.kendalaList),
         monthlyData: toJsonInput(detail.monthlyData),
         updateLogs: toJsonInput(detail.updateLogs),
+        detailBlocks: toJsonInput(card.detailBlocks || detail.detailBlocks),
       };
 
       const seedCreatePayload: PillarCardCreatePayload = {
@@ -1119,6 +1161,7 @@ export async function seedPrismaDatabase(): Promise<void> {
         kendalaList: toJsonInput(detail.kendalaList),
         monthlyData: toJsonInput(detail.monthlyData),
         updateLogs: toJsonInput(detail.updateLogs),
+        detailBlocks: toJsonInput(card.detailBlocks || detail.detailBlocks),
       };
 
       await prisma.pillarCard.upsert({

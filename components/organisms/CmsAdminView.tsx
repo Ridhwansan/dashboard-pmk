@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   GraduationCap,
   HeartPulse,
@@ -23,29 +24,30 @@ import {
   LogOut,
   Menu,
   X,
-  Copy,
   Sliders,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Hash,
   Type,
   Users,
   Percent,
-  Calendar,
   AlertTriangle,
   FileText,
   CheckCircle2,
-  KeyRound,
-  ShieldCheck,
-  User,
   UserPlus,
   FileDown,
-  ToggleLeft,
-  ToggleRight,
   CheckCheck,
+  ArrowUp,
+  ArrowDown,
+  LayoutGrid,
+  MapPin,
+  BarChart3,
+  Code,
 } from 'lucide-react';
-import { CmsCardItem } from '@/types/cms';
-import { calculatePercentage, parseMetricNumber } from '@/lib/calcPercent';
+import { CmsCardItem, DetailBlockConfig, BlockType, BlockWidth, KpiCardItem, KpiCardsBlockData } from '@/types/cms';
+import { getDefaultDetailBlocks } from '@/data/defaultIndicatorBlocks';
+import { calculatePercentage } from '@/lib/calcPercent';
 import { useAuth } from '@/lib/useAuth';
 import { setClientCardsCache } from '@/lib/useCmsCards';
 import { KendalaDetailItem } from '@/data/programDetailData';
@@ -120,7 +122,8 @@ export function unformatIndonesianNumber(input: string): string {
 }
 
 export const CmsAdminView: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
+  const router = useRouter();
 
   const [cards, setCards] = useState<CmsCardItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,12 +140,15 @@ export const CmsAdminView: React.FC = () => {
 
   // Pagination for Indicator Table (10 items / page)
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [filterKey, setFilterKey] = useState<string>('all|all|');
   const itemsPerPage = 10;
 
-  // Reset page to 1 whenever filters change
-  useEffect(() => {
+  // Adjust page to 1 during render when filters change (React recommended pattern)
+  const currentFilterKey = `${selectedPillar}|${selectedCategory}|${searchQuery}`;
+  if (currentFilterKey !== filterKey) {
+    setFilterKey(currentFilterKey);
     setCurrentPage(1);
-  }, [selectedPillar, selectedCategory, searchQuery]);
+  }
 
   // Dashboard Metadata state (Informasi Tampilan Depan)
   const [metadata, setMetadata] = useState({
@@ -156,7 +162,6 @@ export const CmsAdminView: React.FC = () => {
   // PDF Settings state (Pengaturan Unduh Ringkasan)
   const [pdfPillarFilter, setPdfPillarFilter] = useState<PillarTab>('all');
   const [pdfSearchQuery, setPdfSearchQuery] = useState('');
-  const [isBulkUpdatingPdf, setIsBulkUpdatingPdf] = useState(false);
   const [isApplyingPdfSettings, setIsApplyingPdfSettings] = useState(false);
   const [isPdfDirty, setIsPdfDirty] = useState(false);
 
@@ -209,6 +214,18 @@ export const CmsAdminView: React.FC = () => {
   // Kendala & Catatan Pelaksanaan (Isu Strategis) directly connected to program detail
   const [kendalaList, setKendalaList] = useState<KendalaDetailItem[]>([]);
 
+  // Dynamic Detail Blocks (Layout & Modular Blocks)
+  const [detailBlocks, setDetailBlocks] = useState<DetailBlockConfig[]>([]);
+  const [editingBlockJsonIdx, setEditingBlockJsonIdx] = useState<number | null>(null);
+  const [blockJsonText, setBlockJsonText] = useState<string>('');
+  const [blockJsonError, setBlockJsonError] = useState<string | null>(null);
+  const [formActiveTab, setFormActiveTab] = useState<'info' | 'blocks' | 'kendala'>('info');
+  const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
+
+  // KPI Cards Visual Editor State (1 to 5 cards)
+  const [editingKpiCardsIdx, setEditingKpiCardsIdx] = useState<number | null>(null);
+  const [kpiCardsDraft, setKpiCardsDraft] = useState<KpiCardItem[]>([]);
+
   // Users Management State
   const [usersList, setUsersList] = useState<CmsUserItem[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -247,24 +264,6 @@ export const CmsAdminView: React.FC = () => {
     }
   };
 
-  // Fetch users from API
-  const fetchUsers = async () => {
-    setLoadingUsers(true);
-    try {
-      const res = await fetch('/api/users', { cache: 'no-store' });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data && Array.isArray(json.data)) {
-          setUsersList(json.data);
-        }
-      }
-    } catch {
-      // fallback
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
-
   useEffect(() => {
     let active = true;
     const init = async () => {
@@ -299,9 +298,23 @@ export const CmsAdminView: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (viewMode === 'users') {
-      fetchUsers();
-    }
+    if (viewMode !== 'users') return;
+    let isMounted = true;
+    fetch('/api/users', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (isMounted && json?.data && Array.isArray(json.data)) {
+          setUsersList(json.data);
+          setLoadingUsers(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setLoadingUsers(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [viewMode]);
 
   // Save metadata (Informasi Tampilan Depan)
@@ -374,7 +387,19 @@ export const CmsAdminView: React.FC = () => {
 
   // Bulk toggle cards inclusion in Executive Summary PDF
   const handleBulkTogglePdf = (enable: boolean) => {
-    const targetCards = pdfFilteredCards.filter((c) => (c.includeInPdf !== false) !== enable);
+    const currentFiltered = cards.filter((card) => {
+      if (pdfPillarFilter !== 'all' && card.pillarId !== pdfPillarFilter) return false;
+      if (pdfSearchQuery.trim() !== '') {
+        const q = pdfSearchQuery.toLowerCase();
+        const matchesTitle = card.title.toLowerCase().includes(q);
+        const matchesSubtext = (card.subtext || '').toLowerCase().includes(q);
+        const matchesPIC = (card.picKementerian || '').toLowerCase().includes(q);
+        const matchesTarget = (card.target || '').toLowerCase().includes(q);
+        return matchesTitle || matchesSubtext || matchesPIC || matchesTarget;
+      }
+      return true;
+    });
+    const targetCards = currentFiltered.filter((c) => (c.includeInPdf !== false) !== enable);
     if (targetCards.length === 0) {
       showToast(
         enable
@@ -471,7 +496,7 @@ export const CmsAdminView: React.FC = () => {
 
   // Reset to default seed
   const handleResetDefault = async () => {
-    if (!confirm('Sinkronisasi ulang seluruh 28 kartu resmi ke database? Perubahan kustom akan ditimpa.')) return;
+    if (!confirm('Sinkronisasi ulang seluruh 42 kartu master resmi ke database? Perubahan kustom akan ditimpa.')) return;
     try {
       setLoading(true);
       const res = await fetch('/api/cards/reset', { method: 'POST' });
@@ -479,7 +504,7 @@ export const CmsAdminView: React.FC = () => {
         const json = await res.json();
         setCards(json.data);
         setClientCardsCache(json.data);
-        showToast('28 data master resmi berhasil disinkronisasi');
+        showToast('Seluruh 42 data master resmi berhasil disinkronisasi');
       }
     } catch {
       alert('Gagal mereset data');
@@ -563,7 +588,9 @@ export const CmsAdminView: React.FC = () => {
     });
 
     setKendalaList([]);
+    setDetailBlocks([]);
     setEditingCardId(null);
+    setFormActiveTab('info');
     setViewMode('create');
   };
 
@@ -633,6 +660,11 @@ export const CmsAdminView: React.FC = () => {
     const rawKendala = (card.kendalaList as KendalaDetailItem[]) || [];
     setKendalaList(rawKendala);
 
+    // Extract detail blocks
+    const rawBlocks = (card.detailBlocks as DetailBlockConfig[]) || getDefaultDetailBlocks(card.slug || card.id) || [];
+    setDetailBlocks(rawBlocks);
+    setFormActiveTab('info');
+
     setViewMode('edit');
   };
 
@@ -641,7 +673,7 @@ export const CmsAdminView: React.FC = () => {
     setKendalaList((prev) => [
       ...prev,
       {
-        id: `knd_${Date.now()}`,
+        id: `knd_${prev.length + 1}`,
         title: '',
         kendala: '',
         tindakLanjut: '',
@@ -661,6 +693,358 @@ export const CmsAdminView: React.FC = () => {
 
   const handleRemoveKendala = (index: number) => {
     setKendalaList((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Block Layout & Customization Handlers
+  const syncBlocksToBackendAndCache = (updatedBlocks: DetailBlockConfig[]) => {
+    if (!editingCardId) return;
+    const nextCards = cards.map((c) =>
+      c.id === editingCardId || c.slug === editingCardId
+        ? { ...c, detailBlocks: updatedBlocks }
+        : c
+    );
+    setCards(nextCards);
+    setClientCardsCache(nextCards);
+
+    fetch(`/api/cards/${editingCardId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ detailBlocks: updatedBlocks }),
+    })
+      .then(async (res) => {
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data) {
+            const freshCards = cards.map((c) =>
+              c.id === editingCardId || c.slug === editingCardId ? json.data : c
+            );
+            setCards(freshCards);
+            setClientCardsCache(freshCards);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('Auto-sync detailBlocks error:', err);
+      });
+  };
+
+  const handleMoveBlock = (idx: number, dir: 'up' | 'down') => {
+    setDetailBlocks((prev) => {
+      const targetIdx = dir === 'up' ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= prev.length) return prev;
+      const copy = [...prev];
+      const temp = copy[idx];
+      copy[idx] = copy[targetIdx];
+      copy[targetIdx] = temp;
+      const nextBlocks = copy.map((b, i) => ({ ...b, order: i + 1 }));
+      syncBlocksToBackendAndCache(nextBlocks);
+      return nextBlocks;
+    });
+  };
+
+  const handleToggleBlock = (idx: number) => {
+    setDetailBlocks((prev) => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], enabled: copy[idx].enabled === false ? true : false };
+      syncBlocksToBackendAndCache(copy);
+      return copy;
+    });
+  };
+
+  const handleChangeBlockWidth = (idx: number, width: BlockWidth) => {
+    setDetailBlocks((prev) => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], width };
+      syncBlocksToBackendAndCache(copy);
+      return copy;
+    });
+  };
+
+  const handleUpdateBlockMeta = (idx: number, field: 'title' | 'subtitle', val: string) => {
+    setDetailBlocks((prev) => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], [field]: val };
+      syncBlocksToBackendAndCache(copy);
+      return copy;
+    });
+  };
+
+  const handleRemoveBlock = (idx: number) => {
+    setDetailBlocks((prev) => {
+      const nextBlocks = prev.filter((_, i) => i !== idx).map((b, i) => ({ ...b, order: i + 1 }));
+      syncBlocksToBackendAndCache(nextBlocks);
+      return nextBlocks;
+    });
+  };
+
+  const handleAddBlock = (type: BlockType) => {
+    const newId = `blk_${type}_${detailBlocks.length + 1}`;
+    let newBlock: DetailBlockConfig;
+    if (type === 'kpi_cards') {
+      newBlock = {
+        id: newId,
+        type: 'kpi_cards',
+        title: 'Indikator Utama',
+        width: 'full',
+        order: detailBlocks.length + 1,
+        enabled: true,
+        data: {
+          mode: 'comparator',
+          items: [
+            { id: 'k1', label: 'Metrik Utama A', val2025: '10.000', val2026: '12.500', delta: '+25%' },
+            { id: 'k2', label: 'Metrik Utama B', val2025: '5.000', val2026: '6.200', delta: '+24%' },
+          ],
+        },
+      };
+    } else if (type === 'spatial_map') {
+      newBlock = {
+        id: newId,
+        type: 'spatial_map',
+        title: 'Peta Sebaran Program',
+        subtitle: 'Distribusi titik sebaran program berdasarkan lokasi',
+        width: 'half',
+        order: detailBlocks.length + 1,
+        enabled: true,
+        data: {
+          mapMode: 'points',
+          centerLat: -2.5,
+          centerLng: 118.0,
+          zoom: 5,
+          legendTitle: 'Sebaran Lokasi',
+          markers: [
+            { id: 'p1', name: 'Titik Lokasi 1', kabKota: 'Kota Jakarta', provinsi: 'DKI Jakarta', lat: -6.2, lng: 106.8, year: 2026, status: 'Realisasi' },
+            { id: 'p2', name: 'Titik Lokasi 2', kabKota: 'Kota Surabaya', provinsi: 'Jawa Timur', lat: -7.25, lng: 112.75, year: 2026, status: 'Realisasi' },
+          ],
+        },
+      };
+    } else if (type === 'category_bars') {
+      newBlock = {
+        id: newId,
+        type: 'category_bars',
+        title: 'Distribusi Berdasarkan Kategori',
+        width: 'half',
+        order: detailBlocks.length + 1,
+        enabled: true,
+        data: {
+          chartTitle: 'Perbandingan Kategori',
+          categories: [
+            { id: 'c1', name: 'Kategori A', val2025: 100, val2026: 150 },
+            { id: 'c2', name: 'Kategori B', val2025: 80, val2026: 120 },
+          ],
+        },
+      };
+    } else if (type === 'milestone_pipeline') {
+      newBlock = {
+        id: newId,
+        type: 'milestone_pipeline',
+        title: 'Tahapan Kesiapan Pelaksanaan',
+        width: 'half',
+        order: detailBlocks.length + 1,
+        enabled: true,
+        data: {
+          title: 'Tahapan Milestone',
+          stages: [
+            { id: 's1', name: 'Penyiapan', count: 30, total: 40, status: 'completed' },
+            { id: 's2', name: 'Pelaksanaan', count: 18, total: 40, status: 'in_progress' },
+          ],
+        },
+      };
+    } else if (type === 'progress_metrics') {
+      newBlock = {
+        id: newId,
+        type: 'progress_metrics',
+        title: 'Progres Fisik dan Keuangan',
+        width: 'third',
+        order: detailBlocks.length + 1,
+        enabled: true,
+        data: {
+          title: 'Realisasi Progres',
+          items: [
+            { id: 'pm1', label: 'Fisik', val2025: 60, val2026: 80, deltaLabel: '+20 pp', unit: '%' },
+            { id: 'pm2', label: 'Keuangan', val2025: 55, val2026: 75, deltaLabel: '+20 pp', unit: '%' },
+          ],
+        },
+      };
+    } else if (type === 'watchlist') {
+      newBlock = {
+        id: newId,
+        type: 'watchlist',
+        title: 'Lokasi yang Memerlukan Perhatian',
+        width: 'third',
+        order: detailBlocks.length + 1,
+        enabled: true,
+        data: {
+          title: 'Isu Lapangan',
+          actionDirection: 'Percepatan Tindak Lanjut',
+          items: [
+            { id: 'w1', title: 'Lokasi A', location: 'Kabupaten X', findings: 'Kendala teknis di lapangan', action: 'Koordinasi percepatan', statusSeverity: 'warning' },
+          ],
+        },
+      };
+    } else if (type === 'insight_callout') {
+      newBlock = {
+        id: newId,
+        type: 'insight_callout',
+        title: 'INSIGHT UTAMA',
+        width: 'full',
+        order: detailBlocks.length + 1,
+        enabled: true,
+        data: {
+          title: 'INSIGHT UTAMA',
+          insights: ['Insight poin 1 capaian program.', 'Insight poin 2 prioritas percepatan.'],
+        },
+      };
+    } else {
+      newBlock = {
+        id: newId,
+        type: 'annual_table',
+        title: 'Tabel Capaian RPJMN (2025–2029)',
+        width: 'full',
+        order: detailBlocks.length + 1,
+        enabled: true,
+        data: {
+          title: 'Target & Realisasi 5 Tahun',
+        },
+      };
+    }
+    const nextBlocks = [...detailBlocks, newBlock];
+    setDetailBlocks(nextBlocks);
+    syncBlocksToBackendAndCache(nextBlocks);
+    showToast(`Blok "${newBlock.title}" berhasil ditambahkan!`);
+  };
+
+  const openEditKpiCardsModal = (idx: number) => {
+    const block = detailBlocks[idx];
+    if (!block) return;
+    const rawData = block.data as KpiCardsBlockData;
+    const items: KpiCardItem[] = Array.isArray(rawData?.items)
+      ? JSON.parse(JSON.stringify(rawData.items))
+      : [];
+
+    setKpiCardsDraft(
+      items.length > 0
+        ? items
+        : [
+            {
+              id: 'k1',
+              label: 'Realisasi Berjalan',
+              val2025: '—',
+              val2026: '0',
+              unit: formData.unit || 'Unit',
+              subtext: `Satuan: ${formData.unit || 'Unit'}`,
+            },
+          ]
+    );
+    setEditingKpiCardsIdx(idx);
+  };
+
+  const handleAddKpiCard = () => {
+    if (kpiCardsDraft.length >= 5) {
+      showToast('Maksimal 5 kartu metrik tercapai!');
+      return;
+    }
+    const newIdx = kpiCardsDraft.length + 1;
+    const defaultLabels = [
+      'Realisasi Berjalan',
+      'Target Kinerja',
+      'Tingkat Capaian',
+      'Instansi Pelaksana',
+      'Alokasi Anggaran',
+    ];
+    const suggestedLabel = defaultLabels[kpiCardsDraft.length] || `Metrik #${newIdx}`;
+    const newCard: KpiCardItem = {
+      id: `kpi_${newIdx}`,
+      label: suggestedLabel,
+      val2025: '—',
+      val2026: '0',
+      unit: formData.unit || '',
+      subtext: `Satuan: ${formData.unit || 'Unit'}`,
+    };
+    setKpiCardsDraft((prev) => [...prev, newCard]);
+  };
+
+  const handleRemoveKpiCard = (cardIdx: number) => {
+    if (kpiCardsDraft.length <= 1) {
+      showToast('Minimal harus ada 1 kartu metrik!');
+      return;
+    }
+    setKpiCardsDraft((prev) => prev.filter((_, i) => i !== cardIdx));
+  };
+
+  const handleMoveKpiCard = (cardIdx: number, direction: 'up' | 'down') => {
+    const targetIdx = direction === 'up' ? cardIdx - 1 : cardIdx + 1;
+    if (targetIdx < 0 || targetIdx >= kpiCardsDraft.length) return;
+    setKpiCardsDraft((prev) => {
+      const copy = [...prev];
+      const temp = copy[cardIdx];
+      copy[cardIdx] = copy[targetIdx];
+      copy[targetIdx] = temp;
+      return copy;
+    });
+  };
+
+  const handleUpdateKpiCard = (cardIdx: number, patch: Partial<KpiCardItem>) => {
+    setKpiCardsDraft((prev) => {
+      const copy = [...prev];
+      copy[cardIdx] = { ...copy[cardIdx], ...patch };
+      return copy;
+    });
+  };
+
+  const handleSaveKpiCards = () => {
+    if (editingKpiCardsIdx === null) return;
+    const copy = [...detailBlocks];
+    const existingData = (copy[editingKpiCardsIdx].data || {}) as KpiCardsBlockData;
+    copy[editingKpiCardsIdx] = {
+      ...copy[editingKpiCardsIdx],
+      data: {
+        ...existingData,
+        mode: existingData.mode || 'comparator',
+        items: kpiCardsDraft,
+      },
+    };
+    setDetailBlocks(copy);
+    setEditingKpiCardsIdx(null);
+    syncBlocksToBackendAndCache(copy);
+    showToast(`Berhasil menyimpan dan mensinkronisasi ${kpiCardsDraft.length} kartu metrik!`);
+  };
+
+  const switchToJsonEditorFromKpi = () => {
+    if (editingKpiCardsIdx === null) return;
+    const idx = editingKpiCardsIdx;
+    const currentData = {
+      ...(detailBlocks[idx].data || {}),
+      items: kpiCardsDraft,
+    };
+    setEditingKpiCardsIdx(null);
+    setEditingBlockJsonIdx(idx);
+    setBlockJsonText(JSON.stringify(currentData, null, 2));
+    setBlockJsonError(null);
+  };
+
+  const openEditBlockJson = (idx: number) => {
+    if (detailBlocks[idx]?.type === 'kpi_cards') {
+      openEditKpiCardsModal(idx);
+      return;
+    }
+    setEditingBlockJsonIdx(idx);
+    setBlockJsonText(JSON.stringify(detailBlocks[idx].data, null, 2));
+    setBlockJsonError(null);
+  };
+
+  const handleSaveBlockJson = () => {
+    if (editingBlockJsonIdx === null) return;
+    try {
+      const parsed = JSON.parse(blockJsonText);
+      const copy = [...detailBlocks];
+      copy[editingBlockJsonIdx] = { ...copy[editingBlockJsonIdx], data: parsed };
+      setDetailBlocks(copy);
+      setEditingBlockJsonIdx(null);
+      syncBlocksToBackendAndCache(copy);
+      showToast('Data konfigurasi blok berhasil diperbarui dan disinkronisasi!');
+    } catch (err: unknown) {
+      setBlockJsonError((err as Error).message || 'Format JSON tidak valid');
+    }
   };
 
   // Save Form (Create or Update Card & Connected Details)
@@ -708,6 +1092,7 @@ export const CmsAdminView: React.FC = () => {
       milestoneContent: finalMilestoneContent,
       kendalaList: kendalaList,
       annualTargets: annualRows,
+      detailBlocks: detailBlocks,
     };
 
     setIsSaving(true);
@@ -720,7 +1105,9 @@ export const CmsAdminView: React.FC = () => {
         });
         if (res.ok) {
           const json = await res.json();
-          setCards((prev) => prev.map((c) => (c.id === editingCardId ? json.data : c)));
+          const nextCards = cards.map((c) => (c.id === editingCardId || c.slug === editingCardId ? json.data : c));
+          setCards(nextCards);
+          setClientCardsCache(nextCards);
           showToast(`Indikator "${formData.title}" dan rincian detail berhasil diperbarui`);
           setViewMode('list');
         } else {
@@ -735,7 +1122,9 @@ export const CmsAdminView: React.FC = () => {
         });
         if (res.ok) {
           const json = await res.json();
-          setCards((prev) => [json.data, ...prev]);
+          const nextCards = [json.data, ...cards];
+          setCards(nextCards);
+          setClientCardsCache(nextCards);
           showToast(`Indikator "${formData.title}" dan rincian detail berhasil ditambahkan`);
           setViewMode('list');
         } else {
@@ -1087,7 +1476,7 @@ export const CmsAdminView: React.FC = () => {
               type="button"
               onClick={async () => {
                 await logout();
-                window.location.href = '/login';
+                router.push('/login');
               }}
               className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-950/30 hover:text-rose-300 transition-colors cursor-pointer"
             >
@@ -1542,565 +1931,879 @@ export const CmsAdminView: React.FC = () => {
           {/* =============================================================== */}
           {(viewMode === 'create' || viewMode === 'edit') && (
             <div className="max-w-4xl mx-auto space-y-6">
+              {/* Form Navigation Tabs */}
+              <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-2xs">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormActiveTab('info')}
+                    className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      formActiveTab === 'info'
+                        ? 'bg-blue-50 text-blue-700 shadow-2xs border border-blue-200/80 font-extrabold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>1. Ringkasan &amp; Info Utama</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormActiveTab('blocks')}
+                    className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      formActiveTab === 'blocks'
+                        ? 'bg-blue-50 text-blue-700 shadow-2xs border border-blue-200/80 font-extrabold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                    }`}
+                  >
+                    <LayoutGrid className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>2. Tata Letak Blok Detail</span>
+                    <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200 text-slate-700 font-extrabold">
+                      {detailBlocks.length}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormActiveTab('kendala')}
+                    className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      formActiveTab === 'kendala'
+                        ? 'bg-blue-50 text-blue-700 shadow-2xs border border-blue-200/80 font-extrabold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                    }`}
+                  >
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>3. Isu &amp; Kendala Lapangan</span>
+                    <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200 text-slate-700 font-extrabold">
+                      {kendalaList.length}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
               <form onSubmit={handleSaveForm} className="space-y-6">
-                {/* Section 1: Identitas & Klasifikasi */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-                  <h2 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center justify-between">
-                    <span>1. Identitas Program & Pilar Strategis</span>
-                    <span className="text-[11px] text-slate-400 font-medium">Langkah 1 dari 4</span>
-                  </h2>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Pilar Kemenko PMK <span className="text-rose-600">*</span>
-                      </label>
-                      <select
-                        value={formData.pillarId}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            pillarId: e.target.value as CmsCardItem['pillarId'],
-                          }))
-                        }
-                        className="h-10 w-full px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC]"
-                      >
-                        <option value="pendidikan">Pilar Pendidikan</option>
-                        <option value="kesehatan">Pilar Kesehatan</option>
-                        <option value="bencana">Pilar Kebencanaan</option>
-                        <option value="kemiskinan">Pilar Penurunan Kemiskinan</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Kategori Program <span className="text-rose-600">*</span>
-                      </label>
-                      <select
-                        value={formData.category}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            category: e.target.value as CmsCardItem['category'],
-                          }))
-                        }
-                        className="h-10 w-full px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC]"
-                      >
-                        <option value="PKPN">PKPN (Program Kerja Prioritas Nasional)</option>
-                        <option value="Isu Strategis">Isu Strategis Prioritas</option>
-                        <option value="RPJMN">RPJMN (Rencana Pembangunan Jangka Menengah Nasional)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Judul Indikator / Program <span className="text-rose-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.title}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                      placeholder="Contoh: Revitalisasi Satuan Pendidikan"
-                      className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      K/L Penanggung Jawab (PIC Pelaksana)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.picKementerian}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, picKementerian: e.target.value }))}
-                      placeholder="Contoh: Kemendikdasmen, Kemenkes, BNPB, Kemensos"
-                      className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* Section 2: Target, Capaian & Kalkulasi Sesuai Satuan */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
-                    <div>
-                      <h2 className="text-sm font-bold text-slate-900">
-                        2. Target, Capaian & Kalkulasi Persentase Sesuai Satuan
-                      </h2>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        Input dipisahkan spesifik sesuai satuannya. Nilai ribuan otomatis diformat dengan tanda titik.
-                      </p>
-                    </div>
-
-                    {/* Metric Type Selector */}
-                    <div className="inline-flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200">
-                      <button
-                        type="button"
-                        onClick={() => setMetricType('number')}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          metricType === 'number'
-                            ? 'bg-white text-[#4F83CC] shadow-xs'
-                            : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      >
-                        <Hash className="h-3.5 w-3.5" />
-                        <span>Angka / Jumlah</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setMetricType('percent')}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          metricType === 'percent'
-                            ? 'bg-white text-[#4F83CC] shadow-xs'
-                            : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      >
-                        <Percent className="h-3.5 w-3.5" />
-                        <span>Persen (%)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setMetricType('text')}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          metricType === 'text'
-                            ? 'bg-white text-[#4F83CC] shadow-xs'
-                            : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      >
-                        <Type className="h-3.5 w-3.5" />
-                        <span>Kualitatif</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* FORM FIELDS PER METRIC TYPE */}
-                  {metricType === 'number' && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* TAB 1: RINGKASAN & INFORMASI UTAMA */}
+                {formActiveTab === 'info' && (
+                  <div className="space-y-6">
+                    {/* Identitas Program */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+                      <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                            Satuan Unit <span className="text-rose-600">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={formData.unit}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, unit: e.target.value }))}
-                            placeholder="Contoh: Satuan Pendidikan, Sekolah, Jiwa"
-                            className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                            Tahun Target
-                          </label>
-                          <select
-                            value={targetYear}
-                            onChange={(e) => setTargetYear(e.target.value)}
-                            className="h-10 w-full px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC]"
-                          >
-                            <option value="2025">Tahun 2025</option>
-                            <option value="2026">Tahun 2026</option>
-                            <option value="2027">Tahun 2027</option>
-                            <option value="2028">Tahun 2028</option>
-                            <option value="2029">Tahun 2029</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                            Status Realisasi
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.status}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
-                            placeholder="Contoh: Realisasi 2026"
-                            className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                          />
+                          <h2 className="text-sm font-bold text-slate-900">Identitas Program &amp; Pilar</h2>
+                          <p className="text-[11px] text-slate-500 mt-0.5">Klasifikasi program dalam arsitektur koordinasi Kemenko PMK</p>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                            Capaian Realisasi (Hanya Angka) <span className="text-rose-600">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            required
-                            value={numberCapaian}
-                            onChange={(e) => handleCapaianNumberChange(e.target.value)}
-                            placeholder="Contoh: 36.669"
-                            className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 tabular-nums focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                          />
-                          <p className="text-[11px] text-slate-400 mt-1">
-                            Ketik angka, tanda titik otomatis ditambahkan saat mencapai ribuan.
-                          </p>
-                        </div>
-
-                        <div>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-xs font-bold text-slate-700">
-                              Target Kinerja (Hanya Angka) <span className="text-rose-600">*</span>
-                            </label>
-                            {formLivePercentage !== null && (
-                              <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                                {formLivePercentage}% Tercapai
-                              </span>
-                            )}
-                          </div>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            required
-                            value={numberTarget}
-                            onChange={(e) => handleTargetNumberChange(e.target.value)}
-                            placeholder="Contoh: 80.282"
-                            className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 tabular-nums focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                          />
-                          <p className="text-[11px] text-slate-400 mt-1">
-                            Ketik angka target, format titik otomatis.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {metricType === 'percent' && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                            Capaian Persentase (%) <span className="text-rose-600">*</span>
+                            Pilar Kemenko PMK <span className="text-rose-600">*</span>
                           </label>
                           <div className="relative">
-                            <input
-                              type="text"
-                              required
-                              value={percentCapaian}
-                              onChange={(e) => setPercentCapaian(e.target.value.replace(/[^0-9,.]/g, ''))}
-                              placeholder="Contoh: 45,7 atau 75"
-                              className="h-10 w-full pl-3.5 pr-8 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 tabular-nums focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                            />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                              %
-                            </span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                            Target Persentase (%) <span className="text-rose-600">*</span>
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              required
-                              value={percentTarget}
-                              onChange={(e) => setPercentTarget(e.target.value.replace(/[^0-9,.]/g, ''))}
-                              placeholder="Contoh: 100"
-                              className="h-10 w-full pl-3.5 pr-8 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 tabular-nums focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                            />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                              %
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {metricType === 'text' && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                            Status / Realisasi Berjalan <span className="text-rose-600">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={textCapaian}
-                            onChange={(e) => setTextCapaian(e.target.value)}
-                            placeholder="Contoh: — atau Dalam Proses Penyiapan"
-                            className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                            Target Milestone / Jadwal <span className="text-rose-600">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={textTarget}
-                            onChange={(e) => setTextTarget(e.target.value)}
-                            placeholder="Contoh: Peluncuran 1 Studio Pusat pada Nov 2026"
-                            className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] focus:ring-1 focus:ring-[#4F83CC] transition-all"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Section 3: Rincian Target & Realisasi Tahunan (2025–2029) */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <div>
-                      <h2 className="text-sm font-bold text-slate-900">
-                        3. Rincian Target & Capaian Tahunan (2025–2029)
-                      </h2>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        Tabel ini langsung tampil pada halaman detail indikator program.
-                      </p>
-                    </div>
-                    <span className="text-[11px] text-slate-400 font-medium">Langkah 3 dari 4</span>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
-                      <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
-                        <tr>
-                          <th className="py-2.5 px-4 w-28">Tahun</th>
-                          <th className="py-2.5 px-4">Target (T)</th>
-                          <th className="py-2.5 px-4">Capaian Realisasi (C)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 font-medium">
-                        {[2025, 2026, 2027, 2028, 2029].map((yr) => (
-                          <tr key={yr} className="hover:bg-slate-50/50">
-                            <td className="py-2.5 px-4 font-bold text-slate-900">
-                              Tahun {yr} {yr === 2026 && <span className="text-[10px] text-blue-600 font-semibold">(Berjalan)</span>}
-                            </td>
-                            <td className="py-2.5 px-4">
-                              <input
-                                type="text"
-                                value={annualRows[yr]?.target || ''}
-                                onChange={(e) => {
-                                  const val = metricType === 'number' ? formatIndonesianNumber(e.target.value) : e.target.value;
-                                  setAnnualRows((prev) => ({
-                                    ...prev,
-                                    [yr]: { ...prev[yr], target: val },
-                                  }));
-                                }}
-                                placeholder={yr === 2026 ? numberTarget || 'Target tahun 2026' : 'Target tahunan'}
-                                className="h-9 w-full px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
-                              />
-                            </td>
-                            <td className="py-2.5 px-4">
-                              <input
-                                type="text"
-                                value={annualRows[yr]?.capaian || ''}
-                                onChange={(e) => {
-                                  const val = metricType === 'number' ? formatIndonesianNumber(e.target.value) : e.target.value;
-                                  setAnnualRows((prev) => ({
-                                    ...prev,
-                                    [yr]: { ...prev[yr], capaian: val },
-                                  }));
-                                }}
-                                placeholder={yr === 2026 ? numberCapaian || 'Realisasi tahun 2026' : '—'}
-                                className="h-9 w-full px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Section 4: Kendala & Catatan Pelaksanaan (Isu Strategis) */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <div>
-                      <h2 className="text-sm font-bold text-slate-900">
-                        4. Kendala & Catatan Pelaksanaan (Isu Strategis)
-                      </h2>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        Daftar kendala ini otomatis muncul pada popover kartu dan halaman detail program.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleAddKendala}
-                      className="h-8 px-3 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>Tambah Kendala</span>
-                    </button>
-                  </div>
-
-                  {kendalaList.length === 0 ? (
-                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center text-xs text-slate-500">
-                      Belum ada kendala yang dicatat. Klik tombol <strong>+ Tambah Kendala</strong> jika terdapat isu pelaksanaan program.
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {kendalaList.map((k, idx) => (
-                        <div
-                          key={k.id || idx}
-                          className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3 relative group"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-amber-500" />
-                              <span>Kendala #{idx + 1}</span>
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveKendala(idx)}
-                              className="text-xs text-rose-600 hover:text-rose-800 font-semibold cursor-pointer"
+                            <select
+                              value={formData.pillarId}
+                              onChange={(e) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  pillarId: e.target.value as CmsCardItem['pillarId'],
+                                }))
+                              }
+                              className="h-10 w-full pl-3.5 pr-10 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all appearance-none cursor-pointer"
                             >
-                              Hapus Kendala
-                            </button>
+                              <option value="pendidikan">Pilar Pendidikan</option>
+                              <option value="kesehatan">Pilar Kesehatan</option>
+                              <option value="bencana">Pilar Kebencanaan</option>
+                              <option value="kemiskinan">Pilar Penurunan Kemiskinan</option>
+                            </select>
+                            <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
                           </div>
+                        </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                            Kategori Program <span className="text-rose-600">*</span>
+                          </label>
+                          <div className="relative">
+                            <select
+                              value={formData.category}
+                              onChange={(e) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  category: e.target.value as CmsCardItem['category'],
+                                }))
+                              }
+                              className="h-10 w-full pl-3.5 pr-10 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all appearance-none cursor-pointer"
+                            >
+                              <option value="PKPN">PKPN (Program Kerja Prioritas Nasional)</option>
+                              <option value="Isu Strategis">Isu Strategis Prioritas</option>
+                              <option value="RPJMN">RPJMN (Rencana Pembangunan Jangka Menengah Nasional)</option>
+                            </select>
+                            <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          Judul Indikator / Program <span className="text-rose-600">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.title}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                          placeholder="Contoh: Revitalisasi Satuan Pendidikan"
+                          className="h-10 w-full px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          K/L Penanggung Jawab (PIC Pelaksana)
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.picKementerian}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, picKementerian: e.target.value }))}
+                          placeholder="Contoh: Kemendikdasmen, Kemenag, Kementerian PUPR, Kemendagri"
+                          className="h-10 w-full px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Metrik & Capaian Dashboard Ringkasan */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
+                        <div>
+                          <h2 className="text-sm font-bold text-slate-900">
+                            Capaian &amp; Target (Kartu Ringkasan Dashboard)
+                          </h2>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Data metrik utama yang tampil pada kartu dashboard depan.
+                          </p>
+                        </div>
+
+                        {/* Metric Type Selector */}
+                        <div className="inline-flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200">
+                          <button
+                            type="button"
+                            onClick={() => setMetricType('number')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              metricType === 'number'
+                                ? 'bg-white text-blue-700 shadow-2xs font-extrabold'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            <Hash className="h-3.5 w-3.5" />
+                            <span>Angka / Jumlah</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setMetricType('percent')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              metricType === 'percent'
+                                ? 'bg-white text-blue-700 shadow-2xs font-extrabold'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            <Percent className="h-3.5 w-3.5" />
+                            <span>Persen (%)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setMetricType('text')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              metricType === 'text'
+                                ? 'bg-white text-blue-700 shadow-2xs font-extrabold'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            <Type className="h-3.5 w-3.5" />
+                            <span>Kualitatif</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* FORM FIELDS PER METRIC TYPE */}
+                      {metricType === 'number' && (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
-                              <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                Ringkasan / Judul Kendala <span className="text-rose-600">*</span>
+                              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                Satuan Unit <span className="text-rose-600">*</span>
                               </label>
                               <input
                                 type="text"
                                 required
-                                value={k.title}
-                                onChange={(e) => handleUpdateKendala(idx, 'title', e.target.value)}
-                                placeholder="Contoh: Usulan Anggaran Belanja Tambahan (ABT)"
-                                className="h-9 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
+                                value={formData.unit}
+                                onChange={(e) => setFormData((prev) => ({ ...prev, unit: e.target.value }))}
+                                placeholder="Contoh: Satuan Pendidikan, Sekolah, Jiwa"
+                                className="h-10 w-full px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
                               />
                             </div>
 
                             <div>
-                              <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                K/L Terkait
+                              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                Tahun Target
+                              </label>
+                              <div className="relative">
+                                <select
+                                  value={targetYear}
+                                  onChange={(e) => setTargetYear(e.target.value)}
+                                  className="h-10 w-full pl-3.5 pr-10 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all appearance-none cursor-pointer"
+                                >
+                                  <option value="2025">Tahun 2025</option>
+                                  <option value="2026">Tahun 2026</option>
+                                  <option value="2027">Tahun 2027</option>
+                                  <option value="2028">Tahun 2028</option>
+                                  <option value="2029">Tahun 2029</option>
+                                </select>
+                                <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                Status Realisasi
                               </label>
                               <input
                                 type="text"
-                                value={k.klTerkait || ''}
-                                onChange={(e) => handleUpdateKendala(idx, 'klTerkait', e.target.value)}
-                                placeholder="Contoh: Kemenkeu, Kemenag"
-                                className="h-9 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
+                                value={formData.status}
+                                onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
+                                placeholder="Contoh: Realisasi 2026"
+                                className="h-10 w-full px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
                               />
                             </div>
                           </div>
 
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                              Uraian Lengkap Kendala <span className="text-rose-600">*</span>
-                            </label>
-                            <textarea
-                              rows={2}
-                              required
-                              value={k.kendala}
-                              onChange={(e) => handleUpdateKendala(idx, 'kendala', e.target.value)}
-                              placeholder="Jelaskan kendala operasional, administratif, atau regulasi yang dihadapi..."
-                              className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
-                            />
-                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                Capaian Realisasi (Hanya Angka) <span className="text-rose-600">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                required
+                                value={numberCapaian}
+                                onChange={(e) => handleCapaianNumberChange(e.target.value)}
+                                placeholder="Contoh: 36.669"
+                                className="h-10 w-full px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 tabular-nums placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                              />
+                              <p className="text-[11px] text-slate-400 mt-1">
+                                Ketik angka, tanda titik otomatis ditambahkan saat mencapai ribuan.
+                              </p>
+                            </div>
 
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                              Tindak Lanjut / Rekomendasi Orkestrasi PMK
-                            </label>
-                            <textarea
-                              rows={2}
-                              value={k.tindakLanjut}
-                              onChange={(e) => handleUpdateKendala(idx, 'tindakLanjut', e.target.value)}
-                              placeholder="Langkah koordinasi dan tindak lanjut penyelesaian..."
-                              className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
-                            />
+                            <div>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="text-xs font-bold text-slate-700">
+                                  Target Kinerja (Hanya Angka) <span className="text-rose-600">*</span>
+                                </label>
+                                {formLivePercentage !== null && (
+                                  <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                    {formLivePercentage}% Tercapai
+                                  </span>
+                                )}
+                              </div>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                required
+                                value={numberTarget}
+                                onChange={(e) => handleTargetNumberChange(e.target.value)}
+                                placeholder="Contoh: 80.282"
+                                className="h-10 w-full px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 tabular-nums placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                              />
+                              <p className="text-[11px] text-slate-400 mt-1">
+                                Ketik angka target, format titik otomatis.
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      ))}
+                      )}
+
+                      {metricType === 'percent' && (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                Capaian Persentase (%) <span className="text-rose-600">*</span>
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="text"
+                                  required
+                                  value={percentCapaian}
+                                  onChange={(e) => setPercentCapaian(e.target.value.replace(/[^0-9,.]/g, ''))}
+                                  placeholder="Contoh: 45,7 atau 75"
+                                  className="h-10 w-full pl-3.5 pr-8 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 tabular-nums placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                                  %
+                                </span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                Target Persentase (%) <span className="text-rose-600">*</span>
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="text"
+                                  required
+                                  value={percentTarget}
+                                  onChange={(e) => setPercentTarget(e.target.value.replace(/[^0-9,.]/g, ''))}
+                                  placeholder="Contoh: 100"
+                                  className="h-10 w-full pl-3.5 pr-8 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 tabular-nums placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                                  %
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {metricType === 'text' && (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                Status / Realisasi Berjalan <span className="text-rose-600">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={textCapaian}
+                                onChange={(e) => setTextCapaian(e.target.value)}
+                                placeholder="Contoh: — atau Dalam Proses Penyiapan"
+                                className="h-10 w-full px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                Target Milestone / Jadwal <span className="text-rose-600">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={textTarget}
+                                onChange={(e) => setTextTarget(e.target.value)}
+                                placeholder="Contoh: Peluncuran 1 Studio Pusat pada Nov 2026"
+                                className="h-10 w-full px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                {/* Section 5: Keterangan & Deskripsi Lengkap Kebijakan */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-                  <h2 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">
-                    5. Keterangan & Deskripsi Lengkap Kebijakan
-                  </h2>
+                    {/* Deskripsi & Visibilitas */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+                      <h2 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">
+                        Keterangan &amp; Visibilitas
+                      </h2>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Keterangan Ringkas (Subtext pada Kartu)
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={formData.subtext}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, subtext: e.target.value }))}
-                      placeholder="Keterangan singkat indikator..."
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] transition-all"
-                    />
-                  </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          Keterangan Ringkas (Subtext pada Kartu)
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={formData.subtext}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, subtext: e.target.value }))}
+                          placeholder="Keterangan singkat indikator..."
+                          className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Deskripsi Lengkap Kebijakan / Program
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={formData.description}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                      placeholder="Uraian rinci dasar pelaksanaan dan kebijakan pengawalan Kemenko PMK..."
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC] transition-all"
-                    />
-                  </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          Deskripsi Lengkap Kebijakan / Program
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={formData.description}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                          placeholder="Uraian rinci dasar pelaksanaan dan kebijakan pengawalan Kemenko PMK..."
+                          className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                        />
+                      </div>
 
-                  {/* Toggle Aktif */}
-                  <div className="pt-2 flex items-center justify-between">
-                    <div>
-                      <label htmlFor="card-is-active" className="text-xs font-bold text-slate-900 block cursor-pointer">
-                        Tampilkan di Dashboard Utama
-                      </label>
-                      <span className="text-[11px] text-slate-500">
-                        Indikator akan langsung ditampilkan pada ikhtisar dan detail dashboard eksekutif.
-                      </span>
+                      <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+                        <div>
+                          <label htmlFor="card-is-active" className="text-xs font-bold text-slate-900 block cursor-pointer">
+                            Tampilkan di Dashboard Utama
+                          </label>
+                          <span className="text-[11px] text-slate-500">
+                            Indikator akan langsung ditampilkan pada ikhtisar dan detail dashboard eksekutif.
+                          </span>
+                        </div>
+                        <input
+                          id="card-is-active"
+                          type="checkbox"
+                          checked={formData.isActive}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))}
+                          className="h-5 w-5 accent-[#4F83CC] rounded-md cursor-pointer"
+                        />
+                      </div>
                     </div>
-                    <input
-                      id="card-is-active"
-                      type="checkbox"
-                      checked={formData.isActive}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))}
-                      className="h-5 w-5 accent-[#4F83CC] rounded-md cursor-pointer"
-                    />
                   </div>
-                </div>
+                )}
 
-                {/* Form Action Buttons */}
-                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('list')}
-                    className="h-10 px-5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
-                  >
-                    Batal
-                  </button>
+                {/* TAB 2: TATA LETAK & BLOK DETAIL (DASHBOARD DINAMIS) */}
+                {formActiveTab === 'blocks' && (
+                  <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                        <div>
+                          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                            <LayoutGrid className="w-4 h-4 text-blue-600" />
+                            <span>Tata Letak Blok Detail</span>
+                          </h2>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Kelola modul visual dan analitik yang tampil pada halaman detail indikator ini.
+                          </p>
+                        </div>
 
-                  <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="h-10 px-6 rounded-xl bg-[#4F83CC] hover:bg-[#3f72bb] active:bg-[#33609f] disabled:bg-slate-300 text-white text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer transition-colors"
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Menyimpan ke Database...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Check className="h-4 w-4 stroke-[2]" />
-                        <span>Simpan Indikator & Detail Program</span>
-                      </>
+                        {/* Dropdown Tambah Modul Blok */}
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setIsAddBlockOpen((prev) => !prev)}
+                            className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs inline-flex items-center gap-2 transition-all cursor-pointer shadow-xs"
+                          >
+                            <Plus className="w-4 h-4 stroke-[2.5]" />
+                            <span>Tambah Modul Blok</span>
+                            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isAddBlockOpen ? 'rotate-180' : ''}`} />
+                          </button>
+
+                          {isAddBlockOpen && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-30"
+                                onClick={() => setIsAddBlockOpen(false)}
+                              />
+                              <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl border border-slate-200 shadow-xl py-1.5 z-40">
+                                <div className="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                                  Pilih Modul Blok:
+                                </div>
+                                {[
+                                  { type: 'kpi_cards' as BlockType, label: 'KPI Cards', desc: 'Ringkasan kartu metrik & capaian', icon: BarChart3 },
+                                  { type: 'spatial_map' as BlockType, label: 'Peta Spasial', desc: 'Peta sebaran titik lokasi program', icon: MapPin },
+                                  { type: 'category_bars' as BlockType, label: 'Bar Kategori', desc: 'Grafik batang per kategori / kerusakan', icon: Layers },
+                                  { type: 'milestone_pipeline' as BlockType, label: 'Pipeline Tahapan', desc: 'Tracking tahapan kesiapan milestone', icon: Sliders },
+                                  { type: 'progress_metrics' as BlockType, label: 'Progres Fisik & Keu', desc: 'Perbandingan realisasi 2025 vs 2026', icon: TrendingDown },
+                                  { type: 'watchlist' as BlockType, label: 'Watchlist Isu', desc: 'Daftar lokasi prioritas & tindak lanjut', icon: AlertTriangle },
+                                  { type: 'insight_callout' as BlockType, label: 'Insight Utama', desc: 'Kotak temuan eksekutif 3 poin', icon: FileText },
+                                ].map((item) => {
+                                  const ItemIcon = item.icon;
+                                  return (
+                                    <button
+                                      key={item.type}
+                                      type="button"
+                                      onClick={() => {
+                                        handleAddBlock(item.type);
+                                        setIsAddBlockOpen(false);
+                                      }}
+                                      className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-start gap-2.5 transition-colors cursor-pointer group"
+                                    >
+                                      <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                        <ItemIcon className="w-3.5 h-3.5 stroke-[2]" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-xs font-bold text-slate-800 group-hover:text-blue-700 transition-colors">
+                                          {item.label}
+                                        </div>
+                                        <div className="text-[11px] text-slate-400 truncate">
+                                          {item.desc}
+                                        </div>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Block List */}
+                      {detailBlocks.length === 0 ? (
+                        <div className="p-8 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-2">
+                          <p className="text-xs font-bold text-slate-700">Belum Ada Blok Modular Khusus</p>
+                          <p className="text-xs text-slate-500 max-w-md mx-auto">
+                            Klik tombol <strong>+ Tambah Modul Blok</strong> di atas untuk menambahkan modul visual ke dalam halaman detail indikator ini.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {detailBlocks.map((block, idx) => (
+                            <div
+                              key={block.id || idx}
+                              className={`p-4 rounded-xl border transition-all ${
+                                block.enabled !== false
+                                  ? 'bg-white border-slate-200 shadow-2xs'
+                                  : 'bg-slate-50/70 border-slate-200 opacity-60'
+                              }`}
+                            >
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                {/* Reorder & Identity */}
+                                <div className="flex items-center gap-2">
+                                  {/* Reorder Buttons */}
+                                  <div className="inline-flex rounded-lg border border-slate-200 bg-white shadow-2xs overflow-hidden">
+                                    <button
+                                      type="button"
+                                      disabled={idx === 0}
+                                      onClick={() => handleMoveBlock(idx, 'up')}
+                                      className="h-7 w-7 flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-25 disabled:pointer-events-none cursor-pointer transition-colors"
+                                      title="Geser ke atas"
+                                    >
+                                      <ArrowUp className="w-3.5 h-3.5" />
+                                    </button>
+                                    <div className="w-px bg-slate-200" />
+                                    <button
+                                      type="button"
+                                      disabled={idx === detailBlocks.length - 1}
+                                      onClick={() => handleMoveBlock(idx, 'down')}
+                                      className="h-7 w-7 flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-25 disabled:pointer-events-none cursor-pointer transition-colors"
+                                      title="Geser ke bawah"
+                                    >
+                                      <ArrowDown className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+
+                                  <span className="h-7 px-2.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200">
+                                    #{idx + 1}
+                                  </span>
+
+                                  <span className="h-7 px-2.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] uppercase tracking-wider flex items-center border border-blue-200/80">
+                                    {block.type.replace('_', ' ')}
+                                  </span>
+                                </div>
+
+                                {/* Width selector & Action Buttons */}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {/* Width Toggle */}
+                                  <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs font-semibold">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleChangeBlockWidth(idx, 'third')}
+                                      className={`h-6 px-2.5 rounded-md transition-all cursor-pointer ${
+                                        block.width === 'third'
+                                          ? 'bg-white text-blue-700 font-bold shadow-2xs border border-slate-200/60'
+                                          : 'text-slate-600 hover:text-slate-900'
+                                      }`}
+                                      title="Lebar 33% (1/3 baris di desktop)"
+                                    >
+                                      33%
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleChangeBlockWidth(idx, 'half')}
+                                      className={`h-6 px-2.5 rounded-md transition-all cursor-pointer ${
+                                        block.width === 'half'
+                                          ? 'bg-white text-blue-700 font-bold shadow-2xs border border-slate-200/60'
+                                          : 'text-slate-600 hover:text-slate-900'
+                                      }`}
+                                      title="Lebar 50% (1/2 baris di desktop)"
+                                    >
+                                      50%
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleChangeBlockWidth(idx, 'full')}
+                                      className={`h-6 px-2.5 rounded-md transition-all cursor-pointer ${
+                                        block.width === 'full'
+                                          ? 'bg-white text-blue-700 font-bold shadow-2xs border border-slate-200/60'
+                                          : 'text-slate-600 hover:text-slate-900'
+                                      }`}
+                                      title="Lebar 100% (Penuh baris)"
+                                    >
+                                      100%
+                                    </button>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditBlockJson(idx)}
+                                    className="h-7 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                                    title="Edit data dan parameter blok"
+                                  >
+                                    <Code className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>Kelola Data</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleBlock(idx)}
+                                    className={`h-7 px-2.5 rounded-lg font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer border shadow-2xs ${
+                                      block.enabled !== false
+                                        ? 'bg-white border-emerald-300 text-emerald-700 hover:bg-emerald-50'
+                                        : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'
+                                    }`}
+                                  >
+                                    <span className={`w-1.5 h-1.5 rounded-full ${block.enabled !== false ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                                    <span>{block.enabled !== false ? 'Aktif' : 'Nonaktif'}</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveBlock(idx)}
+                                    className="h-7 w-7 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-600 flex items-center justify-center cursor-pointer transition-colors shadow-2xs"
+                                    title="Hapus blok"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Block Title & Subtitle inputs */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 mt-3 border-t border-slate-100">
+                                <div>
+                                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                    Judul Blok
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={block.title || ''}
+                                    onChange={(e) => handleUpdateBlockMeta(idx, 'title', e.target.value)}
+                                    placeholder="Contoh: PERSEBARAN SEKOLAH SASARAN"
+                                    className="h-9 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                    Subtitle / Keterangan Modul
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={block.subtitle || ''}
+                                    onChange={(e) => handleUpdateBlockMeta(idx, 'subtitle', e.target.value)}
+                                    placeholder="Contoh: Sebaran sekolah penerima program berdasarkan titik lokasi"
+                                    className="h-9 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Dedicated quick action for KPI Cards */}
+                              {block.type === 'kpi_cards' && (
+                                <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between bg-blue-50/70 p-3 rounded-xl border border-blue-200/80">
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                                      <BarChart3 className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <span className="text-xs font-bold text-slate-900 block truncate">
+                                        Kartu Metrik: {((block.data as KpiCardsBlockData)?.items || []).length} dari maksimal 5 kartu
+                                      </span>
+                                      <span className="text-[11px] text-slate-500 block truncate">
+                                        {((block.data as KpiCardsBlockData)?.items || [])
+                                          .map((it) => it.label)
+                                          .join(' • ') || 'Belum ada kartu metrik'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditKpiCardsModal(idx)}
+                                    className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
+                                  >
+                                    <Sliders className="w-3.5 h-3.5" />
+                                    <span>Atur Kartu Metrik (1–5)</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: ISU & KENDALA LAPANGAN */}
+                {formActiveTab === 'kendala' && (
+                  <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div>
+                          <h2 className="text-sm font-bold text-slate-900">
+                            Kendala &amp; Catatan Pelaksanaan (Isu Strategis)
+                          </h2>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Daftar kendala ini otomatis muncul pada popover kartu dan modal detail indikator program.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAddKendala}
+                          className="h-8 px-3 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>Tambah Kendala</span>
+                        </button>
+                      </div>
+
+                      {kendalaList.length === 0 ? (
+                        <div className="p-8 bg-slate-50 border border-slate-200 rounded-xl text-center text-xs text-slate-500 space-y-1">
+                          <p className="font-bold text-slate-700">Belum ada kendala yang dicatat</p>
+                          <p>Klik tombol <strong>+ Tambah Kendala</strong> jika terdapat isu pelaksanaan program yang memerlukan koordinasi PMK.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {kendalaList.map((k, idx) => (
+                            <div
+                              key={k.id || idx}
+                              className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3 relative group"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                  <span>Kendala #{idx + 1}</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveKendala(idx)}
+                                  className="text-xs text-rose-600 hover:text-rose-800 font-semibold cursor-pointer"
+                                >
+                                  Hapus Kendala
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                    Ringkasan / Judul Kendala <span className="text-rose-600">*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    required
+                                    value={k.title}
+                                    onChange={(e) => handleUpdateKendala(idx, 'title', e.target.value)}
+                                    placeholder="Contoh: Usulan Anggaran Belanja Tambahan (ABT)"
+                                    className="h-9 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                    K/L Terkait
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={k.klTerkait || ''}
+                                    onChange={(e) => handleUpdateKendala(idx, 'klTerkait', e.target.value)}
+                                    placeholder="Contoh: Kemenkeu, Kemenag"
+                                    className="h-9 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
+                                  />
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                  Uraian Lengkap Kendala <span className="text-rose-600">*</span>
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  required
+                                  value={k.kendala}
+                                  onChange={(e) => handleUpdateKendala(idx, 'kendala', e.target.value)}
+                                  placeholder="Jelaskan kendala operasional, administratif, atau regulasi yang dihadapi..."
+                                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                  Tindak Lanjut / Rekomendasi Orkestrasi PMK
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  value={k.tindakLanjut}
+                                  onChange={(e) => handleUpdateKendala(idx, 'tindakLanjut', e.target.value)}
+                                  placeholder="Langkah koordinasi dan tindak lanjut penyelesaian..."
+                                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Form Action & Step Navigation Footer */}
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    {formActiveTab === 'blocks' && (
+                      <button
+                        type="button"
+                        onClick={() => setFormActiveTab('info')}
+                        className="h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
+                      >
+                        ← Kembali ke Ringkasan
+                      </button>
                     )}
-                  </button>
+                    {formActiveTab === 'kendala' && (
+                      <button
+                        type="button"
+                        onClick={() => setFormActiveTab('blocks')}
+                        className="h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
+                      >
+                        ← Kembali ke Tata Letak
+                      </button>
+                    )}
+                    {formActiveTab === 'info' && (
+                      <button
+                        type="button"
+                        onClick={() => setFormActiveTab('blocks')}
+                        className="h-10 px-4 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold cursor-pointer transition-colors"
+                      >
+                        Lanjut ke Tata Letak Detail →
+                      </button>
+                    )}
+                    {formActiveTab === 'blocks' && (
+                      <button
+                        type="button"
+                        onClick={() => setFormActiveTab('kendala')}
+                        className="h-10 px-4 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold cursor-pointer transition-colors"
+                      >
+                        Lanjut ke Isu &amp; Kendala →
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('list')}
+                      className="h-10 px-5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
+                    >
+                      Batal
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={isSaving}
+                      className="h-10 px-6 rounded-xl bg-[#4F83CC] hover:bg-[#3f72bb] active:bg-[#33609f] disabled:bg-slate-300 text-white text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Menyimpan ke Database...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4 stroke-[2]" />
+                          <span>Simpan Indikator &amp; Detail Program</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
@@ -2740,22 +3443,25 @@ export const CmsAdminView: React.FC = () => {
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   Peran / Hak Akses Sistem <span className="text-rose-600">*</span>
                 </label>
-                <select
-                  value={userFormData.role}
-                  onChange={(e) =>
-                    setUserFormData((prev) => ({
-                      ...prev,
-                      role: e.target.value as CmsUserItem['role'],
-                    }))
-                  }
-                  className="h-10 w-full px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
-                >
-                  {ROLE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={userFormData.role}
+                    onChange={(e) =>
+                      setUserFormData((prev) => ({
+                        ...prev,
+                        role: e.target.value as CmsUserItem['role'],
+                      }))
+                    }
+                    className="h-10 w-full pl-3.5 pr-10 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all appearance-none cursor-pointer"
+                  >
+                    {ROLE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                </div>
               </div>
 
               <div>
@@ -2799,6 +3505,372 @@ export const CmsAdminView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* KPI Cards Visual Editor Modal (1 to 5 Cards) */}
+      {editingKpiCardsIdx !== null && detailBlocks[editingKpiCardsIdx] && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <BarChart3 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <span>Kelola Kartu Metrik Utama</span>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                      {kpiCardsDraft.length} dari 5 Kartu
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Atur jumlah kartu (1 hingga maksimal 5 kartu) dan sesuaikan isi capaian, target, atau indikator lainnya.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={kpiCardsDraft.length >= 5}
+                  onClick={handleAddKpiCard}
+                  className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:cursor-not-allowed"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Tambah Kartu</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingKpiCardsIdx(null)}
+                  className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: Cards List */}
+            <div className="p-6 flex-1 overflow-y-auto space-y-4">
+              {kpiCardsDraft.map((card, cIdx) => {
+                const isComparator = Boolean(
+                  (card.val2025 !== undefined || card.val2026 !== undefined) &&
+                    !(card.value && card.val2025 === undefined && card.val2026 === undefined)
+                );
+
+                return (
+                  <div
+                    key={card.id || `draft_${cIdx}`}
+                    className="bg-slate-50/80 border border-slate-200/90 rounded-2xl p-4 sm:p-5 space-y-3.5 transition-all hover:border-slate-300"
+                  >
+                    {/* Card Top Row */}
+                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-blue-700 bg-blue-100/90 px-2 py-0.5 rounded-md border border-blue-200">
+                          #{cIdx + 1}
+                        </span>
+                        <span className="text-xs font-extrabold text-slate-800">
+                          {card.label || `Kartu Metrik ${cIdx + 1}`}
+                        </span>
+                      </div>
+
+                      {/* Reorder and Delete controls */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={cIdx === 0}
+                          onClick={() => handleMoveKpiCard(cIdx, 'up')}
+                          className="h-7 w-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white text-slate-600 flex items-center justify-center cursor-pointer disabled:cursor-not-allowed shadow-2xs"
+                          title="Geser ke kiri / urutan sebelumnya"
+                        >
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={cIdx === kpiCardsDraft.length - 1}
+                          onClick={() => handleMoveKpiCard(cIdx, 'down')}
+                          className="h-7 w-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white text-slate-600 flex items-center justify-center cursor-pointer disabled:cursor-not-allowed shadow-2xs"
+                          title="Geser ke kanan / urutan selanjutnya"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={kpiCardsDraft.length <= 1}
+                          onClick={() => handleRemoveKpiCard(cIdx)}
+                          className="h-7 w-7 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 disabled:opacity-40 disabled:hover:bg-white text-slate-400 hover:text-rose-600 flex items-center justify-center cursor-pointer disabled:cursor-not-allowed shadow-2xs ml-1"
+                          title="Hapus kartu ini"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Field 1: Label / Judul Metrik with quick presets */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Judul / Label Metrik <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={card.label || ''}
+                        onChange={(e) => handleUpdateKpiCard(cIdx, { label: e.target.value })}
+                        placeholder="Contoh: Realisasi Berjalan, Target Kinerja, Alokasi Anggaran"
+                        className="h-9 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                      />
+                      {/* Quick preset suggestions */}
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                        <span className="text-[10px] text-slate-400 font-medium">Pilihan cepat:</span>
+                        {[
+                          'Realisasi Berjalan',
+                          'Target Kinerja',
+                          'Tingkat Capaian',
+                          'Instansi Pelaksana',
+                          'Alokasi Anggaran',
+                          'Penerima Manfaat',
+                        ].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => handleUpdateKpiCard(cIdx, { label: preset })}
+                            className="text-[10px] font-medium text-slate-600 bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 px-2 py-0.5 rounded border border-slate-200 transition-colors cursor-pointer"
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Field 2: Tipe Format (Komparasi 2 Tahun vs Nilai Tunggal) */}
+                    <div className="pt-2 border-t border-slate-200/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-bold text-slate-700">Format Nilai</span>
+                        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-xs font-semibold">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUpdateKpiCard(cIdx, {
+                                val2025: card.val2025 || '—',
+                                val2026: card.val2026 || card.value || '0',
+                                value: undefined,
+                              })
+                            }
+                            className={`h-6 px-2.5 rounded-md transition-all cursor-pointer text-[11px] ${
+                              isComparator
+                                ? 'bg-blue-600 text-white font-bold shadow-2xs'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            Komparasi 2025 vs 2026
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUpdateKpiCard(cIdx, {
+                                value: card.val2026 || card.value || '100%',
+                                target: card.target || '100%',
+                                val2025: undefined,
+                                val2026: undefined,
+                              })
+                            }
+                            className={`h-6 px-2.5 rounded-md transition-all cursor-pointer text-[11px] ${
+                              !isComparator
+                                ? 'bg-blue-600 text-white font-bold shadow-2xs'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            Nilai Tunggal / Target
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Values based on chosen format */}
+                      {isComparator ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1">
+                              Nilai Baseline 2025 (Opsional, isi &apos;—&apos; jika belum ada)
+                            </label>
+                            <input
+                              type="text"
+                              value={card.val2025 !== undefined ? String(card.val2025) : '—'}
+                              onChange={(e) => handleUpdateKpiCard(cIdx, { val2025: e.target.value })}
+                              placeholder="—"
+                              className="h-8 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-600"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-blue-700 mb-1">
+                              Nilai Berjalan 2026
+                            </label>
+                            <input
+                              type="text"
+                              value={card.val2026 !== undefined ? String(card.val2026) : ''}
+                              onChange={(e) => handleUpdateKpiCard(cIdx, { val2026: e.target.value })}
+                              placeholder="Contoh: 30, 15.400, Kemendikdasmen"
+                              className="h-8 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-600"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-700 mb-1">
+                              Nilai / Capaian Saat Ini
+                            </label>
+                            <input
+                              type="text"
+                              value={card.value !== undefined ? String(card.value) : ''}
+                              onChange={(e) => handleUpdateKpiCard(cIdx, { value: e.target.value })}
+                              placeholder="Contoh: 30 Sekolah, 84%"
+                              className="h-8 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-600"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1">
+                              Target Kinerja (Opsional)
+                            </label>
+                            <input
+                              type="text"
+                              value={card.target !== undefined ? String(card.target) : ''}
+                              onChange={(e) => handleUpdateKpiCard(cIdx, { target: e.target.value })}
+                              placeholder="Contoh: 35 Sekolah, 100%"
+                              className="h-8 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-600"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Field 3: Unit & Subtext */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200/50">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-700 mb-1">
+                          Satuan / Unit Data
+                        </label>
+                        <input
+                          type="text"
+                          value={card.unit || ''}
+                          onChange={(e) => handleUpdateKpiCard(cIdx, { unit: e.target.value })}
+                          placeholder="Contoh: Sekolah, %, Ruang, K/L, Jiwa"
+                          className="h-8 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-700 mb-1">
+                          Keterangan Bawah / Subteks
+                        </label>
+                        <input
+                          type="text"
+                          value={card.subtext || ''}
+                          onChange={(e) => handleUpdateKpiCard(cIdx, { subtext: e.target.value })}
+                          placeholder="Contoh: Target Pelaksanaan 2026, Tahap Berjalan"
+                          className="h-8 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-600"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={switchToJsonEditorFromKpi}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Code className="w-3.5 h-3.5" />
+                <span>Beralih ke Editor JSON Lanjutan</span>
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingKpiCardsIdx(null)}
+                  className="h-9 px-4 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-white transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveKpiCards}
+                  className="h-9 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Simpan Perubahan ({kpiCardsDraft.length} Kartu)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Block JSON Editor Modal */}
+      {editingBlockJsonIdx !== null && detailBlocks[editingBlockJsonIdx] && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Code className="w-4 h-4 text-blue-600" />
+                  <span>Editor Data Blok: {detailBlocks[editingBlockJsonIdx].title || detailBlocks[editingBlockJsonIdx].type}</span>
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Ubah parameter, titik lokasi peta, atau nilai data dalam format JSON terstruktur.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingBlockJsonIdx(null)}
+                className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 flex-1 overflow-y-auto space-y-3">
+              {blockJsonError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-semibold flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{blockJsonError}</span>
+                </div>
+              )}
+              <textarea
+                value={blockJsonText}
+                onChange={(e) => {
+                  setBlockJsonText(e.target.value);
+                  setBlockJsonError(null);
+                }}
+                rows={16}
+                className="w-full p-4 font-mono text-xs bg-slate-900 text-emerald-400 rounded-xl border border-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500 leading-relaxed [tab-size:2]"
+                spellCheck={false}
+              />
+            </div>
+
+            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-[11px] text-slate-500 font-medium">
+                Tipe blok: <code className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-800">{detailBlocks[editingBlockJsonIdx].type}</code>
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingBlockJsonIdx(null)}
+                  className="h-9 px-4 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-white transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveBlockJson}
+                  className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Simpan Data Blok</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
