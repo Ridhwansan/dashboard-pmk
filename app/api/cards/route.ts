@@ -62,6 +62,10 @@ export async function POST(request: Request) {
       annualTargets: body.annualTargets || null,
       monthlyData: body.monthlyData || null,
       updateLogs: body.updateLogs || [],
+      supersetEmbed: body.supersetEmbed || null,
+      spatialMapEmbed: body.spatialMapEmbed || null,
+      customExcelTable: body.customExcelTable || null,
+      mapMarkersExcel: body.mapMarkersExcel || null,
     });
 
     return NextResponse.json({ success: true, data: newCard }, { status: 201 });

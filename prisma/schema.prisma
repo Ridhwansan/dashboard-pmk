@@ -63,6 +63,11 @@ model PillarCard {
   kendalaList      Json?    // Daftar kendala & tindak lanjut
   updateLogs       Json?    // Audit trails / log pembaruan
   detailBlocks     Json?    // Modular dynamic layout blocks configuration & data
+  supersetEmbed    Json?    // Konfigurasi embed Apache Superset (iframe, URL, UUID, lebar %, tinggi)
+  spatialMapEmbed  Json?    // Konfigurasi embed Apache Superset Peta Spasial Sebaran
+  customExcelTable   Json?    // Definisi kolom & baris data hasil upload Excel
+  mapMarkersExcel    Json?    // Titik lokasi koordinat peta spasial hasil upload Excel
+  detailSectionOrder Json?    // Urutan & tata letak section halaman detail
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

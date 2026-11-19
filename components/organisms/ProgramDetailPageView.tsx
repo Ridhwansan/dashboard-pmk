@@ -4,10 +4,6 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   ArrowLeft,
   ChevronDown,
-  TableProperties,
-  BarChart3,
-  AlertCircle,
-  CheckCircle2,
   Clock,
 } from 'lucide-react';
 import { ProgramDetailData, KendalaDetailItem, getProgramDetailData } from '@/data/programDetailData';
@@ -17,7 +13,9 @@ import {
   getIndicatorAnnualRow,
   AVAILABLE_YEARS,
 } from '@/data/pillarAgregatData';
-import { IndicatorBlockRenderer } from '@/components/molecules/indicator-blocks/IndicatorBlockRenderer';
+import { SupersetEmbedView } from '@/components/molecules/SupersetEmbedView';
+import { CustomExcelTableView } from '@/components/molecules/CustomExcelTableView';
+import { DetailSectionId } from '@/types/cms';
 
 interface ProgramDetailPageViewProps {
   program: ProgramDetailData;
@@ -219,16 +217,23 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   // Resolves active program data dynamically based on active segmented control tab
   const effectiveProgram: ProgramDetailData = useMemo(() => {
     if (isMbg3b) {
+      let subBaseline: ProgramDetailData;
       if (activeMbgTab === 'balita') {
-        return getProgramDetailData('mbg_balita', 'MBG Balita Non-PAUD', 'kesehatan');
+        subBaseline = getProgramDetailData('mbg_balita', 'MBG Balita Non-PAUD', 'kesehatan');
+      } else if (activeMbgTab === 'ibu_hamil') {
+        subBaseline = getProgramDetailData('mbg_ibu_hamil', 'MBG Ibu Hamil', 'kesehatan');
+      } else if (activeMbgTab === 'ibu_menyusui') {
+        subBaseline = getProgramDetailData('mbg_ibu_menyusui', 'MBG Ibu Menyusui', 'kesehatan');
+      } else {
+        subBaseline = getProgramDetailData('mbg_3b', 'MBG Ibu Hamil, Ibu Menyusui, dan Balita (3B)', 'kesehatan');
       }
-      if (activeMbgTab === 'ibu_hamil') {
-        return getProgramDetailData('mbg_ibu_hamil', 'MBG Ibu Hamil', 'kesehatan');
-      }
-      if (activeMbgTab === 'ibu_menyusui') {
-        return getProgramDetailData('mbg_ibu_menyusui', 'MBG Ibu Menyusui', 'kesehatan');
-      }
-      return getProgramDetailData('mbg_3b', 'MBG Ibu Hamil, Ibu Menyusui, dan Balita (3B)', 'kesehatan');
+      return {
+        ...subBaseline,
+        supersetEmbed: currentProgram.supersetEmbed || subBaseline.supersetEmbed,
+        spatialMapEmbed: currentProgram.spatialMapEmbed || subBaseline.spatialMapEmbed,
+        customExcelTable: currentProgram.customExcelTable || subBaseline.customExcelTable,
+        detailSectionOrder: currentProgram.detailSectionOrder || subBaseline.detailSectionOrder,
+      };
     }
     return currentProgram;
   }, [isMbg3b, activeMbgTab, currentProgram]);
@@ -240,9 +245,63 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
   const [selectedMonth, setSelectedMonth] = useState<number>(0); // 0 = Semua Bulan
   const [hoveredAnnualIdx, setHoveredAnnualIdx] = useState<number | null>(null);
   const [hoveredMonthlyIdx, setHoveredMonthlyIdx] = useState<number | null>(null);
-  const hasDetailBlocks = Boolean(
-    effectiveProgram.detailBlocks && effectiveProgram.detailBlocks.length > 0
+  const hasSupersetEmbed = Boolean(
+    effectiveProgram.supersetEmbed &&
+      (effectiveProgram.supersetEmbed.srcUrl ||
+        effectiveProgram.supersetEmbed.url ||
+        effectiveProgram.supersetEmbed.uuid)
   );
+
+  const hasSpatialMapEmbed = Boolean(
+    effectiveProgram.spatialMapEmbed &&
+      (effectiveProgram.spatialMapEmbed.srcUrl ||
+        effectiveProgram.spatialMapEmbed.url ||
+        effectiveProgram.spatialMapEmbed.uuid)
+  );
+
+  const hasCustomExcelTable = Boolean(
+    (effectiveProgram.customExcelTables &&
+      effectiveProgram.customExcelTables.some((t) => t.rows && t.rows.length > 0)) ||
+      (effectiveProgram.customExcelTable &&
+        effectiveProgram.customExcelTable.rows &&
+        effectiveProgram.customExcelTable.rows.length > 0)
+  );
+
+  const orderedSections: DetailSectionId[] = useMemo(() => {
+    const rawOrder =
+      (effectiveProgram.detailSectionOrder as DetailSectionId[]) ||
+      (effectiveProgram.supersetEmbed?.sectionOrder as DetailSectionId[]) ||
+      (effectiveProgram.supersetEmbed?.sectionSettings
+        ?.sort((a, b) => a.order - b.order)
+        .map((s) => s.id as DetailSectionId)) ||
+      ([
+        'superset',
+        'custom_excel',
+        'spatial_map',
+        'kinerja_chart',
+        'kendala',
+      ] as DetailSectionId[]);
+
+    const settingsMap = new Map<string, boolean>();
+    effectiveProgram.supersetEmbed?.sectionSettings?.forEach((s) => {
+      settingsMap.set(s.id, s.enabled !== false);
+    });
+
+    const fullOrder: DetailSectionId[] = [...rawOrder];
+    const defaultSections: DetailSectionId[] = [
+      'superset',
+      'custom_excel',
+      'spatial_map',
+      'kinerja_chart',
+      'kendala',
+    ];
+    defaultSections.forEach((ds) => {
+      if (!fullOrder.includes(ds)) fullOrder.push(ds);
+    });
+
+    return fullOrder.filter((id) => settingsMap.get(id) !== false);
+  }, [effectiveProgram]);
+
   const isJumlahBencana = effectiveProgram.id === 'jumlah_bencana';
   const [bencanaReport, setBencanaReport] = useState<{
     ringkasanUtama: typeof BENCANA_RINGKASAN_UTAMA;
@@ -384,107 +443,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
     if (selectedMonth === 0) return enrichedMonths;
     return enrichedMonths.filter((m) => m.month === selectedMonth);
   }, [enrichedMonths, selectedMonth]);
-
-  // Aggregate metrics
-  const summaryMetrics = useMemo(() => {
-    if (rawMonths.length === 0) return { totalTarget: 0, totalCapaian: 0, avgPct: 0 };
-    const latestActiveMonth =
-      rawMonths
-        .filter((m) => m.capaian !== null && (m.capaianFormatted !== '' && m.capaianFormatted !== '—'))
-        .slice(-1)[0] ||
-      rawMonths.filter((m) => m.capaian !== null).slice(-1)[0] ||
-      rawMonths[0];
-
-    const targetVal = latestActiveMonth?.target || 0;
-    const capaianVal = latestActiveMonth?.capaian || 0;
-    let pct = 0;
-    if (latestActiveMonth?.percentage) {
-      pct = latestActiveMonth.percentage;
-    } else if (latestActiveMonth?.percentageFormatted) {
-      const parsed = parseFloat(
-        latestActiveMonth.percentageFormatted.replace(/[^0-9,.-]/g, '').replace(',', '.')
-      );
-      if (!isNaN(parsed)) pct = parsed;
-    } else if (targetVal > 0) {
-      pct = Math.round((capaianVal / targetVal) * 100);
-    }
-
-    return {
-      totalTarget: targetVal,
-      totalCapaian: capaianVal,
-      avgPct: pct,
-    };
-  }, [rawMonths]);
-
-  // Clean target string without redundant "Target 2026:" prefix
-  const cleanTarget2026 = useMemo(() => {
-    const t = effectiveProgram.target2026 || '';
-    const stripped = t.replace(/^Target\s*(\d{4})?\s*:\s*/i, '').trim();
-    return stripped || t || '—';
-  }, [effectiveProgram.target2026]);
-
-  // Unified numerical percentage for 2026
-  const percentNumber2026 = useMemo(() => {
-    if (effectiveProgram.currentValue?.toLowerCase() === 'terhenti') return 0;
-    const annualMetric = activeAnnualRow.years[2026];
-    if (annualMetric?.percent) {
-      const parsed = parseFloat(annualMetric.percent.replace(/[^0-9,.-]/g, '').replace(',', '.'));
-      if (!isNaN(parsed)) return parsed;
-    }
-    if (summaryMetrics.avgPct > 0) return summaryMetrics.avgPct;
-    const pctMatch = effectiveProgram.status?.match(/(\d+(?:[.,]\d+)?)\s*%/);
-    if (pctMatch) {
-      const parsed = parseFloat(pctMatch[1].replace(',', '.'));
-      if (!isNaN(parsed)) return parsed;
-    }
-    return null;
-  }, [effectiveProgram, activeAnnualRow, summaryMetrics]);
-
-  // Display percentage string
-  const percentDisplay = useMemo(() => {
-    if (effectiveProgram.currentValue?.toLowerCase() === 'terhenti') return '0% (Terhenti)';
-    const annualMetric = activeAnnualRow.years[2026];
-    if (annualMetric?.percent) return annualMetric.percent;
-    if (summaryMetrics.avgPct > 0) return `${summaryMetrics.avgPct}%`;
-    const pctMatch = effectiveProgram.status?.match(/(\d+(?:[.,]\d+)?)\s*%/);
-    if (pctMatch) return `${pctMatch[1]}%`;
-    return '—';
-  }, [effectiveProgram, activeAnnualRow, summaryMetrics]);
-
-  // Gap calculation: Sisa sasaran yang belum tercapai (Unik & Non-redundant)
-  const sisaSasaranInfo = useMemo(() => {
-    const tNum = parseMetricValue(cleanTarget2026);
-    const cNum = parseMetricValue(effectiveProgram.currentValue);
-
-    if (tNum !== null && cNum !== null && tNum > 0) {
-      if (cNum >= tNum) {
-        return {
-          label: 'Status Sasaran',
-          value: 'Target Terlampaui',
-          subtext: `Tercapai ${percentDisplay} dari sasaran rencana aksi`,
-          isCompleted: true,
-        };
-      }
-      const sisa = tNum - cNum;
-      const sisaFormatted = effectiveProgram.unit
-        ? `${sisa.toLocaleString('id-ID')} ${effectiveProgram.unit}`
-        : sisa.toLocaleString('id-ID');
-      const sisaPct = Math.round((sisa / tNum) * 1000) / 10;
-      return {
-        label: 'Sisa Sasaran (Gap)',
-        value: sisaFormatted,
-        subtext: `${sisaPct}% sasaran 2026 belum terealisasi`,
-        isCompleted: false,
-      };
-    }
-
-    return {
-      label: 'Status Pelaksanaan',
-      value: effectiveProgram.status || 'Berjalan Sesuai Rencana',
-      subtext: 'Data capaian terverifikasi berkala',
-      isCompleted: false,
-    };
-  }, [cleanTarget2026, effectiveProgram.currentValue, effectiveProgram.unit, effectiveProgram.status, percentDisplay]);
 
   // Dynamic resolution of kendala list
   const resolvedKendalaList: KendalaDetailItem[] = useMemo(() => {
@@ -719,225 +677,62 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
     return buildSmoothPath(pts);
   }, [latestCapaianPoint, annualTargetNum, rawMonths, getXMonthly, getYMonthly]);
 
-  return (
-    <div className="w-full space-y-6 animate-in fade-in duration-150">
-      {/* 1. TOP BAR: Back Button & Context Breadcrumb */}
-      <div className="flex items-center justify-between gap-4">
-        <button
-          type="button"
-          onClick={onBack}
-          className="h-[44px] inline-flex items-center gap-2.5 px-4.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-hidden"
-        >
-          <ArrowLeft className="w-4.5 h-4.5 text-slate-500" />
-          <span>Kembali ke Daftar Program</span>
-        </button>
 
-        {/* Clear Breadcrumb Context */}
-        <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500 bg-white px-4 py-2.5 rounded-xl border border-slate-200/90 shadow-2xs">
-          <span>Ikhtisar</span>
-          <span className="text-slate-300">/</span>
-          <span>{category && category !== 'Semua' ? `${category} ` : ''}{effectiveProgram.pillarTitle.replace(/^Pilar\s+/i, '')}</span>
-          <span className="text-slate-300">/</span>
-          <span className="text-slate-900 font-bold truncate max-w-[280px]">{effectiveProgram.title}</span>
-        </div>
-      </div>
+  const renderDetailSection = (sectionId: DetailSectionId) => {
+    switch (sectionId) {
+      case 'superset': {
+        if (!hasSupersetEmbed) return null;
+        return <SupersetEmbedView key="superset" config={effectiveProgram.supersetEmbed} />;
+      }
 
-      {/* 2. PROGRAM OVERVIEW & 3 FOCUSED KPI STAT CARDS */}
-      <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs space-y-6">
-        {/* MBG 3B SUB-INDICATOR SEGMENTED CONTROL */}
-        {isMbg3b && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
-            <div>
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-                Kelompok Sasaran MBG 3B
-              </span>
-              <p className="text-xs text-slate-500 font-normal mt-0.5">
-                Pilih sasaran untuk melihat data capaian, target, dan rincian berkala
-              </p>
-            </div>
-            <div
-              role="tablist"
-              aria-label="Pilih Kelompok Sasaran MBG 3B"
-              className="p-1 bg-slate-100 rounded-xl border border-slate-200/90 inline-flex items-center gap-1 self-start sm:self-auto shadow-2xs overflow-x-auto max-w-full shrink-0"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeMbgTab === 'semua'}
-                onClick={() => setActiveMbgTab('semua')}
-                className={`h-[36px] px-3.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  activeMbgTab === 'semua'
-                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                }`}
-              >
-                Semua Sasaran (3B)
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeMbgTab === 'balita'}
-                onClick={() => setActiveMbgTab('balita')}
-                className={`h-[36px] px-3.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  activeMbgTab === 'balita'
-                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                }`}
-              >
-                Balita Non-PAUD
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeMbgTab === 'ibu_hamil'}
-                onClick={() => setActiveMbgTab('ibu_hamil')}
-                className={`h-[36px] px-3.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  activeMbgTab === 'ibu_hamil'
-                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                }`}
-              >
-                Ibu Hamil
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeMbgTab === 'ibu_menyusui'}
-                onClick={() => setActiveMbgTab('ibu_menyusui')}
-                className={`h-[36px] px-3.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  activeMbgTab === 'ibu_menyusui'
-                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                }`}
-              >
-                Ibu Menyusui
-              </button>
-            </div>
+      case 'custom_excel': {
+        const tables =
+          effectiveProgram.customExcelTables && effectiveProgram.customExcelTables.length > 0
+            ? effectiveProgram.customExcelTables
+            : effectiveProgram.customExcelTable
+            ? [effectiveProgram.customExcelTable]
+            : [];
+
+        if (tables.length === 0) return null;
+
+        return (
+          <div key="custom_excel_sections" className="space-y-6">
+            {tables.map((tbl, idx) => (
+              <CustomExcelTableView key={tbl.id || `custom_excel_${idx}`} data={tbl} />
+            ))}
           </div>
-        )}
+        );
+      }
 
-        <div className="space-y-2">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight leading-tight">
-            {effectiveProgram.title}
-          </h1>
-          <p className="text-sm sm:text-base text-slate-600 font-normal leading-relaxed max-w-4xl">
-            {effectiveProgram.description}
-          </p>
-        </div>
+      case 'spatial_map': {
+        if (!hasSpatialMapEmbed) return null;
+        return (
+          <SupersetEmbedView
+            key="spatial_map"
+            config={effectiveProgram.spatialMapEmbed}
+            defaultTitle={`Peta Spasial Sebaran: ${effectiveProgram.title}`}
+            defaultSubtitle="Visualisasi pemetaan spasial dan sebaran geografis dari Apache Superset Kemenko PMK"
+          />
+        );
+      }
 
-        {/* 3 Prominent KPI Stat Cards: Only displayed when not using dynamic modular blocks */}
-        {!hasDetailBlocks && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-            {/* Card 1: Target Sasaran 2026 */}
-          <div className="bg-slate-50/80 rounded-xl p-5 border border-slate-200/90 space-y-1.5 shadow-2xs flex flex-col justify-between">
-            <div>
-              <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
-                Target Sasaran (2026)
-              </span>
-              <span className="text-2xl sm:text-3xl font-bold text-slate-900 block tracking-tight tabular-nums mt-1">
-                {cleanTarget2026}
-              </span>
-            </div>
-            <span className="text-xs text-slate-600 font-normal block pt-1">
-              Sasaran rencana aksi nasional
-            </span>
-          </div>
-
-          {/* Card 2: Realisasi & Persentase Capaian (Terpadu) */}
-          <div className="bg-blue-50/60 rounded-xl p-5 border border-blue-200/80 space-y-2 shadow-2xs flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-blue-950 uppercase tracking-wider block">
-                  Realisasi Berjalan
-                </span>
-                {percentDisplay !== '—' && (
-                  <span className="text-xs font-extrabold text-blue-700 bg-white px-2 py-0.5 rounded-md border border-blue-200 shadow-2xs">
-                    {percentDisplay}
-                  </span>
-                )}
-              </div>
-              <span className="text-2xl sm:text-3xl font-bold text-blue-950 block tracking-tight tabular-nums mt-1">
-                {(() => {
-                  const val = effectiveProgram.currentValue;
-                  if (!val || val === '—') return '—';
-                  if (val.toLowerCase() === 'terhenti') return 'Terhenti';
-                  if (effectiveProgram.unit && val.includes(effectiveProgram.unit)) return val;
-                  if (val.includes('%')) return val;
-                  return effectiveProgram.unit ? `${val} ${effectiveProgram.unit}` : val;
-                })()}
-              </span>
-            </div>
-
-            {percentNumber2026 !== null && (
-              <div className="pt-1">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-blue-200/70 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-600 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, Math.max(0, percentNumber2026))}%` }}
-                    />
-                  </div>
-                  <span className="text-[11px] font-bold text-blue-900 tabular-nums shrink-0">
-                    {percentNumber2026}%
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Card 3: Sisa Sasaran / Gap Target (Nilai Unik & Non-redundant) */}
-          <div className={`rounded-xl p-5 border space-y-1.5 shadow-2xs flex flex-col justify-between ${
-            sisaSasaranInfo.isCompleted
-              ? 'bg-emerald-50/60 border-emerald-200/90'
-              : 'bg-amber-50/50 border-amber-200/90'
-          }`}>
-            <div>
-              <span className={`text-[11px] font-bold uppercase tracking-wider block ${
-                sisaSasaranInfo.isCompleted ? 'text-emerald-950' : 'text-amber-950'
-              }`}>
-                {sisaSasaranInfo.label}
-              </span>
-              <span className={`text-2xl sm:text-3xl font-bold block tracking-tight tabular-nums mt-1 ${
-                sisaSasaranInfo.isCompleted ? 'text-emerald-900' : 'text-amber-950'
-              }`}>
-                {sisaSasaranInfo.value}
-              </span>
-            </div>
-            <span className={`text-xs font-normal block pt-1 ${
-              sisaSasaranInfo.isCompleted ? 'text-emerald-700' : 'text-amber-800'
-            }`}>
-              {sisaSasaranInfo.subtext}
-            </span>
-          </div>
-        </div>
-        )}
-      </div>
-
-      {/* 3. MODULAR DYNAMIC BLOCKS OR FALLBACK KINERJA SECTION */}
-      {hasDetailBlocks ? (
-        <IndicatorBlockRenderer blocks={effectiveProgram.detailBlocks!} />
-      ) : (
-        /* 3. SECTION KINERJA: TABEL & GRAFIK TREN TERPADU */
-        <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs space-y-6">
+      case 'kinerja_chart': {
+        return (
+          <React.Fragment key="kinerja_chart">
+            {/* SECTION KINERJA: TABEL & GRAFIK TREN TERPADU */}
+            <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs space-y-6">
         {/* Controls Toolbar: Title on Left, Controls on Right */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
           {/* Left: Dynamic Title based on active mode */}
           <div>
-            <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-              {displayMode === 'tabel' && tableType !== 'timeseries' ? (
-                <TableProperties className="w-5 h-5 text-blue-600 shrink-0" />
-              ) : (
-                <BarChart3 className="w-5 h-5 text-blue-600 shrink-0" />
-              )}
-              <span>
-                {tableType === 'timeseries'
-                  ? 'Pengkinian Data Bencana'
-                  : displayMode === 'grafik'
-                  ? `Grafik Tren ${tableType === 'tahunan' ? 'Tahunan (2025–2029)' : 'Bulanan'}`
-                  : `Tabel Rincian ${tableType === 'tahunan' ? 'Tahunan (2025–2029)' : 'Bulanan'}`}
-              </span>
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+              {tableType === 'timeseries'
+                ? 'Pengkinian Data Bencana'
+                : displayMode === 'grafik'
+                ? `Grafik Tren ${tableType === 'tahunan' ? 'Tahunan (2025–2029)' : 'Bulanan'}`
+                : `Tabel Rincian ${tableType === 'tahunan' ? 'Tahunan (2025–2029)' : 'Bulanan'}`}
             </h3>
-            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-0.5">
+            <p className="text-xs text-slate-600 font-normal mt-0.5">
               {tableType === 'tahunan'
                 ? `Sasaran Target (T) vs Capaian (C) RPJMN 2025–2029 • ${activeAnnualRow.name}`
                 : tableType === 'bulanan'
@@ -1056,14 +851,13 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   role="tab"
                   aria-selected={displayMode === 'tabel'}
                   onClick={() => setDisplayMode('tabel')}
-                  className={`h-[32px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`h-[32px] px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                     displayMode === 'tabel'
                       ? 'bg-white text-blue-700 shadow-2xs font-extrabold border border-slate-200/80'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                   }`}
                 >
-                  <TableProperties className="w-3.5 h-3.5" />
-                  <span>Tabel Angka</span>
+                  Tabel Angka
                 </button>
 
                 <button
@@ -1071,14 +865,13 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
                   role="tab"
                   aria-selected={displayMode === 'grafik'}
                   onClick={() => setDisplayMode('grafik')}
-                  className={`h-[32px] inline-flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`h-[32px] px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                     displayMode === 'grafik'
                       ? 'bg-white text-blue-700 shadow-2xs font-extrabold border border-slate-200/80'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                   }`}
                 >
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  <span>Grafik Tren</span>
+                  Grafik Tren
                 </button>
               </div>
             )}
@@ -2100,28 +1893,33 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
           </div>
         )}
       </div>
-      )}
 
-      {/* 5. KENDALA PELAKSANAAN & TINDAK LANJUT */}
-      <div id="kendala-section" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6 scroll-mt-6">
-        <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
-          <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
-            <AlertCircle className="w-4.5 h-4.5" />
+          </React.Fragment>
+        );
+      }
+
+      case 'kendala': {
+        return (
+          <React.Fragment key="kendala">
+                  {/* 5. KENDALA PELAKSANAAN & TINDAK LANJUT */}
+      <div id="kendala-section" className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs space-y-6 scroll-mt-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+              Kendala Pelaksanaan &amp; Tindak Lanjut
+            </h3>
+            <p className="text-xs text-slate-600 font-normal mt-0.5">
+              Identifikasi hambatan operasional dan rencana aksi penyelesaian
+            </p>
           </div>
-          <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-            Kendala Pelaksanaan &amp; Tindak Lanjut
-          </h3>
         </div>
 
         {resolvedKendalaList.length === 0 ? (
-          <div className="py-8 px-6 text-center rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
-            <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto mb-2">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <p className="text-sm sm:text-base font-bold text-slate-900">
-              Tidak Ada Kendala dan Tindak Lanjut Pelaksanaan
+          <div className="py-8 px-6 text-center rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+            <p className="text-sm font-bold text-slate-900">
+              Tidak Ada Kendala Pelaksanaan
             </p>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-md mx-auto">
+            <p className="text-xs text-slate-600 max-w-md mx-auto">
               Tidak terdapat isu kritis atau kendala operasional yang dilaporkan untuk program ini pada periode berjalan.
             </p>
           </div>
@@ -2189,23 +1987,143 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         )}
       </div>
 
-      {/* 5. BOTTOM BAR: Convenient Return Action at the End of Detail View */}
+          </React.Fragment>
+        );
+      }
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="w-full space-y-6 animate-in fade-in duration-150">
+      {/* 1. TOP BAR: Back Button & Context Breadcrumb */}
+      <div className="flex items-center justify-between gap-4">
+        <button
+          type="button"
+          onClick={onBack}
+          className="h-10 inline-flex items-center gap-2 px-4 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-hidden"
+        >
+          <ArrowLeft className="w-4 h-4 text-slate-600" />
+          <span>Kembali ke Daftar Program</span>
+        </button>
+
+        {/* Clear Breadcrumb Context */}
+        <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500 bg-white px-4 py-2.5 rounded-xl border border-slate-200/90 shadow-2xs">
+          <span>Ikhtisar</span>
+          <span className="text-slate-300">/</span>
+          <span>{category && category !== 'Semua' ? `${category} ` : ''}{effectiveProgram.pillarTitle.replace(/^Pilar\s+/i, '')}</span>
+          <span className="text-slate-300">/</span>
+          <span className="text-slate-900 font-bold truncate max-w-[280px]">{effectiveProgram.title}</span>
+        </div>
+      </div>
+
+      {/* 2. PROGRAM OVERVIEW & 3 FOCUSED KPI STAT CARDS */}
+      <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs space-y-6">
+        {/* MBG 3B SUB-INDICATOR SEGMENTED CONTROL */}
+        {isMbg3b && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+            <div>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                Kelompok Sasaran MBG 3B
+              </span>
+              <p className="text-xs text-slate-500 font-normal mt-0.5">
+                Pilih sasaran untuk melihat data capaian, target, dan rincian berkala
+              </p>
+            </div>
+            <div
+              role="tablist"
+              aria-label="Pilih Kelompok Sasaran MBG 3B"
+              className="p-1 bg-slate-100 rounded-xl border border-slate-200/90 inline-flex items-center gap-1 self-start sm:self-auto shadow-2xs overflow-x-auto max-w-full shrink-0"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeMbgTab === 'semua'}
+                onClick={() => setActiveMbgTab('semua')}
+                className={`h-[36px] px-3.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  activeMbgTab === 'semua'
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                Semua Sasaran (3B)
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeMbgTab === 'balita'}
+                onClick={() => setActiveMbgTab('balita')}
+                className={`h-[36px] px-3.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  activeMbgTab === 'balita'
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                Balita Non-PAUD
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeMbgTab === 'ibu_hamil'}
+                onClick={() => setActiveMbgTab('ibu_hamil')}
+                className={`h-[36px] px-3.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  activeMbgTab === 'ibu_hamil'
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                Ibu Hamil
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeMbgTab === 'ibu_menyusui'}
+                onClick={() => setActiveMbgTab('ibu_menyusui')}
+                className={`h-[36px] px-3.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  activeMbgTab === 'ibu_menyusui'
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold border border-slate-200/80'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                Ibu Menyusui
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight leading-tight">
+            {effectiveProgram.title}
+          </h1>
+          <p className="text-sm sm:text-base text-slate-600 font-normal leading-relaxed max-w-4xl">
+            {effectiveProgram.description}
+          </p>
+        </div>
+
+      </div>
+
+      {/* DYNAMIC SECTIONS ORDERED BY CMS CONFIG */}
+      {orderedSections.map((secId) => renderDetailSection(secId))}
+
+            {/* 5. BOTTOM BAR: Convenient Return Action at the End of Detail View */}
       <div className="flex items-center justify-between pt-2 pb-6">
         <button
           type="button"
           onClick={onBack}
-          className="h-[44px] inline-flex items-center gap-2.5 px-6 rounded-2xl text-xs sm:text-sm font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs transition-all cursor-pointer"
+          className="h-10 inline-flex items-center gap-2 px-4 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-hidden"
         >
-          <ArrowLeft className="w-4.5 h-4.5 text-slate-500" />
+          <ArrowLeft className="w-4 h-4 text-slate-600" />
           <span>Kembali ke Daftar Program</span>
         </button>
 
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="h-[44px] inline-flex items-center gap-2 px-4 rounded-2xl text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs transition-all cursor-pointer"
+          className="h-10 inline-flex items-center gap-1.5 px-4 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-hidden"
         >
-          <span>Ke Atas Halaman ↑</span>
+          <span>Ke Atas Halaman</span>
         </button>
       </div>
     </div>

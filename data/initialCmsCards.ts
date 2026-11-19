@@ -1,6 +1,6 @@
-import { CmsCardItem, DetailBlockConfig } from '@/types/cms';
+import { CmsCardItem } from '@/types/cms';
 
-export type { CmsCardItem, DetailBlockConfig };
+export type { CmsCardItem };
 
 export const INITIAL_CMS_CARDS: CmsCardItem[] = [
   // =========================================================================

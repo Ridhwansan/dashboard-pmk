@@ -5,10 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  GraduationCap,
-  HeartPulse,
-  ShieldAlert,
-  TrendingDown,
   Layers,
   Plus,
   Pencil,
@@ -28,48 +24,47 @@ import {
   ChevronRight,
   ChevronLeft,
   ChevronDown,
-  Hash,
-  Type,
   Users,
   Percent,
-  AlertTriangle,
   FileText,
   CheckCircle2,
   UserPlus,
   FileDown,
   CheckCheck,
-  ArrowUp,
-  ArrowDown,
-  LayoutGrid,
-  MapPin,
-  BarChart3,
-  Code,
+  UploadCloud,
+  Download,
+  GripVertical,
 } from 'lucide-react';
-import { CmsCardItem, DetailBlockConfig, BlockType, BlockWidth, KpiCardItem, KpiCardsBlockData } from '@/types/cms';
-import { getDefaultDetailBlocks } from '@/data/defaultIndicatorBlocks';
+import {
+  CmsCardItem,
+  CmsPillarItem,
+  SupersetEmbedConfig,
+  CustomExcelTableData,
+  CustomExcelColumn,
+} from '@/types/cms';
+import { PillarId } from '@/types/dashboard';
+import {
+  downloadFile,
+  parseDelimitedText,
+  generateCustomTableCsv,
+  formatIndonesianDateTime,
+} from '@/lib/excelParser';
 import { calculatePercentage } from '@/lib/calcPercent';
 import { useAuth } from '@/lib/useAuth';
 import { setClientCardsCache } from '@/lib/useCmsCards';
 import { KendalaDetailItem } from '@/data/programDetailData';
 import { ExecutivePdfButton } from '@/components/molecules/ExecutivePdfButton';
 
-export type PillarTab = 'all' | 'pendidikan' | 'kesehatan' | 'bencana' | 'kemiskinan';
+export type PillarTab = 'all' | string;
 export type CategoryFilter = 'all' | 'PKPN' | 'Isu Strategis' | 'RPJMN';
-export type CmsViewMode = 'list' | 'create' | 'edit' | 'metadata' | 'users' | 'pdf-settings';
+export type CmsViewMode = 'list' | 'create' | 'edit' | 'metadata' | 'users' | 'pdf-settings' | 'pillars';
 export type MetricType = 'number' | 'percent' | 'text';
 
-interface PillarNavConfig {
-  id: PillarTab;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-const PILLAR_NAV_CONFIGS: PillarNavConfig[] = [
-  { id: 'all', label: 'Semua Pilar', icon: Layers },
-  { id: 'pendidikan', label: 'Pendidikan', icon: GraduationCap },
-  { id: 'kesehatan', label: 'Kesehatan', icon: HeartPulse },
-  { id: 'bencana', label: 'Kebencanaan', icon: ShieldAlert },
-  { id: 'kemiskinan', label: 'Penurunan Kemiskinan', icon: TrendingDown },
+export const INITIAL_PILLARS: CmsPillarItem[] = [
+  { id: 'pendidikan', name: 'Pendidikan', description: 'Pilar Pembangunan Manusia bidang Pendidikan dan Kebudayaan', order: 1 },
+  { id: 'kesehatan', name: 'Kesehatan', description: 'Pilar Peningkatan Kualitas Kesehatan Masyarakat', order: 2 },
+  { id: 'bencana', name: 'Kebencanaan', description: 'Pilar Penanggulangan dan Mitigasi Bencana', order: 3 },
+  { id: 'kemiskinan', name: 'Penurunan Kemiskinan', description: 'Pilar Percepatan Penghapusan Kemiskinan Ekstrem dan Penurunan Kemiskinan', order: 4 },
 ];
 
 export interface CmsUserItem {
@@ -119,6 +114,19 @@ export function formatIndonesianNumber(input: string): string {
 export function unformatIndonesianNumber(input: string): string {
   if (!input) return '';
   return input.replace(/\./g, '').replace(',', '.');
+}
+
+/**
+ * Returns the 3-column Z-grid position label for a given card order.
+ * e.g. 1 -> "Baris 1 • Kiri", 2 -> "Baris 1 • Tengah", 3 -> "Baris 1 • Kanan",
+ *      4 -> "Baris 2 • Kiri", 5 -> "Baris 2 • Tengah", 6 -> "Baris 2 • Kanan"
+ */
+export function getGridZPositionLabel(order: number): string {
+  const safeOrder = Math.max(1, order || 1);
+  const row = Math.floor((safeOrder - 1) / 3) + 1;
+  const colIndex = (safeOrder - 1) % 3;
+  const colLabel = colIndex === 0 ? 'Kiri' : colIndex === 1 ? 'Tengah' : 'Kanan';
+  return `B${row} • ${colLabel}`;
 }
 
 export const CmsAdminView: React.FC = () => {
@@ -190,6 +198,7 @@ export const CmsAdminView: React.FC = () => {
     description: string;
     picKementerian: string;
     isActive: boolean;
+    order: number;
   }>({
     pillarId: 'pendidikan',
     category: 'PKPN',
@@ -200,6 +209,7 @@ export const CmsAdminView: React.FC = () => {
     description: '',
     picKementerian: '',
     isActive: true,
+    order: 1,
   });
 
   // Annual Targets (2025–2029) directly connected to program detail
@@ -211,20 +221,55 @@ export const CmsAdminView: React.FC = () => {
     2029: { target: '', capaian: '' },
   });
 
+  // Pillars Management State
+  const [pillars, setPillars] = useState<CmsPillarItem[]>(INITIAL_PILLARS);
+  const [isPillarModalOpen, setIsPillarModalOpen] = useState(false);
+  const [editingPillar, setEditingPillar] = useState<CmsPillarItem | null>(null);
+  const [pillarFormData, setPillarFormData] = useState({
+    id: '',
+    name: '',
+    description: '',
+    order: 1,
+  });
+  const [isSavingPillar, setIsSavingPillar] = useState(false);
+  const [pillarError, setPillarError] = useState<string | null>(null);
+
   // Kendala & Catatan Pelaksanaan (Isu Strategis) directly connected to program detail
   const [kendalaList, setKendalaList] = useState<KendalaDetailItem[]>([]);
+  const [isKendalaModalOpen, setIsKendalaModalOpen] = useState(false);
+  const [editingKendalaIndex, setEditingKendalaIndex] = useState<number | null>(null);
+  const [kendalaFormData, setKendalaFormData] = useState<KendalaDetailItem>({
+    id: '',
+    title: '',
+    klTerkait: '',
+    kendala: '',
+    tindakLanjut: '',
+  });
+  const [draggedKendalaIndex, setDraggedKendalaIndex] = useState<number | null>(null);
+  const [dragOverKendalaIndex, setDragOverKendalaIndex] = useState<number | null>(null);
 
-  // Dynamic Detail Blocks (Layout & Modular Blocks)
-  const [detailBlocks, setDetailBlocks] = useState<DetailBlockConfig[]>([]);
-  const [editingBlockJsonIdx, setEditingBlockJsonIdx] = useState<number | null>(null);
-  const [blockJsonText, setBlockJsonText] = useState<string>('');
-  const [blockJsonError, setBlockJsonError] = useState<string | null>(null);
-  const [formActiveTab, setFormActiveTab] = useState<'info' | 'blocks' | 'kendala'>('info');
-  const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
+  const [formActiveTab, setFormActiveTab] = useState<'info' | 'superset' | 'excel' | 'kendala'>('info');
 
-  // KPI Cards Visual Editor State (1 to 5 cards)
-  const [editingKpiCardsIdx, setEditingKpiCardsIdx] = useState<number | null>(null);
-  const [kpiCardsDraft, setKpiCardsDraft] = useState<KpiCardItem[]>([]);
+  // Cards Table Drag & Drop Reordering
+  const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
+  const [dragOverCardId, setDragOverCardId] = useState<string | null>(null);
+
+  // Apache Superset Embed State (Visualisasi Analitik Tunggal)
+  const [supersetEmbed, setSupersetEmbed] = useState<SupersetEmbedConfig>({
+    enabled: true,
+    srcUrl: '',
+    url: '',
+    uuid: '',
+    widthPercent: 100,
+    heightPx: 450,
+    iframeCode: '',
+    title: '',
+    updatedAt: '',
+  });
+
+  // Multiple Custom Excel Table Sections
+  const [customExcelTables, setCustomExcelTables] = useState<CustomExcelTableData[]>([]);
+  const [excelUploadFeedbackMap, setExcelUploadFeedbackMap] = useState<Record<number, string>>({});
 
   // Users Management State
   const [usersList, setUsersList] = useState<CmsUserItem[]>([]);
@@ -264,13 +309,29 @@ export const CmsAdminView: React.FC = () => {
     }
   };
 
+  // Fetch pillars from API
+  const fetchPillars = async () => {
+    try {
+      const res = await fetch('/api/pillars', { cache: 'no-store' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data && Array.isArray(json.data)) {
+          setPillars(json.data);
+        }
+      }
+    } catch {
+      // offline/fallback
+    }
+  };
+
   useEffect(() => {
     let active = true;
     const init = async () => {
       try {
-        const [cardsRes, metaRes] = await Promise.all([
+        const [cardsRes, metaRes, pillarsRes] = await Promise.all([
           fetch('/api/cards?all=true', { cache: 'no-store' }),
           fetch('/api/meta', { cache: 'no-store' }),
+          fetch('/api/pillars', { cache: 'no-store' }),
         ]);
         if (cardsRes.ok && active) {
           const cardsJson = await cardsRes.json();
@@ -283,6 +344,12 @@ export const CmsAdminView: React.FC = () => {
           const metaJson = await metaRes.json();
           if (metaJson.data) {
             setMetadata(metaJson.data);
+          }
+        }
+        if (pillarsRes.ok && active) {
+          const pillarsJson = await pillarsRes.json();
+          if (pillarsJson.data && Array.isArray(pillarsJson.data)) {
+            setPillars(pillarsJson.data);
           }
         }
       } catch {
@@ -577,6 +644,7 @@ export const CmsAdminView: React.FC = () => {
       description: '',
       picKementerian: '',
       isActive: true,
+      order: cards.length + 1,
     });
 
     setAnnualRows({
@@ -587,8 +655,39 @@ export const CmsAdminView: React.FC = () => {
       2029: { target: '', capaian: '' },
     });
 
+    const initialPillar = selectedPillar !== 'all' ? selectedPillar : (pillars[0]?.id || 'pendidikan');
+    setFormData((prev) => ({
+      ...prev,
+      pillarId: initialPillar,
+    }));
+
     setKendalaList([]);
-    setDetailBlocks([]);
+    setSupersetEmbed({
+      enabled: false,
+      srcUrl: '',
+      url: '',
+      uuid: '',
+      widthPercent: 100,
+      heightPx: 450,
+      iframeCode: '',
+      title: '',
+      updatedAt: '',
+    });
+    setCustomExcelTables([
+      {
+        id: `sec_${Date.now()}`,
+        title: 'Matriks Rincian Komponen & Data Khusus',
+        tableName: 'Matriks Rincian Komponen & Data Khusus',
+        columns: [
+          { id: 'col_1', key: 'no', name: 'No', label: 'No' },
+          { id: 'col_2', key: 'program_atau_komponen', name: 'Program atau Komponen', label: 'Program atau Komponen' },
+          { id: 'col_3', key: 'indikasi_data_khusus', name: 'Indikasi data khusus yang diperlukan', label: 'Indikasi data khusus yang diperlukan' },
+        ],
+        rows: [],
+        rowCount: 0,
+      },
+    ]);
+    setExcelUploadFeedbackMap({});
     setEditingCardId(null);
     setFormActiveTab('info');
     setViewMode('create');
@@ -641,6 +740,7 @@ export const CmsAdminView: React.FC = () => {
       description: card.description || '',
       picKementerian: card.picKementerian || '',
       isActive: card.isActive,
+      order: card.order ?? 1,
     });
 
     // Extract annual targets if available
@@ -660,398 +760,477 @@ export const CmsAdminView: React.FC = () => {
     const rawKendala = (card.kendalaList as KendalaDetailItem[]) || [];
     setKendalaList(rawKendala);
 
-    // Extract detail blocks
-    const rawBlocks = (card.detailBlocks as DetailBlockConfig[]) || getDefaultDetailBlocks(card.slug || card.id) || [];
-    setDetailBlocks(rawBlocks);
-    setFormActiveTab('info');
+    // Extract superset embed (Visualisasi Analitik Tunggal)
+    setSupersetEmbed(
+      card.supersetEmbed || {
+        enabled: false,
+        srcUrl: '',
+        url: '',
+        uuid: '',
+        widthPercent: 100,
+        heightPx: 450,
+        iframeCode: '',
+        title: '',
+        updatedAt: '',
+      }
+    );
 
+    // Extract multiple custom excel tables
+    if (card.customExcelTables && card.customExcelTables.length > 0) {
+      setCustomExcelTables(card.customExcelTables);
+    } else if (card.customExcelTable) {
+      setCustomExcelTables([card.customExcelTable]);
+    } else {
+      setCustomExcelTables([
+        {
+          id: `sec_${Date.now()}`,
+          title: card.title || 'Matriks Rincian Komponen & Data Khusus',
+          tableName: card.title || 'Matriks Rincian Komponen & Data Khusus',
+          columns: [
+            { id: 'col_1', key: 'no', name: 'No', label: 'No' },
+            { id: 'col_2', key: 'program_atau_komponen', name: 'Program atau Komponen', label: 'Program atau Komponen' },
+            { id: 'col_3', key: 'indikasi_data_khusus', name: 'Indikasi data khusus yang diperlukan', label: 'Indikasi data khusus yang diperlukan' },
+          ],
+          rows: [],
+          rowCount: 0,
+        },
+      ]);
+    }
+    setExcelUploadFeedbackMap({});
+
+    setFormActiveTab('info');
     setViewMode('edit');
   };
 
-  // Add / Remove Kendala Item
-  const handleAddKendala = () => {
-    setKendalaList((prev) => [
-      ...prev,
-      {
-        id: `knd_${prev.length + 1}`,
-        title: '',
-        kendala: '',
-        tindakLanjut: '',
-        klTerkait: formData.picKementerian || '',
-        urgensi: 'Tinggi',
-      },
-    ]);
+  // ---------------------------------------------------------------------------
+  // Kendala Modal & Drag-and-Drop Handlers
+  // ---------------------------------------------------------------------------
+  const openAddKendalaModal = () => {
+    setEditingKendalaIndex(null);
+    setKendalaFormData({
+      id: `knd_${Date.now()}`,
+      title: '',
+      klTerkait: formData.picKementerian || '',
+      kendala: '',
+      tindakLanjut: '',
+      urgensi: 'Tinggi',
+    });
+    setIsKendalaModalOpen(true);
   };
 
-  const handleUpdateKendala = (index: number, field: keyof KendalaDetailItem, val: string) => {
-    setKendalaList((prev) => {
+  const openEditKendalaModal = (index: number) => {
+    setEditingKendalaIndex(index);
+    setKendalaFormData({ ...kendalaList[index] });
+    setIsKendalaModalOpen(true);
+  };
+
+  const handleSaveKendalaModal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!kendalaFormData.title.trim()) {
+      alert('Judul kendala wajib diisi.');
+      return;
+    }
+    if (!kendalaFormData.kendala.trim()) {
+      alert('Uraian lengkap kendala wajib diisi.');
+      return;
+    }
+
+    if (editingKendalaIndex !== null) {
+      setKendalaList((prev) => {
+        const next = [...prev];
+        next[editingKendalaIndex] = { ...kendalaFormData };
+        return next;
+      });
+    } else {
+      setKendalaList((prev) => [...prev, { ...kendalaFormData }]);
+    }
+    setIsKendalaModalOpen(false);
+  };
+
+  const handleRemoveKendala = (index: number) => {
+    if (!confirm('Hapus kendala ini?')) return;
+    setKendalaList((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleKendalaDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedKendalaIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleKendalaDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverKendalaIndex !== index) {
+      setDragOverKendalaIndex(index);
+    }
+  };
+
+  const handleKendalaDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedKendalaIndex === null || draggedKendalaIndex === targetIndex) {
+      setDraggedKendalaIndex(null);
+      setDragOverKendalaIndex(null);
+      return;
+    }
+    const nextList = [...kendalaList];
+    const [moved] = nextList.splice(draggedKendalaIndex, 1);
+    nextList.splice(targetIndex, 0, moved);
+    setKendalaList(nextList);
+    setDraggedKendalaIndex(null);
+    setDragOverKendalaIndex(null);
+  };
+
+  const handleKendalaDragEnd = () => {
+    setDraggedKendalaIndex(null);
+    setDragOverKendalaIndex(null);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Pillar CRUD Handlers
+  // ---------------------------------------------------------------------------
+  const openCreatePillarModal = () => {
+    setEditingPillar(null);
+    setPillarFormData({
+      id: '',
+      name: '',
+      description: '',
+      order: pillars.length + 1,
+    });
+    setPillarError(null);
+    setIsPillarModalOpen(true);
+  };
+
+  const openEditPillarModal = (p: CmsPillarItem) => {
+    setEditingPillar(p);
+    setPillarFormData({
+      id: p.id,
+      name: p.name,
+      description: p.description || '',
+      order: p.order || 1,
+    });
+    setPillarError(null);
+    setIsPillarModalOpen(true);
+  };
+
+  const handleSavePillar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPillarError(null);
+    if (!pillarFormData.name.trim()) {
+      setPillarError('Nama pilar wajib diisi.');
+      return;
+    }
+
+    setIsSavingPillar(true);
+    try {
+      if (editingPillar) {
+        const res = await fetch(`/api/pillars/${editingPillar.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: pillarFormData.name.trim(),
+            description: pillarFormData.description.trim(),
+            order: Number(pillarFormData.order) || 1,
+          }),
+        });
+        const json = await res.json();
+        if (res.ok && json.success) {
+          showToast(`Pilar "${pillarFormData.name}" berhasil diperbarui.`);
+          setIsPillarModalOpen(false);
+          await fetchPillars();
+        } else {
+          setPillarError(json.error || 'Gagal memperbarui pilar.');
+        }
+      } else {
+        const res = await fetch('/api/pillars', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: pillarFormData.id.trim() || undefined,
+            name: pillarFormData.name.trim(),
+            description: pillarFormData.description.trim(),
+            order: Number(pillarFormData.order) || 1,
+          }),
+        });
+        const json = await res.json();
+        if (res.ok && json.success) {
+          showToast(`Pilar "${pillarFormData.name}" berhasil ditambahkan.`);
+          setIsPillarModalOpen(false);
+          await fetchPillars();
+        } else {
+          setPillarError(json.error || 'Gagal menambahkan pilar baru.');
+        }
+      }
+    } catch {
+      setPillarError('Terjadi kesalahan jaringan.');
+    } finally {
+      setIsSavingPillar(false);
+    }
+  };
+
+  const handleDeletePillar = async (p: CmsPillarItem) => {
+    const count = cards.filter((c) => c.pillarId === p.id).length;
+    if (count > 0) {
+      alert(`Pilar "${p.name}" tidak dapat dihapus karena masih memuat ${count} program aktif. Silakan hapus atau pindahkan program tersebut terlebih dahulu.`);
+      return;
+    }
+    if (!confirm(`Apakah Anda yakin ingin menghapus pilar "${p.name}"?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/pillars/${p.id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        showToast(`Pilar "${p.name}" berhasil dihapus.`);
+        await fetchPillars();
+      } else {
+        alert(json.error || 'Gagal menghapus pilar.');
+      }
+    } catch {
+      alert('Terjadi kesalahan jaringan saat menghapus pilar.');
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Apache Superset Embed Handlers (Single Embed, Clean)
+  // ---------------------------------------------------------------------------
+  const handleSupersetEmbedCodeChange = (codeOrUrl: string) => {
+    let srcUrl = codeOrUrl.trim();
+    const srcMatch = codeOrUrl.match(/src=["']([^"']+)["']/i);
+    if (srcMatch && srcMatch[1]) {
+      srcUrl = srcMatch[1];
+    }
+    const uuidMatch = srcUrl.match(/\/p\/([a-zA-Z0-9_-]+)/i);
+    const uuid = uuidMatch ? uuidMatch[1] : '';
+
+    setSupersetEmbed({
+      enabled: Boolean(srcUrl || uuid),
+      iframeCode: codeOrUrl,
+      srcUrl,
+      url: srcUrl,
+      uuid: uuid,
+      widthPercent: 100,
+      heightPx: 450,
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
+  const handleClearSupersetEmbed = () => {
+    setSupersetEmbed({
+      enabled: false,
+      srcUrl: '',
+      url: '',
+      uuid: '',
+      widthPercent: 100,
+      heightPx: 450,
+      iframeCode: '',
+      title: '',
+      updatedAt: new Date().toISOString(),
+    });
+    showToast('Embed Apache Superset dikosongkan.');
+  };
+
+  // ---------------------------------------------------------------------------
+  // Multiple Custom Excel Table Section Handlers
+  // ---------------------------------------------------------------------------
+  const handleAddExcelTableSection = () => {
+    const newIdx = customExcelTables.length + 1;
+    const newSec: CustomExcelTableData = {
+      id: `sec_${Date.now()}_${newIdx}`,
+      title: `Matriks Data ${newIdx}`,
+      tableName: `Matriks Data ${newIdx}`,
+      description: '',
+      columns: [
+        { id: 'col_1', key: 'no', name: 'No', label: 'No' },
+        { id: 'col_2', key: 'program_atau_komponen', name: 'Program atau Komponen', label: 'Program atau Komponen' },
+        { id: 'col_3', key: 'indikasi_data_khusus', name: 'Indikasi data khusus yang diperlukan', label: 'Indikasi data khusus yang diperlukan' },
+      ],
+      rows: [],
+      rowCount: 0,
+    };
+    setCustomExcelTables((prev) => [...prev, newSec]);
+    showToast(`Section tabel "${newSec.title}" ditambahkan.`);
+  };
+
+  const handleRemoveExcelTableSection = (index: number) => {
+    if (customExcelTables.length <= 1) {
+      alert('Minimal harus ada 1 section tabel.');
+      return;
+    }
+    if (!confirm('Apakah Anda yakin ingin menghapus section tabel ini?')) return;
+    setCustomExcelTables((prev) => prev.filter((_, i) => i !== index));
+    showToast('Section tabel berhasil dihapus.');
+  };
+
+  const handleUpdateSectionTitle = (index: number, title: string) => {
+    setCustomExcelTables((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [field]: val };
+      next[index] = { ...next[index], title, tableName: title };
       return next;
     });
   };
 
-  const handleRemoveKendala = (index: number) => {
-    setKendalaList((prev) => prev.filter((_, i) => i !== index));
+  const handleUpdateSectionDesc = (index: number, description: string) => {
+    setCustomExcelTables((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], description };
+      return next;
+    });
   };
 
-  // Block Layout & Customization Handlers
-  const syncBlocksToBackendAndCache = (updatedBlocks: DetailBlockConfig[]) => {
-    if (!editingCardId) return;
-    const nextCards = cards.map((c) =>
-      c.id === editingCardId || c.slug === editingCardId
-        ? { ...c, detailBlocks: updatedBlocks }
-        : c
-    );
-    setCards(nextCards);
-    setClientCardsCache(nextCards);
+  const handleUploadTemplateFile = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    fetch(`/api/cards/${editingCardId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ detailBlocks: updatedBlocks }),
-    })
-      .then(async (res) => {
-        if (res.ok) {
-          const json = await res.json();
-          if (json.data) {
-            const freshCards = cards.map((c) =>
-              c.id === editingCardId || c.slug === editingCardId ? json.data : c
-            );
-            setCards(freshCards);
-            setClientCardsCache(freshCards);
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const base64 = ev.target?.result as string;
+      let parsedCols: CustomExcelColumn[] | null = null;
+      if (file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
+        try {
+          const text = await file.text();
+          const parsed = parseDelimitedText(text);
+          if (parsed.headers.length > 0) {
+            parsedCols = parsed.headers.map((h, i) => ({
+              id: `col_${i + 1}`,
+              name: h,
+              label: h,
+              key: h.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 30) || `col_${i}`,
+            }));
           }
+        } catch {
+          // ignore
         }
-      })
-      .catch((err) => {
-        console.error('Auto-sync detailBlocks error:', err);
+      }
+
+      setCustomExcelTables((prev) => {
+        const next = [...prev];
+        next[index] = {
+          ...next[index],
+          templateFileName: file.name,
+          templateFileBase64: base64,
+          ...(parsedCols ? { columns: parsedCols } : {}),
+        };
+        return next;
       });
+      showToast(`Template file "${file.name}" berhasil diunggah.`);
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleMoveBlock = (idx: number, dir: 'up' | 'down') => {
-    setDetailBlocks((prev) => {
-      const targetIdx = dir === 'up' ? idx - 1 : idx + 1;
-      if (targetIdx < 0 || targetIdx >= prev.length) return prev;
-      const copy = [...prev];
-      const temp = copy[idx];
-      copy[idx] = copy[targetIdx];
-      copy[targetIdx] = temp;
-      const nextBlocks = copy.map((b, i) => ({ ...b, order: i + 1 }));
-      syncBlocksToBackendAndCache(nextBlocks);
-      return nextBlocks;
-    });
-  };
+  const handleDownloadSectionTemplate = (index: number) => {
+    const sec = customExcelTables[index];
+    if (!sec) return;
 
-  const handleToggleBlock = (idx: number) => {
-    setDetailBlocks((prev) => {
-      const copy = [...prev];
-      copy[idx] = { ...copy[idx], enabled: copy[idx].enabled === false ? true : false };
-      syncBlocksToBackendAndCache(copy);
-      return copy;
-    });
-  };
-
-  const handleChangeBlockWidth = (idx: number, width: BlockWidth) => {
-    setDetailBlocks((prev) => {
-      const copy = [...prev];
-      copy[idx] = { ...copy[idx], width };
-      syncBlocksToBackendAndCache(copy);
-      return copy;
-    });
-  };
-
-  const handleUpdateBlockMeta = (idx: number, field: 'title' | 'subtitle', val: string) => {
-    setDetailBlocks((prev) => {
-      const copy = [...prev];
-      copy[idx] = { ...copy[idx], [field]: val };
-      syncBlocksToBackendAndCache(copy);
-      return copy;
-    });
-  };
-
-  const handleRemoveBlock = (idx: number) => {
-    setDetailBlocks((prev) => {
-      const nextBlocks = prev.filter((_, i) => i !== idx).map((b, i) => ({ ...b, order: i + 1 }));
-      syncBlocksToBackendAndCache(nextBlocks);
-      return nextBlocks;
-    });
-  };
-
-  const handleAddBlock = (type: BlockType) => {
-    const newId = `blk_${type}_${detailBlocks.length + 1}`;
-    let newBlock: DetailBlockConfig;
-    if (type === 'kpi_cards') {
-      newBlock = {
-        id: newId,
-        type: 'kpi_cards',
-        title: 'Indikator Utama',
-        width: 'full',
-        order: detailBlocks.length + 1,
-        enabled: true,
-        data: {
-          mode: 'comparator',
-          items: [
-            { id: 'k1', label: 'Metrik Utama A', val2025: '10.000', val2026: '12.500', delta: '+25%' },
-            { id: 'k2', label: 'Metrik Utama B', val2025: '5.000', val2026: '6.200', delta: '+24%' },
-          ],
-        },
-      };
-    } else if (type === 'spatial_map') {
-      newBlock = {
-        id: newId,
-        type: 'spatial_map',
-        title: 'Peta Sebaran Program',
-        subtitle: 'Distribusi titik sebaran program berdasarkan lokasi',
-        width: 'half',
-        order: detailBlocks.length + 1,
-        enabled: true,
-        data: {
-          mapMode: 'points',
-          centerLat: -2.5,
-          centerLng: 118.0,
-          zoom: 5,
-          legendTitle: 'Sebaran Lokasi',
-          markers: [
-            { id: 'p1', name: 'Titik Lokasi 1', kabKota: 'Kota Jakarta', provinsi: 'DKI Jakarta', lat: -6.2, lng: 106.8, year: 2026, status: 'Realisasi' },
-            { id: 'p2', name: 'Titik Lokasi 2', kabKota: 'Kota Surabaya', provinsi: 'Jawa Timur', lat: -7.25, lng: 112.75, year: 2026, status: 'Realisasi' },
-          ],
-        },
-      };
-    } else if (type === 'category_bars') {
-      newBlock = {
-        id: newId,
-        type: 'category_bars',
-        title: 'Distribusi Berdasarkan Kategori',
-        width: 'half',
-        order: detailBlocks.length + 1,
-        enabled: true,
-        data: {
-          chartTitle: 'Perbandingan Kategori',
-          categories: [
-            { id: 'c1', name: 'Kategori A', val2025: 100, val2026: 150 },
-            { id: 'c2', name: 'Kategori B', val2025: 80, val2026: 120 },
-          ],
-        },
-      };
-    } else if (type === 'milestone_pipeline') {
-      newBlock = {
-        id: newId,
-        type: 'milestone_pipeline',
-        title: 'Tahapan Kesiapan Pelaksanaan',
-        width: 'half',
-        order: detailBlocks.length + 1,
-        enabled: true,
-        data: {
-          title: 'Tahapan Milestone',
-          stages: [
-            { id: 's1', name: 'Penyiapan', count: 30, total: 40, status: 'completed' },
-            { id: 's2', name: 'Pelaksanaan', count: 18, total: 40, status: 'in_progress' },
-          ],
-        },
-      };
-    } else if (type === 'progress_metrics') {
-      newBlock = {
-        id: newId,
-        type: 'progress_metrics',
-        title: 'Progres Fisik dan Keuangan',
-        width: 'third',
-        order: detailBlocks.length + 1,
-        enabled: true,
-        data: {
-          title: 'Realisasi Progres',
-          items: [
-            { id: 'pm1', label: 'Fisik', val2025: 60, val2026: 80, deltaLabel: '+20 pp', unit: '%' },
-            { id: 'pm2', label: 'Keuangan', val2025: 55, val2026: 75, deltaLabel: '+20 pp', unit: '%' },
-          ],
-        },
-      };
-    } else if (type === 'watchlist') {
-      newBlock = {
-        id: newId,
-        type: 'watchlist',
-        title: 'Lokasi yang Memerlukan Perhatian',
-        width: 'third',
-        order: detailBlocks.length + 1,
-        enabled: true,
-        data: {
-          title: 'Isu Lapangan',
-          actionDirection: 'Percepatan Tindak Lanjut',
-          items: [
-            { id: 'w1', title: 'Lokasi A', location: 'Kabupaten X', findings: 'Kendala teknis di lapangan', action: 'Koordinasi percepatan', statusSeverity: 'warning' },
-          ],
-        },
-      };
-    } else if (type === 'insight_callout') {
-      newBlock = {
-        id: newId,
-        type: 'insight_callout',
-        title: 'INSIGHT UTAMA',
-        width: 'full',
-        order: detailBlocks.length + 1,
-        enabled: true,
-        data: {
-          title: 'INSIGHT UTAMA',
-          insights: ['Insight poin 1 capaian program.', 'Insight poin 2 prioritas percepatan.'],
-        },
-      };
+    if (sec.templateFileBase64 && sec.templateFileName) {
+      const a = document.createElement('a');
+      a.href = sec.templateFileBase64;
+      a.download = sec.templateFileName;
+      a.click();
+      showToast(`Template "${sec.templateFileName}" diunduh.`);
     } else {
-      newBlock = {
-        id: newId,
-        type: 'annual_table',
-        title: 'Tabel Capaian RPJMN (2025–2029)',
-        width: 'full',
-        order: detailBlocks.length + 1,
-        enabled: true,
-        data: {
-          title: 'Target & Realisasi 5 Tahun',
-        },
-      };
+      const cols = sec.columns && sec.columns.length > 0 ? sec.columns : [
+        { id: 'col_1', key: 'no', name: 'No', label: 'No' },
+        { id: 'col_2', key: 'program_atau_komponen', name: 'Program atau Komponen', label: 'Program atau Komponen' },
+        { id: 'col_3', key: 'indikasi_data_khusus', name: 'Indikasi data khusus yang diperlukan', label: 'Indikasi data khusus yang diperlukan' },
+      ];
+      const csvContent = generateCustomTableCsv(cols, []);
+      const filename = `Template_${(sec.title || formData.title || 'Indikator').replace(/\s+/g, '_')}.csv`;
+      downloadFile(filename, csvContent);
+      showToast(`Template "${filename}" diunduh.`);
     }
-    const nextBlocks = [...detailBlocks, newBlock];
-    setDetailBlocks(nextBlocks);
-    syncBlocksToBackendAndCache(nextBlocks);
-    showToast(`Blok "${newBlock.title}" berhasil ditambahkan!`);
   };
 
-  const openEditKpiCardsModal = (idx: number) => {
-    const block = detailBlocks[idx];
-    if (!block) return;
-    const rawData = block.data as KpiCardsBlockData;
-    const items: KpiCardItem[] = Array.isArray(rawData?.items)
-      ? JSON.parse(JSON.stringify(rawData.items))
-      : [];
+  const handleUploadDataFile = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    setKpiCardsDraft(
-      items.length > 0
-        ? items
-        : [
-            {
-              id: 'k1',
-              label: 'Realisasi Berjalan',
-              val2025: '—',
-              val2026: '0',
-              unit: formData.unit || 'Unit',
-              subtext: `Satuan: ${formData.unit || 'Unit'}`,
-            },
-          ]
-    );
-    setEditingKpiCardsIdx(idx);
-  };
-
-  const handleAddKpiCard = () => {
-    if (kpiCardsDraft.length >= 5) {
-      showToast('Maksimal 5 kartu metrik tercapai!');
-      return;
-    }
-    const newIdx = kpiCardsDraft.length + 1;
-    const defaultLabels = [
-      'Realisasi Berjalan',
-      'Target Kinerja',
-      'Tingkat Capaian',
-      'Instansi Pelaksana',
-      'Alokasi Anggaran',
-    ];
-    const suggestedLabel = defaultLabels[kpiCardsDraft.length] || `Metrik #${newIdx}`;
-    const newCard: KpiCardItem = {
-      id: `kpi_${newIdx}`,
-      label: suggestedLabel,
-      val2025: '—',
-      val2026: '0',
-      unit: formData.unit || '',
-      subtext: `Satuan: ${formData.unit || 'Unit'}`,
-    };
-    setKpiCardsDraft((prev) => [...prev, newCard]);
-  };
-
-  const handleRemoveKpiCard = (cardIdx: number) => {
-    if (kpiCardsDraft.length <= 1) {
-      showToast('Minimal harus ada 1 kartu metrik!');
-      return;
-    }
-    setKpiCardsDraft((prev) => prev.filter((_, i) => i !== cardIdx));
-  };
-
-  const handleMoveKpiCard = (cardIdx: number, direction: 'up' | 'down') => {
-    const targetIdx = direction === 'up' ? cardIdx - 1 : cardIdx + 1;
-    if (targetIdx < 0 || targetIdx >= kpiCardsDraft.length) return;
-    setKpiCardsDraft((prev) => {
-      const copy = [...prev];
-      const temp = copy[cardIdx];
-      copy[cardIdx] = copy[targetIdx];
-      copy[targetIdx] = temp;
-      return copy;
-    });
-  };
-
-  const handleUpdateKpiCard = (cardIdx: number, patch: Partial<KpiCardItem>) => {
-    setKpiCardsDraft((prev) => {
-      const copy = [...prev];
-      copy[cardIdx] = { ...copy[cardIdx], ...patch };
-      return copy;
-    });
-  };
-
-  const handleSaveKpiCards = () => {
-    if (editingKpiCardsIdx === null) return;
-    const copy = [...detailBlocks];
-    const existingData = (copy[editingKpiCardsIdx].data || {}) as KpiCardsBlockData;
-    copy[editingKpiCardsIdx] = {
-      ...copy[editingKpiCardsIdx],
-      data: {
-        ...existingData,
-        mode: existingData.mode || 'comparator',
-        items: kpiCardsDraft,
-      },
-    };
-    setDetailBlocks(copy);
-    setEditingKpiCardsIdx(null);
-    syncBlocksToBackendAndCache(copy);
-    showToast(`Berhasil menyimpan dan mensinkronisasi ${kpiCardsDraft.length} kartu metrik!`);
-  };
-
-  const switchToJsonEditorFromKpi = () => {
-    if (editingKpiCardsIdx === null) return;
-    const idx = editingKpiCardsIdx;
-    const currentData = {
-      ...(detailBlocks[idx].data || {}),
-      items: kpiCardsDraft,
-    };
-    setEditingKpiCardsIdx(null);
-    setEditingBlockJsonIdx(idx);
-    setBlockJsonText(JSON.stringify(currentData, null, 2));
-    setBlockJsonError(null);
-  };
-
-  const openEditBlockJson = (idx: number) => {
-    if (detailBlocks[idx]?.type === 'kpi_cards') {
-      openEditKpiCardsModal(idx);
-      return;
-    }
-    setEditingBlockJsonIdx(idx);
-    setBlockJsonText(JSON.stringify(detailBlocks[idx].data, null, 2));
-    setBlockJsonError(null);
-  };
-
-  const handleSaveBlockJson = () => {
-    if (editingBlockJsonIdx === null) return;
     try {
-      const parsed = JSON.parse(blockJsonText);
-      const copy = [...detailBlocks];
-      copy[editingBlockJsonIdx] = { ...copy[editingBlockJsonIdx], data: parsed };
-      setDetailBlocks(copy);
-      setEditingBlockJsonIdx(null);
-      syncBlocksToBackendAndCache(copy);
-      showToast('Data konfigurasi blok berhasil diperbarui dan disinkronisasi!');
-    } catch (err: unknown) {
-      setBlockJsonError((err as Error).message || 'Format JSON tidak valid');
+      const text = await file.text();
+      const parsed = parseDelimitedText(text);
+      if (parsed.headers.length === 0 || parsed.rows.length === 0) {
+        setExcelUploadFeedbackMap((prev) => ({
+          ...prev,
+          [index]: 'File tidak memiliki baris data atau kosong.',
+        }));
+        return;
+      }
+
+      const newCols: CustomExcelColumn[] = parsed.headers.map((h, i) => ({
+        id: `col_${i + 1}`,
+        name: h,
+        label: h,
+        key: h.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 30) || `col_${i}`,
+      }));
+
+      const normalizedRows: Record<string, string>[] = parsed.rows.map((r) => {
+        const rowObj: Record<string, string> = {};
+        parsed.headers.forEach((h, idx) => {
+          const colKey = newCols[idx].key;
+          rowObj[colKey] = r[h] || '';
+          rowObj[h] = r[h] || '';
+        });
+        return rowObj;
+      });
+
+      const nowIso = new Date().toISOString();
+      setCustomExcelTables((prev) => {
+        const next = [...prev];
+        next[index] = {
+          ...next[index],
+          columns: newCols,
+          rows: normalizedRows,
+          fileName: file.name,
+          rowCount: normalizedRows.length,
+          uploadedAt: nowIso,
+          lastUploadedAt: nowIso,
+        };
+        return next;
+      });
+
+      setExcelUploadFeedbackMap((prev) => ({
+        ...prev,
+        [index]: `Berhasil memuat ${normalizedRows.length} baris data dari "${file.name}".`,
+      }));
+      showToast(`Data Excel berhasil diunggah (${normalizedRows.length} baris)`);
+    } catch (err) {
+      console.error('Error parsing excel CSV:', err);
+      setExcelUploadFeedbackMap((prev) => ({
+        ...prev,
+        [index]: 'Gagal membaca file. Pastikan format CSV valid.',
+      }));
     }
+  };
+
+  const handleClearSectionData = (index: number) => {
+    setCustomExcelTables((prev) => {
+      const next = [...prev];
+      next[index] = {
+        ...next[index],
+        rows: [],
+        rowCount: 0,
+        fileName: undefined,
+        uploadedAt: new Date().toISOString(),
+      };
+      return next;
+    });
+    setExcelUploadFeedbackMap((prev) => {
+      const copy = { ...prev };
+      delete copy[index];
+      return copy;
+    });
+    showToast('Data tabel dikosongkan.');
   };
 
   // Save Form (Create or Update Card & Connected Details)
   const handleSaveForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) {
-      alert('Judul indikator / program wajib diisi');
+      alert('Judul program / indikator wajib diisi.');
+      return;
+    }
+    if (!formData.pillarId) {
+      alert('Pilar program wajib dipilih.');
       return;
     }
 
@@ -1084,6 +1263,7 @@ export const CmsAdminView: React.FC = () => {
 
     const payload = {
       ...formData,
+      status: `Realisasi ${targetYear}`,
       value: finalValue,
       target: finalTarget,
       unit: finalUnit,
@@ -1092,7 +1272,13 @@ export const CmsAdminView: React.FC = () => {
       milestoneContent: finalMilestoneContent,
       kendalaList: kendalaList,
       annualTargets: annualRows,
-      detailBlocks: detailBlocks,
+      supersetEmbed: {
+        ...supersetEmbed,
+        widthPercent: 100,
+        heightPx: 450,
+      },
+      customExcelTables: customExcelTables,
+      customExcelTable: customExcelTables[0] || undefined,
     };
 
     setIsSaving(true);
@@ -1249,9 +1435,9 @@ export const CmsAdminView: React.FC = () => {
     }
   };
 
-  // Filtered Cards
+  // Filtered Cards sorted by order (Z-Pattern for Gambar 2)
   const filteredCards = useMemo(() => {
-    return cards.filter((card) => {
+    const list = cards.filter((card) => {
       if (selectedPillar !== 'all' && card.pillarId !== selectedPillar) return false;
       if (selectedCategory !== 'all' && card.category !== selectedCategory) return false;
       if (searchQuery.trim() !== '') {
@@ -1264,6 +1450,7 @@ export const CmsAdminView: React.FC = () => {
       }
       return true;
     });
+    return [...list].sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
   }, [cards, selectedPillar, selectedCategory, searchQuery]);
 
   // Paginated Cards (10 items / page)
@@ -1272,6 +1459,82 @@ export const CmsAdminView: React.FC = () => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredCards.slice(start, start + itemsPerPage);
   }, [filteredCards, currentPage, itemsPerPage]);
+
+  // Card Drag & Drop Reordering
+  const handleCardDragStart = (e: React.DragEvent, cardId: string) => {
+    setDraggedCardId(cardId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', cardId);
+  };
+
+  const handleCardDragOver = (e: React.DragEvent, cardId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverCardId !== cardId) {
+      setDragOverCardId(cardId);
+    }
+  };
+
+  const handleCardDrop = async (e: React.DragEvent, targetCardId: string) => {
+    e.preventDefault();
+    const sourceId = draggedCardId;
+    setDraggedCardId(null);
+    setDragOverCardId(null);
+
+    if (!sourceId || sourceId === targetCardId) return;
+
+    const currentIdx = filteredCards.findIndex((c) => c.id === sourceId);
+    const targetIdx = filteredCards.findIndex((c) => c.id === targetCardId);
+    if (currentIdx === -1 || targetIdx === -1) return;
+
+    const movedCard = filteredCards[currentIdx];
+    const reordered = [...filteredCards];
+    reordered.splice(currentIdx, 1);
+    reordered.splice(targetIdx, 0, movedCard);
+
+    // Assign clean 1-based order
+    const orderUpdates: { id: string; order: number }[] = [];
+    const updatedCards = cards.map((c) => {
+      const foundIdx = reordered.findIndex((r) => r.id === c.id);
+      if (foundIdx !== -1) {
+        const newOrder = foundIdx + 1;
+        if (c.order !== newOrder) {
+          orderUpdates.push({ id: c.id, order: newOrder });
+        }
+        return { ...c, order: newOrder };
+      }
+      return c;
+    });
+
+    setCards(updatedCards);
+    setClientCardsCache(updatedCards);
+
+    try {
+      const res = await fetch('/api/cards/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: orderUpdates.length > 0 ? orderUpdates : [
+            { id: movedCard.id, order: targetIdx + 1 },
+          ],
+        }),
+      });
+
+      if (res.ok) {
+        showToast(`Urutan "${movedCard.title}" berhasil diubah ke posisi #${targetIdx + 1}`);
+      } else {
+        fetchAllCards();
+      }
+    } catch (err) {
+      console.error('Failed to reorder cards:', err);
+      fetchAllCards();
+    }
+  };
+
+  const handleCardDragEnd = () => {
+    setDraggedCardId(null);
+    setDragOverCardId(null);
+  };
 
   // Filtered Cards for PDF Settings
   const pdfFilteredCards = useMemo(() => {
@@ -1292,23 +1555,6 @@ export const CmsAdminView: React.FC = () => {
   const totalPdfCards = cards.length;
   const includedPdfCount = cards.filter((c) => c.includeInPdf !== false).length;
   const excludedPdfCount = totalPdfCards - includedPdfCount;
-
-  // Pillar counts
-  const pillarCounts = useMemo(() => {
-    const counts: Record<PillarTab, number> = {
-      all: cards.length,
-      pendidikan: 0,
-      kesehatan: 0,
-      bencana: 0,
-      kemiskinan: 0,
-    };
-    cards.forEach((c) => {
-      if (counts[c.pillarId] !== undefined) {
-        counts[c.pillarId]++;
-      }
-    });
-    return counts;
-  }, [cards]);
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row font-sans text-slate-900 antialiased">
@@ -1358,46 +1604,65 @@ export const CmsAdminView: React.FC = () => {
 
         {/* Sidebar Navigation Items */}
         <div className={`flex-1 px-4 py-5 space-y-6 overflow-y-auto min-h-0 ${mobileSidebarOpen ? 'block' : 'hidden md:block'}`}>
-          {/* Group 1: Kelola Indikator Pilar */}
+          {/* Group 1: Kelola Data */}
           <div className="space-y-1">
             <div className="px-3 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Kelola Indikator Pilar
+              Kelola Data
             </div>
 
-            {PILLAR_NAV_CONFIGS.map((cfg) => {
-              const Icon = cfg.icon;
-              const isActive = selectedPillar === cfg.id && (viewMode === 'list' || viewMode === 'create');
-              const count = pillarCounts[cfg.id];
+            {/* Kelola Pilar */}
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('pillars');
+                setMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                viewMode === 'pillars'
+                  ? 'bg-[#4F83CC] text-white shadow-xs font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Layers className="h-4 w-4 shrink-0 stroke-[1.75]" />
+                <span>Kelola Pilar</span>
+              </div>
+              <span
+                className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+                  viewMode === 'pillars' ? 'bg-[#3b6eb3] text-white' : 'bg-slate-800 text-slate-400'
+                }`}
+              >
+                {pillars.length}
+              </span>
+            </button>
 
-              return (
-                <button
-                  key={cfg.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedPillar(cfg.id);
-                    setViewMode('list');
-                    setMobileSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                    isActive
-                      ? 'bg-[#4F83CC] text-white shadow-xs font-bold'
-                      : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Icon className="h-4 w-4 shrink-0 stroke-[1.75]" />
-                    <span>{cfg.label}</span>
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
-                      isActive ? 'bg-[#3b6eb3] text-white' : 'bg-slate-800 text-slate-400'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
+            {/* Kelola Program */}
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('list');
+                setMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                viewMode === 'list' || viewMode === 'create' || viewMode === 'edit'
+                  ? 'bg-[#4F83CC] text-white shadow-xs font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <FileText className="h-4 w-4 shrink-0 stroke-[1.75]" />
+                <span>Kelola Program</span>
+              </div>
+              <span
+                className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+                  viewMode === 'list' || viewMode === 'create' || viewMode === 'edit'
+                    ? 'bg-[#3b6eb3] text-white'
+                    : 'bg-slate-800 text-slate-400'
+                }`}
+              >
+                {cards.length}
+              </span>
+            </button>
           </div>
 
           {/* Group 2: Konfigurasi */}
@@ -1523,6 +1788,8 @@ export const CmsAdminView: React.FC = () => {
                 ? 'Pengaturan Informasi Halaman Depan'
                 : viewMode === 'pdf-settings'
                 ? 'Pengaturan Indikator Ringkasan Eksekutif (PDF)'
+                : viewMode === 'pillars'
+                ? 'Kelola Pilar Prioritas'
                 : viewMode === 'users'
                 ? 'Kelola Akun & Hak Akses Pengguna'
                 : viewMode === 'create'
@@ -1531,6 +1798,27 @@ export const CmsAdminView: React.FC = () => {
                 ? `Edit: ${formData.title}`
                 : `Manajemen Indikator (${filteredCards.length} Program)`}
             </h1>
+            {viewMode === 'pillars' && (
+              <p className="text-xs text-slate-500 font-normal mt-0.5">
+                Kelola pilar pembangunan manusia dan kebudayaan sebagai payung koordinasi program.
+              </p>
+            )}
+            {viewMode === 'pillars' && (
+              <button
+                type="button"
+                onClick={openCreatePillarModal}
+                className="h-10 px-4 rounded-xl bg-[#4F83CC] hover:bg-[#3f72bb] text-white text-xs font-bold flex items-center gap-2 shadow-xs cursor-pointer transition-colors"
+              >
+                <Plus className="h-4 w-4 stroke-[2]" />
+                <span>Tambah Pilar Baru</span>
+              </button>
+            )}
+
+            {viewMode === 'list' && (
+              <p className="text-xs text-slate-500 font-normal mt-0.5">
+                Tarik baris tabel (drag &amp; drop) untuk mengatur urutan tampilan kartu di dashboard.
+              </p>
+            )}
           </div>
 
           {/* Action Button Set */}
@@ -1586,7 +1874,7 @@ export const CmsAdminView: React.FC = () => {
 
                 <ExecutivePdfButton
                   cards={cards}
-                  currentPillar={pdfPillarFilter !== 'all' ? pdfPillarFilter : undefined}
+                  currentPillar={pdfPillarFilter !== 'all' ? (pdfPillarFilter as PillarId) : undefined}
                 />
 
                 <button
@@ -1626,6 +1914,101 @@ export const CmsAdminView: React.FC = () => {
 
         {/* WORKSPACE CONTENT ROUTER */}
         <div className="flex-1 p-6 space-y-6">
+          {/* =============================================================== */}
+          {/* VIEW MODE PILLARS: KELOLA PILAR PRIORITAS                       */}
+          {/* =============================================================== */}
+          {viewMode === 'pillars' && (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">
+                    Daftar Pilar Kemenko PMK ({pillars.length} Pilar)
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Kelola pilar untuk pengelompokan program dan indikator strategis.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={openCreatePillarModal}
+                  className="h-9 px-4 rounded-xl bg-[#4F83CC] hover:bg-[#3f72bb] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors self-start sm:self-auto"
+                >
+                  <Plus className="h-4 w-4 stroke-[2]" />
+                  <span>Tambah Pilar Baru</span>
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+                      <th className="py-3 px-4 w-12 text-center">No</th>
+                      <th className="py-3 px-4 min-w-[200px]">Nama Pilar</th>
+                      <th className="py-3 px-4 min-w-[140px]">ID / Slug</th>
+                      <th className="py-3 px-4 min-w-[240px]">Deskripsi</th>
+                      <th className="py-3 px-4 w-32 text-center">Jumlah Program</th>
+                      <th className="py-3 px-4 w-28 text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {pillars.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-slate-500">
+                          Belum ada pilar yang tersimpan.
+                        </td>
+                      </tr>
+                    ) : (
+                      pillars.map((pillar, idx) => {
+                        const programCount = cards.filter((c) => c.pillarId === pillar.id).length;
+                        return (
+                          <tr key={pillar.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3.5 px-4 text-center text-slate-400 font-medium">
+                              {idx + 1}
+                            </td>
+                            <td className="py-3.5 px-4 font-bold text-slate-900">
+                              {pillar.name}
+                            </td>
+                            <td className="py-3.5 px-4 font-mono text-slate-600 text-[11px]">
+                              {pillar.id}
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-600 max-w-xs truncate">
+                              {pillar.description || '—'}
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                {programCount} Program
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditPillarModal(pillar)}
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                  title="Edit Pilar"
+                                >
+                                  <Pencil className="h-3.5 w-3.5 stroke-[2]" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeletePillar(pillar)}
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                  title="Hapus Pilar"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 stroke-[2]" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* =============================================================== */}
           {/* VIEW MODE A: LIST TABLE (De-nested, 10 Items / Page Pagination) */}
           {/* =============================================================== */}
@@ -1684,6 +2067,29 @@ export const CmsAdminView: React.FC = () => {
                   </button>
                 </div>
 
+                {/* Pillar Filter Dropdown */}
+                <div className="relative min-w-[200px]">
+                  <select
+                    value={selectedPillar}
+                    onChange={(e) => {
+                      setSelectedPillar(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="h-10 w-full pl-3.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 hover:border-slate-300 focus:bg-white focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="all">Semua Pilar ({cards.length})</option>
+                    {pillars.map((p) => {
+                      const count = cards.filter((c) => c.pillarId === p.id).length;
+                      return (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({count})
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
+                </div>
+
                 {/* Quick Search Bar */}
                 <div className="relative w-full md:w-80">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 stroke-[1.75]" />
@@ -1711,7 +2117,7 @@ export const CmsAdminView: React.FC = () => {
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-                      <th className="py-3 px-4 w-12 text-center">No</th>
+                      <th className="py-3 px-4 w-24 text-center">Urutan</th>
                       <th className="py-3 px-4 min-w-[220px]">Program / Indikator</th>
                       <th className="py-3 px-4 w-36">Pilar</th>
                       <th className="py-3 px-4 w-36">Realisasi</th>
@@ -1763,12 +2169,32 @@ export const CmsAdminView: React.FC = () => {
                         const calculatedPct = calculatePercentage(card.value, card.target);
                         const displayPct = card.percent !== null && card.percent !== undefined ? card.percent : calculatedPct;
                         const rowNumber = (currentPage - 1) * itemsPerPage + idx + 1;
+                        const cardOrder = card.order ?? rowNumber;
 
                         return (
-                          <tr key={card.id} className="hover:bg-slate-50/80 transition-colors">
-                            {/* Numbering */}
-                            <td className="py-3.5 px-4 text-center text-slate-400 font-medium">
-                              {rowNumber}
+                          <tr
+                            key={card.id}
+                            draggable
+                            onDragStart={(e) => handleCardDragStart(e, card.id)}
+                            onDragOver={(e) => handleCardDragOver(e, card.id)}
+                            onDrop={(e) => handleCardDrop(e, card.id)}
+                            onDragEnd={handleCardDragEnd}
+                            className={`transition-colors cursor-grab active:cursor-grabbing ${
+                              draggedCardId === card.id
+                                ? 'opacity-40 bg-blue-50/60'
+                                : dragOverCardId === card.id
+                                ? 'bg-blue-50/80 border-t-2 border-blue-600'
+                                : 'hover:bg-slate-50/80'
+                            }`}
+                          >
+                            {/* Numbering & Drag Handle */}
+                            <td className="py-3.5 px-4 text-center">
+                              <div className="inline-flex items-center gap-2 select-none">
+                                <GripVertical className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span className="font-extrabold text-slate-900 text-xs tabular-nums">
+                                  #{cardOrder}
+                                </span>
+                              </div>
                             </td>
 
                             {/* Title & PIC */}
@@ -1776,17 +2202,15 @@ export const CmsAdminView: React.FC = () => {
                               <div className="font-bold text-slate-900 leading-snug">
                                 {card.title}
                               </div>
-                              <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
-                                <span className="font-semibold text-slate-600">{card.picKementerian || 'Kemenko PMK'}</span>
-                                <span>&bull;</span>
-                                <span className="text-slate-400 font-mono text-[10px]">{card.slug}</span>
+                              <div className="text-xs text-slate-500 font-medium mt-0.5">
+                                {card.picKementerian || 'Kemenko PMK'}
                               </div>
                             </td>
 
                             {/* Pillar */}
                             <td className="py-3.5 px-4">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 capitalize border border-slate-200">
-                                {card.pillarId}
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 capitalize border border-slate-200">
+                                {pillars.find((p) => p.id === card.pillarId)?.name || card.pillarId}
                               </span>
                             </td>
 
@@ -1933,48 +2357,53 @@ export const CmsAdminView: React.FC = () => {
             <div className="max-w-4xl mx-auto space-y-6">
               {/* Form Navigation Tabs */}
               <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-2xs">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                   <button
                     type="button"
                     onClick={() => setFormActiveTab('info')}
-                    className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       formActiveTab === 'info'
                         ? 'bg-blue-50 text-blue-700 shadow-2xs border border-blue-200/80 font-extrabold'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
                     }`}
                   >
-                    <FileText className="w-4 h-4 text-blue-600 shrink-0" />
-                    <span>1. Ringkasan &amp; Info Utama</span>
+                    <span>1. Ringkasan &amp; Info</span>
                   </button>
+
                   <button
                     type="button"
-                    onClick={() => setFormActiveTab('blocks')}
-                    className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      formActiveTab === 'blocks'
+                    onClick={() => setFormActiveTab('superset')}
+                    className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      formActiveTab === 'superset'
                         ? 'bg-blue-50 text-blue-700 shadow-2xs border border-blue-200/80 font-extrabold'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
                     }`}
                   >
-                    <LayoutGrid className="w-4 h-4 text-indigo-600 shrink-0" />
-                    <span>2. Tata Letak Blok Detail</span>
-                    <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200 text-slate-700 font-extrabold">
-                      {detailBlocks.length}
-                    </span>
+                    <span>2. Tata Letak &amp; Superset</span>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormActiveTab('excel')}
+                    className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      formActiveTab === 'excel'
+                        ? 'bg-blue-50 text-blue-700 shadow-2xs border border-blue-200/80 font-extrabold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                    }`}
+                  >
+                    <span>3. Template &amp; Excel</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => setFormActiveTab('kendala')}
-                    className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       formActiveTab === 'kendala'
                         ? 'bg-blue-50 text-blue-700 shadow-2xs border border-blue-200/80 font-extrabold'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
                     }`}
                   >
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>3. Isu &amp; Kendala Lapangan</span>
-                    <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200 text-slate-700 font-extrabold">
-                      {kendalaList.length}
-                    </span>
+                    <span>4. Isu &amp; Kendala</span>
                   </button>
                 </div>
               </div>
@@ -2008,10 +2437,11 @@ export const CmsAdminView: React.FC = () => {
                               }
                               className="h-10 w-full pl-3.5 pr-10 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all appearance-none cursor-pointer"
                             >
-                              <option value="pendidikan">Pilar Pendidikan</option>
-                              <option value="kesehatan">Pilar Kesehatan</option>
-                              <option value="bencana">Pilar Kebencanaan</option>
-                              <option value="kemiskinan">Pilar Penurunan Kemiskinan</option>
+                              {pillars.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name}
+                                </option>
+                              ))}
                             </select>
                             <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
                           </div>
@@ -2039,6 +2469,34 @@ export const CmsAdminView: React.FC = () => {
                             <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
                           </div>
                         </div>
+                      </div>
+
+                      {/* Nomor Urut Pola Z */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          Nomor Urut Tampilan Dashboard (Grid 3 Kolom - Pola Huruf Z) <span className="text-rose-600">*</span>
+                        </label>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="number"
+                            min={1}
+                            required
+                            value={formData.order}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                order: Math.max(1, parseInt(e.target.value, 10) || 1),
+                              }))
+                            }
+                            className="h-10 w-28 px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 tabular-nums hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                          />
+                          <div className="px-3 py-2 rounded-xl bg-blue-50 border border-blue-200/80 text-blue-900 text-xs font-bold">
+                            Posisi Grid: {getGridZPositionLabel(formData.order)}
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Pola huruf Z: <strong>#1 Kiri</strong> &rarr; <strong>#2 Tengah</strong> &rarr; <strong>#3 Kanan</strong>, lalu baris berikutnya <strong>#4 Kiri Bawah</strong> &rarr; <strong>#5 Tengah</strong> &rarr; <strong>#6 Kanan</strong>.
+                        </p>
                       </div>
 
                       <div>
@@ -2074,10 +2532,10 @@ export const CmsAdminView: React.FC = () => {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
                         <div>
                           <h2 className="text-sm font-bold text-slate-900">
-                            Capaian &amp; Target (Kartu Ringkasan Dashboard)
+                            Metrik Kartu Depan Dashboard
                           </h2>
                           <p className="text-[11px] text-slate-500 mt-0.5">
-                            Data metrik utama yang tampil pada kartu dashboard depan.
+                            Atur angka capaian realisasi, target sasaran, dan satuan unit yang tampil pada kartu ringkasan dashboard depan.
                           </p>
                         </div>
 
@@ -2086,38 +2544,35 @@ export const CmsAdminView: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => setMetricType('number')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                               metricType === 'number'
                                 ? 'bg-white text-blue-700 shadow-2xs font-extrabold'
                                 : 'text-slate-600 hover:text-slate-900'
                             }`}
                           >
-                            <Hash className="h-3.5 w-3.5" />
-                            <span>Angka / Jumlah</span>
+                            Angka / Jumlah
                           </button>
                           <button
                             type="button"
                             onClick={() => setMetricType('percent')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                               metricType === 'percent'
                                 ? 'bg-white text-blue-700 shadow-2xs font-extrabold'
                                 : 'text-slate-600 hover:text-slate-900'
                             }`}
                           >
-                            <Percent className="h-3.5 w-3.5" />
-                            <span>Persen (%)</span>
+                            Persen (%)
                           </button>
                           <button
                             type="button"
                             onClick={() => setMetricType('text')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                               metricType === 'text'
                                 ? 'bg-white text-blue-700 shadow-2xs font-extrabold'
                                 : 'text-slate-600 hover:text-slate-900'
                             }`}
                           >
-                            <Type className="h-3.5 w-3.5" />
-                            <span>Kualitatif</span>
+                            Kualitatif
                           </button>
                         </div>
                       </div>
@@ -2125,7 +2580,7 @@ export const CmsAdminView: React.FC = () => {
                       {/* FORM FIELDS PER METRIC TYPE */}
                       {metricType === 'number' && (
                         <div className="space-y-4">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                                 Satuan Unit <span className="text-rose-600">*</span>
@@ -2158,19 +2613,6 @@ export const CmsAdminView: React.FC = () => {
                                 </select>
                                 <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
                               </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                Status Realisasi
-                              </label>
-                              <input
-                                type="text"
-                                value={formData.status}
-                                onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
-                                placeholder="Contoh: Realisasi 2026"
-                                className="h-10 w-full px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
-                              />
                             </div>
                           </div>
 
@@ -2300,28 +2742,28 @@ export const CmsAdminView: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Deskripsi & Visibilitas */}
+                    {/* Judul & Deskripsi Program */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
                       <h2 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">
-                        Keterangan &amp; Visibilitas
+                        Judul &amp; Deskripsi Program
                       </h2>
 
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                          Keterangan Ringkas (Subtext pada Kartu)
+                          Sub-judul / Ringkasan Program
                         </label>
                         <textarea
                           rows={2}
                           value={formData.subtext}
                           onChange={(e) => setFormData((prev) => ({ ...prev, subtext: e.target.value }))}
-                          placeholder="Keterangan singkat indikator..."
+                          placeholder="Ringkasan singkat capaian dan fokus program..."
                           className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
                         />
                       </div>
 
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                          Deskripsi Lengkap Kebijakan / Program
+                          Deskripsi Lengkap Program
                         </label>
                         <textarea
                           rows={3}
@@ -2353,278 +2795,348 @@ export const CmsAdminView: React.FC = () => {
                   </div>
                 )}
 
-                {/* TAB 2: TATA LETAK & BLOK DETAIL (DASHBOARD DINAMIS) */}
-                {formActiveTab === 'blocks' && (
+                {/* TAB 2: EMBED APACHE SUPERSET */}
+                {formActiveTab === 'superset' && (
                   <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-5">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-6">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                         <div>
-                          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                            <LayoutGrid className="w-4 h-4 text-blue-600" />
-                            <span>Tata Letak Blok Detail</span>
+                          <h2 className="text-sm font-bold text-slate-900">
+                            Embed Apache Superset
                           </h2>
-                          <p className="text-[11px] text-slate-500 mt-0.5">
-                            Kelola modul visual dan analitik yang tampil pada halaman detail indikator ini.
+                          <p className="text-[11px] text-slate-600 mt-1">
+                            Salin kode iframe atau URL eksplorasi Superset analitik resmi Kemenko PMK untuk disematkan di halaman detail program.
                           </p>
                         </div>
 
-                        {/* Dropdown Tambah Modul Blok */}
-                        <div className="relative">
-                          <button
-                            type="button"
-                            onClick={() => setIsAddBlockOpen((prev) => !prev)}
-                            className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs inline-flex items-center gap-2 transition-all cursor-pointer shadow-xs"
-                          >
-                            <Plus className="w-4 h-4 stroke-[2.5]" />
-                            <span>Tambah Modul Blok</span>
-                            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isAddBlockOpen ? 'rotate-180' : ''}`} />
-                          </button>
+                        {supersetEmbed.updatedAt && (
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium">
+                            <span>
+                              Terakhir dimutakhirkan: {formatIndonesianDateTime(supersetEmbed.updatedAt)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
 
-                          {isAddBlockOpen && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-30"
-                                onClick={() => setIsAddBlockOpen(false)}
-                              />
-                              <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl border border-slate-200 shadow-xl py-1.5 z-40">
-                                <div className="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                                  Pilih Modul Blok:
-                                </div>
-                                {[
-                                  { type: 'kpi_cards' as BlockType, label: 'KPI Cards', desc: 'Ringkasan kartu metrik & capaian', icon: BarChart3 },
-                                  { type: 'spatial_map' as BlockType, label: 'Peta Spasial', desc: 'Peta sebaran titik lokasi program', icon: MapPin },
-                                  { type: 'category_bars' as BlockType, label: 'Bar Kategori', desc: 'Grafik batang per kategori / kerusakan', icon: Layers },
-                                  { type: 'milestone_pipeline' as BlockType, label: 'Pipeline Tahapan', desc: 'Tracking tahapan kesiapan milestone', icon: Sliders },
-                                  { type: 'progress_metrics' as BlockType, label: 'Progres Fisik & Keu', desc: 'Perbandingan realisasi 2025 vs 2026', icon: TrendingDown },
-                                  { type: 'watchlist' as BlockType, label: 'Watchlist Isu', desc: 'Daftar lokasi prioritas & tindak lanjut', icon: AlertTriangle },
-                                  { type: 'insight_callout' as BlockType, label: 'Insight Utama', desc: 'Kotak temuan eksekutif 3 poin', icon: FileText },
-                                ].map((item) => {
-                                  const ItemIcon = item.icon;
-                                  return (
-                                    <button
-                                      key={item.type}
-                                      type="button"
-                                      onClick={() => {
-                                        handleAddBlock(item.type);
-                                        setIsAddBlockOpen(false);
-                                      }}
-                                      className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-start gap-2.5 transition-colors cursor-pointer group"
-                                    >
-                                      <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                        <ItemIcon className="w-3.5 h-3.5 stroke-[2]" />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="text-xs font-bold text-slate-800 group-hover:text-blue-700 transition-colors">
-                                          {item.label}
-                                        </div>
-                                        <div className="text-[11px] text-slate-400 truncate">
-                                          {item.desc}
-                                        </div>
-                                      </div>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </>
+                      {/* Input Iframe Code / URL / UUID */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-700 block">
+                          Kode Tag &lt;iframe&gt; / Tautan Superset / UUID
+                        </label>
+                        <textarea
+                          rows={4}
+                          value={supersetEmbed.iframeCode || supersetEmbed.srcUrl || supersetEmbed.url || ''}
+                          onChange={(e) => handleSupersetEmbedCodeChange(e.target.value)}
+                          placeholder='<iframe width="600" height="400" seamless frameBorder="0" scrolling="no" src="https://superset.kemenkopmk.go.id/superset/explore/p/BQpgLPvgJMo/?standalone=1&height=400"></iframe> atau tempel URL langsung'
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-hidden focus:border-[#4F83CC] focus:bg-white transition-colors"
+                        />
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 flex-wrap gap-2">
+                          <span className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-700">URL Terdeteksi:</span>
+                            <span className="text-blue-700 font-mono truncate max-w-md">
+                              {supersetEmbed.srcUrl || supersetEmbed.url || 'Belum ada URL'}
+                            </span>
+                          </span>
+                          {supersetEmbed.uuid && (
+                            <span className="font-mono bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md font-bold text-[10px]">
+                              UUID: {supersetEmbed.uuid}
+                            </span>
                           )}
                         </div>
                       </div>
 
-                      {/* Block List */}
-                      {detailBlocks.length === 0 ? (
-                        <div className="p-8 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-2">
-                          <p className="text-xs font-bold text-slate-700">Belum Ada Blok Modular Khusus</p>
-                          <p className="text-xs text-slate-500 max-w-md mx-auto">
-                            Klik tombol <strong>+ Tambah Modul Blok</strong> di atas untuk menambahkan modul visual ke dalam halaman detail indikator ini.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {detailBlocks.map((block, idx) => (
-                            <div
-                              key={block.id || idx}
-                              className={`p-4 rounded-xl border transition-all ${
-                                block.enabled !== false
-                                  ? 'bg-white border-slate-200 shadow-2xs'
-                                  : 'bg-slate-50/70 border-slate-200 opacity-60'
-                              }`}
+                      {/* Actions toolbar */}
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100 flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          {(supersetEmbed.srcUrl || supersetEmbed.url) && (
+                            <a
+                              href={supersetEmbed.srcUrl || supersetEmbed.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="h-8 px-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                             >
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                {/* Reorder & Identity */}
-                                <div className="flex items-center gap-2">
-                                  {/* Reorder Buttons */}
-                                  <div className="inline-flex rounded-lg border border-slate-200 bg-white shadow-2xs overflow-hidden">
-                                    <button
-                                      type="button"
-                                      disabled={idx === 0}
-                                      onClick={() => handleMoveBlock(idx, 'up')}
-                                      className="h-7 w-7 flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-25 disabled:pointer-events-none cursor-pointer transition-colors"
-                                      title="Geser ke atas"
-                                    >
-                                      <ArrowUp className="w-3.5 h-3.5" />
-                                    </button>
-                                    <div className="w-px bg-slate-200" />
-                                    <button
-                                      type="button"
-                                      disabled={idx === detailBlocks.length - 1}
-                                      onClick={() => handleMoveBlock(idx, 'down')}
-                                      className="h-7 w-7 flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-25 disabled:pointer-events-none cursor-pointer transition-colors"
-                                      title="Geser ke bawah"
-                                    >
-                                      <ArrowDown className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-
-                                  <span className="h-7 px-2.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200">
-                                    #{idx + 1}
-                                  </span>
-
-                                  <span className="h-7 px-2.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] uppercase tracking-wider flex items-center border border-blue-200/80">
-                                    {block.type.replace('_', ' ')}
-                                  </span>
-                                </div>
-
-                                {/* Width selector & Action Buttons */}
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  {/* Width Toggle */}
-                                  <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs font-semibold">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleChangeBlockWidth(idx, 'third')}
-                                      className={`h-6 px-2.5 rounded-md transition-all cursor-pointer ${
-                                        block.width === 'third'
-                                          ? 'bg-white text-blue-700 font-bold shadow-2xs border border-slate-200/60'
-                                          : 'text-slate-600 hover:text-slate-900'
-                                      }`}
-                                      title="Lebar 33% (1/3 baris di desktop)"
-                                    >
-                                      33%
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleChangeBlockWidth(idx, 'half')}
-                                      className={`h-6 px-2.5 rounded-md transition-all cursor-pointer ${
-                                        block.width === 'half'
-                                          ? 'bg-white text-blue-700 font-bold shadow-2xs border border-slate-200/60'
-                                          : 'text-slate-600 hover:text-slate-900'
-                                      }`}
-                                      title="Lebar 50% (1/2 baris di desktop)"
-                                    >
-                                      50%
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleChangeBlockWidth(idx, 'full')}
-                                      className={`h-6 px-2.5 rounded-md transition-all cursor-pointer ${
-                                        block.width === 'full'
-                                          ? 'bg-white text-blue-700 font-bold shadow-2xs border border-slate-200/60'
-                                          : 'text-slate-600 hover:text-slate-900'
-                                      }`}
-                                      title="Lebar 100% (Penuh baris)"
-                                    >
-                                      100%
-                                    </button>
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => openEditBlockJson(idx)}
-                                    className="h-7 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                                    title="Edit data dan parameter blok"
-                                  >
-                                    <Code className="w-3.5 h-3.5 text-slate-500" />
-                                    <span>Kelola Data</span>
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleBlock(idx)}
-                                    className={`h-7 px-2.5 rounded-lg font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer border shadow-2xs ${
-                                      block.enabled !== false
-                                        ? 'bg-white border-emerald-300 text-emerald-700 hover:bg-emerald-50'
-                                        : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'
-                                    }`}
-                                  >
-                                    <span className={`w-1.5 h-1.5 rounded-full ${block.enabled !== false ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                                    <span>{block.enabled !== false ? 'Aktif' : 'Nonaktif'}</span>
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveBlock(idx)}
-                                    className="h-7 w-7 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-600 flex items-center justify-center cursor-pointer transition-colors shadow-2xs"
-                                    title="Hapus blok"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Block Title & Subtitle inputs */}
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 mt-3 border-t border-slate-100">
-                                <div>
-                                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                    Judul Blok
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={block.title || ''}
-                                    onChange={(e) => handleUpdateBlockMeta(idx, 'title', e.target.value)}
-                                    placeholder="Contoh: PERSEBARAN SEKOLAH SASARAN"
-                                    className="h-9 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                    Subtitle / Keterangan Modul
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={block.subtitle || ''}
-                                    onChange={(e) => handleUpdateBlockMeta(idx, 'subtitle', e.target.value)}
-                                    placeholder="Contoh: Sebaran sekolah penerima program berdasarkan titik lokasi"
-                                    className="h-9 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 hover:border-slate-300 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Dedicated quick action for KPI Cards */}
-                              {block.type === 'kpi_cards' && (
-                                <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between bg-blue-50/70 p-3 rounded-xl border border-blue-200/80">
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                                      <BarChart3 className="w-4 h-4" />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <span className="text-xs font-bold text-slate-900 block truncate">
-                                        Kartu Metrik: {((block.data as KpiCardsBlockData)?.items || []).length} dari maksimal 5 kartu
-                                      </span>
-                                      <span className="text-[11px] text-slate-500 block truncate">
-                                        {((block.data as KpiCardsBlockData)?.items || [])
-                                          .map((it) => it.label)
-                                          .join(' • ') || 'Belum ada kartu metrik'}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => openEditKpiCardsModal(idx)}
-                                    className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
-                                  >
-                                    <Sliders className="w-3.5 h-3.5" />
-                                    <span>Atur Kartu Metrik (1–5)</span>
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>Uji Tautan di Tab Baru</span>
+                            </a>
+                          )}
                         </div>
-                      )}
+
+                        {(supersetEmbed.srcUrl || supersetEmbed.url || supersetEmbed.uuid) && (
+                          <button
+                            type="button"
+                            onClick={handleClearSupersetEmbed}
+                            className="h-8 px-3 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Kosongkan Embed</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Live Preview Box */}
+                      <div className="pt-2 space-y-2">
+                        <span className="text-xs font-bold text-slate-700 block">
+                          Pratinjau Tampilan Embed Superset:
+                        </span>
+                        {supersetEmbed.srcUrl || supersetEmbed.url ? (
+                          <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-100">
+                            <iframe
+                              src={supersetEmbed.srcUrl || supersetEmbed.url}
+                              width="100%"
+                              height={450}
+                              seamless
+                              frameBorder="0"
+                              scrolling="no"
+                              title="Pratinjau Superset"
+                              className="w-full bg-white"
+                            />
+                          </div>
+                        ) : (
+                          <div className="p-8 text-center bg-slate-50 border border-dashed border-slate-200 rounded-xl space-y-1">
+                            <p className="text-xs font-semibold text-slate-600">
+                              Belum ada tautan Superset yang disematkan.
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                              Jika belum ada URL/kode embed, visualisasi Superset tidak akan ditampilkan pada halaman detail (tanpa ruang kosong).
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {/* TAB 3: ISU & KENDALA LAPANGAN */}
+                {/* TAB 3: TEMPLATE & DATA EXCEL */}
+                {formActiveTab === 'excel' && (
+                  <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                        <div>
+                          <h2 className="text-sm font-bold text-slate-900">
+                            Template &amp; Data Matriks Excel
+                          </h2>
+                          <p className="text-[11px] text-slate-600 mt-0.5">
+                            Kelola berbagai section tabel data indikator. Superadmin dapat mengunggah file template Excel, mengunduh template untuk diisi, dan mengunggah data hasil isian.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAddExcelTableSection}
+                          className="h-8 px-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto shrink-0"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Tambah Section Tabel Excel</span>
+                        </button>
+                      </div>
+
+                      {/* Sections List */}
+                      <div className="space-y-6 pt-2">
+                        {customExcelTables.map((sec, secIdx) => (
+                          <div
+                            key={sec.id || secIdx}
+                            className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-5"
+                          >
+                            {/* Section Header */}
+                            <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-extrabold flex items-center justify-center">
+                                  #{secIdx + 1}
+                                </span>
+                                <h3 className="text-xs font-bold text-slate-900">
+                                  {sec.title || `Section Tabel #${secIdx + 1}`}
+                                </h3>
+                              </div>
+
+                              {customExcelTables.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveExcelTableSection(secIdx)}
+                                  className="h-7 px-2.5 rounded-lg text-rose-600 hover:text-rose-800 hover:bg-rose-50 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Hapus Section</span>
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Section Title & Description */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                  Judul Section / Tabel <span className="text-rose-600">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={sec.title}
+                                  onChange={(e) => handleUpdateSectionTitle(secIdx, e.target.value)}
+                                  placeholder="Contoh: Matriks Revitalisasi Sekolah dan Madrasah"
+                                  className="h-9 w-full px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-hidden focus:border-[#4F83CC]"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                  Keterangan / Deskripsi Tabel
+                                </label>
+                                <input
+                                  type="text"
+                                  value={sec.description || ''}
+                                  onChange={(e) => handleUpdateSectionDesc(secIdx, e.target.value)}
+                                  placeholder="Contoh: Rincian kebutuhan dan indikasi data khusus"
+                                  className="h-9 w-full px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:border-[#4F83CC]"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Template File & Download/Upload Controls */}
+                            <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-3">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div>
+                                  <div className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                                    <span>File Template Excel:</span>
+                                    {sec.templateFileName ? (
+                                      <span className="font-mono text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md font-bold">
+                                        {sec.templateFileName}
+                                      </span>
+                                    ) : (
+                                      <span className="text-[11px] text-slate-500 font-medium">
+                                        Template Standar Revitalisasi
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-slate-500 mt-0.5">
+                                    Superadmin dapat mengunggah file template kustom (.xlsx / .csv) atau menggunakan template standar.
+                                  </p>
+                                </div>
+
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {/* Download Template Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDownloadSectionTemplate(secIdx)}
+                                    className="h-8 px-3 rounded-lg bg-[#70ad47] hover:bg-[#5f933c] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                                  >
+                                    <Download className="w-3.5 h-3.5" />
+                                    <span>Unduh Template</span>
+                                  </button>
+
+                                  {/* Upload Custom Template File */}
+                                  <label className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200">
+                                    <UploadCloud className="w-3.5 h-3.5" />
+                                    <span>Unggah Template Baru</span>
+                                    <input
+                                      type="file"
+                                      accept=".csv,.xlsx,.xls,.txt"
+                                      onChange={(e) => handleUploadTemplateFile(secIdx, e)}
+                                      className="hidden"
+                                    />
+                                  </label>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Upload Data Hasil Isian Dropzone */}
+                            <div className="space-y-3">
+                              <label className="text-xs font-bold text-slate-800 block">
+                                Unggah File Data Terisi (.csv / .xlsx):
+                              </label>
+                              <div className="relative border-2 border-dashed border-emerald-300 hover:border-emerald-500 rounded-xl p-5 bg-emerald-50/20 text-center transition-colors cursor-pointer">
+                                <input
+                                  type="file"
+                                  accept=".csv,.xlsx,.xls,.txt"
+                                  onChange={(e) => handleUploadDataFile(secIdx, e)}
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <div className="flex flex-col items-center justify-center gap-1.5 pointer-events-none">
+                                  <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                                    <UploadCloud className="w-4 h-4" />
+                                  </div>
+                                  <div className="text-xs font-bold text-slate-800">
+                                    Klik atau seret file CSV/Excel hasil isian template ke sini
+                                  </div>
+                                  <div className="text-[11px] text-slate-500">
+                                    Format didukung: CSV UTF-8 atau Excel (.xlsx)
+                                  </div>
+                                </div>
+                              </div>
+
+                              {excelUploadFeedbackMap[secIdx] && (
+                                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-medium text-emerald-800 flex items-center gap-2">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                  <span>{excelUploadFeedbackMap[secIdx]}</span>
+                                </div>
+                              )}
+
+                              {/* Data Preview */}
+                              {sec.rows && sec.rows.length > 0 && (
+                                <div className="space-y-2 pt-2">
+                                  <div className="flex items-center justify-between flex-wrap gap-2">
+                                    <span className="text-xs font-bold text-slate-800">
+                                      Pratinjau Data ({sec.rows.length} baris):
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleClearSectionData(secIdx)}
+                                      className="h-7 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      <span>Kosongkan Data Tabel</span>
+                                    </button>
+                                  </div>
+
+                                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                    <table className="w-full text-left text-xs border-collapse">
+                                      <thead>
+                                        <tr className="bg-[#70ad47] text-white font-extrabold">
+                                          {sec.columns?.map((c, i) => (
+                                            <th key={c.id || i} className="py-2.5 px-3 border-r border-[#86bc61]/40 last:border-r-0">
+                                              {c.label || c.name}
+                                            </th>
+                                          ))}
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-slate-200 bg-white">
+                                        {sec.rows.slice(0, 5).map((row, rIdx) => (
+                                          <tr key={rIdx} className={rIdx === 0 ? 'bg-[#f4f9f0]' : ''}>
+                                            {sec.columns?.map((c, cIdx) => (
+                                              <td key={c.id || cIdx} className="py-2 px-3 align-top whitespace-pre-line border-r border-slate-200/70 last:border-r-0 text-slate-800">
+                                                {row[c.key] || (c.label ? row[c.label] : '') || '—'}
+                                              </td>
+                                            ))}
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                  {sec.rows.length > 5 && (
+                                    <p className="text-[11px] text-slate-400 italic">
+                                      Menampilkan 5 baris pertama dari total {sec.rows.length} baris data.
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Add another section button at bottom */}
+                      <div className="pt-2 flex justify-center">
+                        <button
+                          type="button"
+                          onClick={handleAddExcelTableSection}
+                          className="h-9 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>+ Tambah Section Tabel Excel Baru</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 4: ISU & KENDALA LAPANGAN */}
                 {formActiveTab === 'kendala' && (
                   <div className="space-y-6">
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
@@ -2634,12 +3146,12 @@ export const CmsAdminView: React.FC = () => {
                             Kendala &amp; Catatan Pelaksanaan (Isu Strategis)
                           </h2>
                           <p className="text-[11px] text-slate-500 mt-0.5">
-                            Daftar kendala ini otomatis muncul pada popover kartu dan modal detail indikator program.
+                            Daftar isu strategis dan kendala lapangan. Tarik dan geser (drag &amp; drop) untuk mengatur urutan prioritas kendala.
                           </p>
                         </div>
                         <button
                           type="button"
-                          onClick={handleAddKendala}
+                          onClick={openAddKendalaModal}
                           className="h-8 px-3 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
                           <Plus className="h-3.5 w-3.5" />
@@ -2650,83 +3162,65 @@ export const CmsAdminView: React.FC = () => {
                       {kendalaList.length === 0 ? (
                         <div className="p-8 bg-slate-50 border border-slate-200 rounded-xl text-center text-xs text-slate-500 space-y-1">
                           <p className="font-bold text-slate-700">Belum ada kendala yang dicatat</p>
-                          <p>Klik tombol <strong>+ Tambah Kendala</strong> jika terdapat isu pelaksanaan program yang memerlukan koordinasi PMK.</p>
+                          <p>Klik tombol <strong>+ Tambah Kendala</strong> untuk menambahkan isu pelaksanaan melalui popup dialog.</p>
                         </div>
                       ) : (
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                           {kendalaList.map((k, idx) => (
                             <div
                               key={k.id || idx}
-                              className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3 relative group"
+                              draggable
+                              onDragStart={(e) => handleKendalaDragStart(e, idx)}
+                              onDragOver={(e) => handleKendalaDragOver(e, idx)}
+                              onDrop={(e) => handleKendalaDrop(e, idx)}
+                              onDragEnd={handleKendalaDragEnd}
+                              className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 transition-all cursor-grab active:cursor-grabbing ${
+                                draggedKendalaIndex === idx
+                                  ? 'opacity-40 bg-blue-50/60'
+                                  : dragOverKendalaIndex === idx
+                                  ? 'bg-blue-50/80 border-blue-500 ring-1 ring-blue-500'
+                                  : 'bg-white border-slate-200 shadow-2xs hover:border-slate-300'
+                              }`}
                             >
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
-                                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                                  <span>Kendala #{idx + 1}</span>
+                              <div className="flex items-center gap-3 select-none min-w-0">
+                                <GripVertical className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span className="w-6 h-6 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 font-extrabold text-xs flex items-center justify-center shrink-0 tabular-nums">
+                                  #{idx + 1}
                                 </span>
+                                <div className="min-w-0 space-y-0.5">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs font-bold text-slate-900 truncate">
+                                      {k.title}
+                                    </span>
+                                    {k.klTerkait && (
+                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                                        {k.klTerkait}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-slate-500 line-clamp-1">
+                                    {k.kendala}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditKendalaModal(idx)}
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                  title="Edit Kendala"
+                                >
+                                  <Pencil className="h-3.5 w-3.5 stroke-[2]" />
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveKendala(idx)}
-                                  className="text-xs text-rose-600 hover:text-rose-800 font-semibold cursor-pointer"
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                  title="Hapus Kendala"
                                 >
-                                  Hapus Kendala
+                                  <Trash2 className="h-3.5 w-3.5 stroke-[2]" />
                                 </button>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                    Ringkasan / Judul Kendala <span className="text-rose-600">*</span>
-                                  </label>
-                                  <input
-                                    type="text"
-                                    required
-                                    value={k.title}
-                                    onChange={(e) => handleUpdateKendala(idx, 'title', e.target.value)}
-                                    placeholder="Contoh: Usulan Anggaran Belanja Tambahan (ABT)"
-                                    className="h-9 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
-                                  />
-                                </div>
-
-                                <div>
-                                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                    K/L Terkait
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={k.klTerkait || ''}
-                                    onChange={(e) => handleUpdateKendala(idx, 'klTerkait', e.target.value)}
-                                    placeholder="Contoh: Kemenkeu, Kemenag"
-                                    className="h-9 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
-                                  />
-                                </div>
-                              </div>
-
-                              <div>
-                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                  Uraian Lengkap Kendala <span className="text-rose-600">*</span>
-                                </label>
-                                <textarea
-                                  rows={2}
-                                  required
-                                  value={k.kendala}
-                                  onChange={(e) => handleUpdateKendala(idx, 'kendala', e.target.value)}
-                                  placeholder="Jelaskan kendala operasional, administratif, atau regulasi yang dihadapi..."
-                                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                  Tindak Lanjut / Rekomendasi Orkestrasi PMK
-                                </label>
-                                <textarea
-                                  rows={2}
-                                  value={k.tindakLanjut}
-                                  onChange={(e) => handleUpdateKendala(idx, 'tindakLanjut', e.target.value)}
-                                  placeholder="Langkah koordinasi dan tindak lanjut penyelesaian..."
-                                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-900 focus:outline-hidden focus:border-[#4F83CC]"
-                                />
                               </div>
                             </div>
                           ))}
@@ -2738,8 +3232,8 @@ export const CmsAdminView: React.FC = () => {
 
                 {/* Form Action & Step Navigation Footer */}
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    {formActiveTab === 'blocks' && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {formActiveTab === 'superset' && (
                       <button
                         type="button"
                         onClick={() => setFormActiveTab('info')}
@@ -2748,25 +3242,43 @@ export const CmsAdminView: React.FC = () => {
                         ← Kembali ke Ringkasan
                       </button>
                     )}
+                    {formActiveTab === 'excel' && (
+                      <button
+                        type="button"
+                        onClick={() => setFormActiveTab('superset')}
+                        className="h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
+                      >
+                        ← Kembali ke Embed Superset
+                      </button>
+                    )}
                     {formActiveTab === 'kendala' && (
                       <button
                         type="button"
-                        onClick={() => setFormActiveTab('blocks')}
+                        onClick={() => setFormActiveTab('excel')}
                         className="h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
                       >
-                        ← Kembali ke Tata Letak
+                        ← Kembali ke Data Excel &amp; Peta
                       </button>
                     )}
                     {formActiveTab === 'info' && (
                       <button
                         type="button"
-                        onClick={() => setFormActiveTab('blocks')}
+                        onClick={() => setFormActiveTab('superset')}
                         className="h-10 px-4 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold cursor-pointer transition-colors"
                       >
-                        Lanjut ke Tata Letak Detail →
+                        Lanjut ke Embed Superset →
                       </button>
                     )}
-                    {formActiveTab === 'blocks' && (
+                    {formActiveTab === 'superset' && (
+                      <button
+                        type="button"
+                        onClick={() => setFormActiveTab('excel')}
+                        className="h-10 px-4 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold cursor-pointer transition-colors"
+                      >
+                        Lanjut ke Template &amp; Data Excel →
+                      </button>
+                    )}
+                    {formActiveTab === 'excel' && (
                       <button
                         type="button"
                         onClick={() => setFormActiveTab('kendala')}
@@ -3159,7 +3671,7 @@ export const CmsAdminView: React.FC = () => {
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
                     {/* Pillar Filters */}
                     <div className="flex flex-wrap items-center gap-1.5">
-                      {PILLAR_NAV_CONFIGS.map((p) => {
+                      {[{ id: 'all', label: 'Semua Pilar' }, ...pillars.map((p) => ({ id: p.id, label: p.name }))].map((p) => {
                         const isSelected = pdfPillarFilter === p.id;
                         const count =
                           p.id === 'all'
@@ -3367,7 +3879,222 @@ export const CmsAdminView: React.FC = () => {
         </div>
       </main>
 
-      {/* USER MANAGEMENT MODAL (CREATE / EDIT USER) */}
+      {/* PILLAR MANAGEMENT MODAL (CREATE / EDIT PILLAR) */}
+      {isPillarModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {editingPillar ? `Edit Pilar: ${editingPillar.name}` : 'Tambah Pilar Baru'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Tentukan nama pilar, ID unik, dan deskripsi pilar koordinasi.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPillarModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePillar} className="p-6 space-y-4">
+              {pillarError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold text-rose-800">
+                  {pillarError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Nama Pilar <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={pillarFormData.name}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    setPillarFormData((prev) => ({
+                      ...prev,
+                      name,
+                      id: editingPillar ? prev.id : name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+                    }));
+                  }}
+                  placeholder="Contoh: Pendidikan dan Kebudayaan"
+                  className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  ID / Slug Pilar <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  disabled={!!editingPillar}
+                  value={pillarFormData.id}
+                  onChange={(e) =>
+                    setPillarFormData((prev) => ({
+                      ...prev,
+                      id: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''),
+                    }))
+                  }
+                  placeholder="Contoh: pendidikan"
+                  className="h-10 w-full px-3.5 bg-slate-50 disabled:bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Digunakan sebagai kode identitas sistem unik (huruf kecil &amp; strip).
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Deskripsi Pilar
+                </label>
+                <textarea
+                  rows={3}
+                  value={pillarFormData.description}
+                  onChange={(e) => setPillarFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder="Uraian ruang lingkup pilar..."
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
+                />
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsPillarModalOpen(false)}
+                  className="h-10 px-4 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingPillar}
+                  className="h-10 px-5 rounded-xl bg-[#4F83CC] hover:bg-[#3f72bb] text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:bg-slate-300"
+                >
+                  {isSavingPillar ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4" />
+                      <span>{editingPillar ? 'Simpan Perubahan' : 'Buat Pilar'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* KENDALA MANAGEMENT MODAL (CREATE / EDIT KENDALA) */}
+      {isKendalaModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {editingKendalaIndex !== null ? 'Edit Kendala Pelaksanaan' : 'Tambah Kendala Baru'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Isi rincian kendala dan rekomendasi tindak lanjut orkestrasi PMK.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsKendalaModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveKendalaModal} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Ringkasan / Judul Kendala <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={kendalaFormData.title}
+                  onChange={(e) => setKendalaFormData((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder="Contoh: Usulan Anggaran Belanja Tambahan (ABT)"
+                  className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  K/L Terkait
+                </label>
+                <input
+                  type="text"
+                  value={kendalaFormData.klTerkait || ''}
+                  onChange={(e) => setKendalaFormData((prev) => ({ ...prev, klTerkait: e.target.value }))}
+                  placeholder="Contoh: Kemenkeu, Kemenag, Bappenas"
+                  className="h-10 w-full px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Uraian Lengkap Kendala <span className="text-rose-600">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={kendalaFormData.kendala}
+                  onChange={(e) => setKendalaFormData((prev) => ({ ...prev, kendala: e.target.value }))}
+                  placeholder="Jelaskan hambatan atau permasalahan yang dihadapi..."
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Tindak Lanjut / Rekomendasi Orkestrasi PMK
+                </label>
+                <textarea
+                  rows={2}
+                  value={kendalaFormData.tindakLanjut}
+                  onChange={(e) => setKendalaFormData((prev) => ({ ...prev, tindakLanjut: e.target.value }))}
+                  placeholder="Langkah penyelesaian atau arahan Menko PMK..."
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-hidden focus:border-[#4F83CC]"
+                />
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsKendalaModalOpen(false)}
+                  className="h-10 px-4 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="h-10 px-5 rounded-xl bg-[#4F83CC] hover:bg-[#3f72bb] text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                >
+                  <Check className="h-4 w-4" />
+                  <span>Simpan Kendala</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+            {/* USER MANAGEMENT MODAL (CREATE / EDIT USER) */}
       {userModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
@@ -3505,372 +4232,6 @@ export const CmsAdminView: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* KPI Cards Visual Editor Modal (1 to 5 Cards) */}
-      {editingKpiCardsIdx !== null && detailBlocks[editingKpiCardsIdx] && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
-                  <BarChart3 className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <span>Kelola Kartu Metrik Utama</span>
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                      {kpiCardsDraft.length} dari 5 Kartu
-                    </span>
-                  </h3>
-                  <p className="text-[11px] text-slate-500">
-                    Atur jumlah kartu (1 hingga maksimal 5 kartu) dan sesuaikan isi capaian, target, atau indikator lainnya.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={kpiCardsDraft.length >= 5}
-                  onClick={handleAddKpiCard}
-                  className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:cursor-not-allowed"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Tambah Kartu</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditingKpiCardsIdx(null)}
-                  className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body: Cards List */}
-            <div className="p-6 flex-1 overflow-y-auto space-y-4">
-              {kpiCardsDraft.map((card, cIdx) => {
-                const isComparator = Boolean(
-                  (card.val2025 !== undefined || card.val2026 !== undefined) &&
-                    !(card.value && card.val2025 === undefined && card.val2026 === undefined)
-                );
-
-                return (
-                  <div
-                    key={card.id || `draft_${cIdx}`}
-                    className="bg-slate-50/80 border border-slate-200/90 rounded-2xl p-4 sm:p-5 space-y-3.5 transition-all hover:border-slate-300"
-                  >
-                    {/* Card Top Row */}
-                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-blue-700 bg-blue-100/90 px-2 py-0.5 rounded-md border border-blue-200">
-                          #{cIdx + 1}
-                        </span>
-                        <span className="text-xs font-extrabold text-slate-800">
-                          {card.label || `Kartu Metrik ${cIdx + 1}`}
-                        </span>
-                      </div>
-
-                      {/* Reorder and Delete controls */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          disabled={cIdx === 0}
-                          onClick={() => handleMoveKpiCard(cIdx, 'up')}
-                          className="h-7 w-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white text-slate-600 flex items-center justify-center cursor-pointer disabled:cursor-not-allowed shadow-2xs"
-                          title="Geser ke kiri / urutan sebelumnya"
-                        >
-                          <ArrowUp className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={cIdx === kpiCardsDraft.length - 1}
-                          onClick={() => handleMoveKpiCard(cIdx, 'down')}
-                          className="h-7 w-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white text-slate-600 flex items-center justify-center cursor-pointer disabled:cursor-not-allowed shadow-2xs"
-                          title="Geser ke kanan / urutan selanjutnya"
-                        >
-                          <ArrowDown className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={kpiCardsDraft.length <= 1}
-                          onClick={() => handleRemoveKpiCard(cIdx)}
-                          className="h-7 w-7 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 disabled:opacity-40 disabled:hover:bg-white text-slate-400 hover:text-rose-600 flex items-center justify-center cursor-pointer disabled:cursor-not-allowed shadow-2xs ml-1"
-                          title="Hapus kartu ini"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Field 1: Label / Judul Metrik with quick presets */}
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                        Judul / Label Metrik <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={card.label || ''}
-                        onChange={(e) => handleUpdateKpiCard(cIdx, { label: e.target.value })}
-                        placeholder="Contoh: Realisasi Berjalan, Target Kinerja, Alokasi Anggaran"
-                        className="h-9 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
-                      />
-                      {/* Quick preset suggestions */}
-                      <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                        <span className="text-[10px] text-slate-400 font-medium">Pilihan cepat:</span>
-                        {[
-                          'Realisasi Berjalan',
-                          'Target Kinerja',
-                          'Tingkat Capaian',
-                          'Instansi Pelaksana',
-                          'Alokasi Anggaran',
-                          'Penerima Manfaat',
-                        ].map((preset) => (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => handleUpdateKpiCard(cIdx, { label: preset })}
-                            className="text-[10px] font-medium text-slate-600 bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 px-2 py-0.5 rounded border border-slate-200 transition-colors cursor-pointer"
-                          >
-                            {preset}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Field 2: Tipe Format (Komparasi 2 Tahun vs Nilai Tunggal) */}
-                    <div className="pt-2 border-t border-slate-200/50">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[11px] font-bold text-slate-700">Format Nilai</span>
-                        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-xs font-semibold">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleUpdateKpiCard(cIdx, {
-                                val2025: card.val2025 || '—',
-                                val2026: card.val2026 || card.value || '0',
-                                value: undefined,
-                              })
-                            }
-                            className={`h-6 px-2.5 rounded-md transition-all cursor-pointer text-[11px] ${
-                              isComparator
-                                ? 'bg-blue-600 text-white font-bold shadow-2xs'
-                                : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                          >
-                            Komparasi 2025 vs 2026
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleUpdateKpiCard(cIdx, {
-                                value: card.val2026 || card.value || '100%',
-                                target: card.target || '100%',
-                                val2025: undefined,
-                                val2026: undefined,
-                              })
-                            }
-                            className={`h-6 px-2.5 rounded-md transition-all cursor-pointer text-[11px] ${
-                              !isComparator
-                                ? 'bg-blue-600 text-white font-bold shadow-2xs'
-                                : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                          >
-                            Nilai Tunggal / Target
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Values based on chosen format */}
-                      {isComparator ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1">
-                              Nilai Baseline 2025 (Opsional, isi &apos;—&apos; jika belum ada)
-                            </label>
-                            <input
-                              type="text"
-                              value={card.val2025 !== undefined ? String(card.val2025) : '—'}
-                              onChange={(e) => handleUpdateKpiCard(cIdx, { val2025: e.target.value })}
-                              placeholder="—"
-                              className="h-8 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-600"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-blue-700 mb-1">
-                              Nilai Berjalan 2026
-                            </label>
-                            <input
-                              type="text"
-                              value={card.val2026 !== undefined ? String(card.val2026) : ''}
-                              onChange={(e) => handleUpdateKpiCard(cIdx, { val2026: e.target.value })}
-                              placeholder="Contoh: 30, 15.400, Kemendikdasmen"
-                              className="h-8 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-600"
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-700 mb-1">
-                              Nilai / Capaian Saat Ini
-                            </label>
-                            <input
-                              type="text"
-                              value={card.value !== undefined ? String(card.value) : ''}
-                              onChange={(e) => handleUpdateKpiCard(cIdx, { value: e.target.value })}
-                              placeholder="Contoh: 30 Sekolah, 84%"
-                              className="h-8 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-600"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1">
-                              Target Kinerja (Opsional)
-                            </label>
-                            <input
-                              type="text"
-                              value={card.target !== undefined ? String(card.target) : ''}
-                              onChange={(e) => handleUpdateKpiCard(cIdx, { target: e.target.value })}
-                              placeholder="Contoh: 35 Sekolah, 100%"
-                              className="h-8 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-600"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Field 3: Unit & Subtext */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200/50">
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-700 mb-1">
-                          Satuan / Unit Data
-                        </label>
-                        <input
-                          type="text"
-                          value={card.unit || ''}
-                          onChange={(e) => handleUpdateKpiCard(cIdx, { unit: e.target.value })}
-                          placeholder="Contoh: Sekolah, %, Ruang, K/L, Jiwa"
-                          className="h-8 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-600"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-700 mb-1">
-                          Keterangan Bawah / Subteks
-                        </label>
-                        <input
-                          type="text"
-                          value={card.subtext || ''}
-                          onChange={(e) => handleUpdateKpiCard(cIdx, { subtext: e.target.value })}
-                          placeholder="Contoh: Target Pelaksanaan 2026, Tahap Berjalan"
-                          className="h-8 w-full px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-600"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={switchToJsonEditorFromKpi}
-                className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Code className="w-3.5 h-3.5" />
-                <span>Beralih ke Editor JSON Lanjutan</span>
-              </button>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingKpiCardsIdx(null)}
-                  className="h-9 px-4 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-white transition-colors cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveKpiCards}
-                  className="h-9 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>Simpan Perubahan ({kpiCardsDraft.length} Kartu)</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Block JSON Editor Modal */}
-      {editingBlockJsonIdx !== null && detailBlocks[editingBlockJsonIdx] && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Code className="w-4 h-4 text-blue-600" />
-                  <span>Editor Data Blok: {detailBlocks[editingBlockJsonIdx].title || detailBlocks[editingBlockJsonIdx].type}</span>
-                </h3>
-                <p className="text-[11px] text-slate-500">
-                  Ubah parameter, titik lokasi peta, atau nilai data dalam format JSON terstruktur.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingBlockJsonIdx(null)}
-                className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-6 flex-1 overflow-y-auto space-y-3">
-              {blockJsonError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-semibold flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 shrink-0" />
-                  <span>{blockJsonError}</span>
-                </div>
-              )}
-              <textarea
-                value={blockJsonText}
-                onChange={(e) => {
-                  setBlockJsonText(e.target.value);
-                  setBlockJsonError(null);
-                }}
-                rows={16}
-                className="w-full p-4 font-mono text-xs bg-slate-900 text-emerald-400 rounded-xl border border-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500 leading-relaxed [tab-size:2]"
-                spellCheck={false}
-              />
-            </div>
-
-            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-[11px] text-slate-500 font-medium">
-                Tipe blok: <code className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-800">{detailBlocks[editingBlockJsonIdx].type}</code>
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingBlockJsonIdx(null)}
-                  className="h-9 px-4 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-white transition-colors cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveBlockJson}
-                  className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>Simpan Data Blok</span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}

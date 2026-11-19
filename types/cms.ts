@@ -1,35 +1,5 @@
 export type CmsCardCategory = 'PKPN' | 'Isu Strategis' | 'RPJMN' | string;
 
-export type BlockWidth = 'full' | 'half' | 'third';
-
-export type BlockType =
-  | 'kpi_cards'
-  | 'spatial_map'
-  | 'category_bars'
-  | 'milestone_pipeline'
-  | 'progress_metrics'
-  | 'watchlist'
-  | 'insight_callout'
-  | 'annual_table';
-
-export interface KpiCardItem {
-  id: string;
-  label: string;
-  val2025?: string | number;
-  val2026?: string | number;
-  value?: string | number;
-  target?: string | number;
-  unit?: string;
-  subtext?: string;
-  delta?: string;
-  deltaType?: 'up' | 'down' | 'neutral';
-}
-
-export interface KpiCardsBlockData {
-  mode: 'single' | 'comparator' | 'multi';
-  items: KpiCardItem[];
-}
-
 export interface MapPointMarker {
   id: string;
   name: string;
@@ -50,111 +20,90 @@ export interface ProvinceAggregateItem {
   percent?: number;
 }
 
-export interface SpatialMapBlockData {
-  mapMode: 'points' | 'provinces';
-  centerLat?: number;
-  centerLng?: number;
-  zoom?: number;
-  legendTitle?: string;
-  markers?: MapPointMarker[];
-  provinceData?: ProvinceAggregateItem[];
-}
+// ---------------------------------------------------------------------------
+// Detail Page Sections & Layout Configuration
+// ---------------------------------------------------------------------------
+export type DetailSectionId =
+  | 'superset'
+  | 'custom_excel'
+  | 'spatial_map'
+  | 'kinerja_chart'
+  | 'kendala';
 
-export interface CategoryBarItem {
-  id: string;
+export interface DetailSectionOrderItem {
+  id: DetailSectionId;
   name: string;
-  val2025: number;
-  val2026: number;
-  val2025Label?: string;
-  val2026Label?: string;
-}
-
-export interface CategoryBarsBlockData {
-  chartTitle?: string;
-  description?: string;
-  unit?: string;
-  categories: CategoryBarItem[];
-}
-
-export interface MilestoneStageItem {
-  id: string;
-  name: string;
-  count: number;
-  total?: number;
-  percent?: number;
-  status?: 'completed' | 'in_progress' | 'pending';
-}
-
-export interface MilestonePipelineBlockData {
-  title?: string;
-  stages: MilestoneStageItem[];
-}
-
-export interface ProgressMetricItem {
-  id: string;
-  label: string;
-  val2025: number;
-  val2026: number;
-  deltaLabel?: string;
-  unit?: string;
-}
-
-export interface ProgressMetricsBlockData {
-  title?: string;
-  items: ProgressMetricItem[];
-}
-
-export interface WatchlistItem {
-  id: string;
-  title: string;
-  location: string;
-  findings: string;
-  action: string;
-  statusSeverity?: 'danger' | 'warning' | 'info';
-}
-
-export interface WatchlistBlockData {
-  title?: string;
-  actionDirection?: string;
-  items: WatchlistItem[];
-}
-
-export interface InsightCalloutBlockData {
-  title?: string;
-  insights: string[];
-}
-
-export interface AnnualTableBlockData {
-  title?: string;
-  showChart?: boolean;
-}
-
-export type DetailBlockPayload =
-  | KpiCardsBlockData
-  | SpatialMapBlockData
-  | CategoryBarsBlockData
-  | MilestonePipelineBlockData
-  | ProgressMetricsBlockData
-  | WatchlistBlockData
-  | InsightCalloutBlockData
-  | AnnualTableBlockData
-  | Record<string, unknown>;
-
-export interface DetailBlockConfig {
-  id: string;
-  type: BlockType;
-  title?: string;
-  subtitle?: string;
-  width: BlockWidth;
   order: number;
-  enabled?: boolean;
-  data: DetailBlockPayload;
+  enabled: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Apache Superset Embed Configuration
+// ---------------------------------------------------------------------------
+export interface SupersetEmbedConfig {
+  enabled: boolean;
+  iframeCode?: string;       // Raw snippet iframe pasted by user
+  srcUrl: string;            // Extracted direct URL
+  url?: string;              // Optional alias for srcUrl
+  uuid?: string;             // Extracted Superset UUID (e.g. BQpgLPvgJMo)
+  widthPercent: number;      // 50, 75, or 100 (%)
+  heightPx: number;          // e.g. 400, 500, 600 (px)
+  title?: string;
+  updatedAt?: string;        // ISO timestamp log when embed was updated
+  sectionOrder?: DetailSectionId[];      // Configurable display order of sections
+  sectionSettings?: DetailSectionOrderItem[]; // Detailed section order & enabled flags
+}
+
+export interface CmsPillarItem {
+  id: string;
+  name: string;
+  badge?: string;
+  description?: string;
+  order?: number;
+  programCount?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Custom Excel Table Data (Template Generator & Uploader)
+// ---------------------------------------------------------------------------
+export interface CustomExcelColumn {
+  id: string;
+  name: string;              // e.g. "No", "Program atau Komponen", "Indikasi data khusus"
+  label?: string;            // Alias for name
+  key: string;
+  width?: string;
+}
+
+export interface CustomExcelTableData {
+  id?: string;
+  title?: string;
+  tableName?: string;        // Alias for title
+  description?: string;
+  columns: CustomExcelColumn[];
+  rows: Record<string, string>[];
+  templateFileName?: string;
+  templateFileBase64?: string;
+  fileName?: string;
+  rowCount: number;
+  uploadedAt?: string;       // ISO timestamp log when excel was uploaded
+  lastUploadedAt?: string;   // Alias for uploadedAt
+}
+
+// ---------------------------------------------------------------------------
+// Spatial Map Coordinates Uploaded via Excel
+// ---------------------------------------------------------------------------
+export interface MapMarkersExcelData {
+  markers: MapPointMarker[];
+  fileName?: string;
+  markerCount: number;
+  uploadedAt?: string;       // ISO timestamp log when map markers were uploaded
+  lastUploadedAt?: string;   // Alias for uploadedAt
 }
 
 export interface CmsCardItem {
   id: string;
   slug: string;
-  pillarId: 'pendidikan' | 'kesehatan' | 'bencana' | 'kemiskinan';
+  pillarId: string;
   category: CmsCardCategory;
   title: string;
   value: string;
@@ -174,6 +123,11 @@ export interface CmsCardItem {
   monthlyData?: unknown;
   kendalaList?: unknown;
   updateLogs?: unknown;
-  detailBlocks?: DetailBlockConfig[];
+  supersetEmbed?: SupersetEmbedConfig;
+  spatialMapEmbed?: SupersetEmbedConfig;
+  customExcelTable?: CustomExcelTableData;
+  customExcelTables?: CustomExcelTableData[];
+  mapMarkersExcel?: MapMarkersExcelData;
+  detailSectionOrder?: DetailSectionId[];
 }
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCardById, updateCard } from '@/lib/db';
-import { getProgramDetailData } from '@/data/programDetailData';
+import { getProgramDetailData, ProgramDetailData } from '@/data/programDetailData';
 import { getCurrentUser, isAdmin } from '@/lib/auth';
 
 interface RouteContext {
@@ -50,10 +50,14 @@ export async function GET(request: Request, context: RouteContext) {
       monthlyData: card.monthlyData || baselineDetail.monthlyData,
       annualTargets: card.annualTargets || (baselineDetail as unknown as { annualTargets?: unknown }).annualTargets,
       updateLogs: card.updateLogs || baselineDetail.updateLogs,
-      detailBlocks:
-        card.detailBlocks && Array.isArray(card.detailBlocks) && card.detailBlocks.length > 0
-          ? card.detailBlocks
-          : baselineDetail.detailBlocks,
+      supersetEmbed: card.supersetEmbed || (baselineDetail as ProgramDetailData).supersetEmbed,
+      spatialMapEmbed: card.spatialMapEmbed || (baselineDetail as ProgramDetailData).spatialMapEmbed,
+      customExcelTable: card.customExcelTable || (baselineDetail as ProgramDetailData).customExcelTable,
+      mapMarkersExcel: card.mapMarkersExcel || (baselineDetail as ProgramDetailData).mapMarkersExcel,
+      detailSectionOrder:
+        card.detailSectionOrder ||
+        card.supersetEmbed?.sectionOrder ||
+        (baselineDetail as ProgramDetailData).detailSectionOrder,
     };
 
     return NextResponse.json(
@@ -92,7 +96,11 @@ export async function PUT(request: Request, context: RouteContext) {
       monthlyData: body.monthlyData,
       annualTargets: body.annualTargets,
       updateLogs: body.updateLogs,
-      detailBlocks: body.detailBlocks,
+      supersetEmbed: body.supersetEmbed,
+      spatialMapEmbed: body.spatialMapEmbed,
+      customExcelTable: body.customExcelTable,
+      mapMarkersExcel: body.mapMarkersExcel,
+      detailSectionOrder: body.detailSectionOrder,
     });
 
     return NextResponse.json(

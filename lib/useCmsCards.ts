@@ -109,14 +109,16 @@ export function useCmsCards(pillarId?: string, category?: string) {
 
   const loading = cachedCards === null;
 
-  // Filter cards synchronously from cached database records
+  // Filter cards synchronously from cached database records and sort by order (Z-pattern)
   const cards = useMemo(() => {
     if (!cachedCards) return [];
-    return cachedCards.filter((c) => {
-      if (pillarId && c.pillarId !== pillarId) return false;
-      if (category && category !== 'Semua' && category !== 'all' && c.category !== category) return false;
-      return c.isActive;
-    });
+    return cachedCards
+      .filter((c) => {
+        if (pillarId && c.pillarId !== pillarId) return false;
+        if (category && category !== 'Semua' && category !== 'all' && c.category !== category) return false;
+        return c.isActive;
+      })
+      .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
   }, [cachedCards, pillarId, category]);
 
   const refresh = useCallback(async () => {

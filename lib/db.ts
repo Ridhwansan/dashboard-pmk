@@ -5,7 +5,6 @@ import { prisma } from './prisma';
 import { calculatePercentage } from './calcPercent';
 import { INITIAL_CMS_CARDS, CmsCardItem } from '../data/initialCmsCards';
 import { getProgramDetailData } from '../data/programDetailData';
-import { getDefaultDetailBlocks } from '../data/defaultIndicatorBlocks';
 import { DEFAULT_USERS } from './auth';
 import { DASHBOARD_META } from '../data/dashboardData';
 import { SUG_LOCATIONS, SugLocation } from '../data/mapIndicators';
@@ -13,17 +12,27 @@ import {
   BENCANA_RINGKASAN_UTAMA,
   PENGKINIAN_BENCANA_DATA,
 } from '../data/bencanaPengkinianData';
+import { CmsPillarItem } from '../types/cms';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const JSON_FILE_PATH = path.join(DATA_DIR, 'cmsCardsData.json');
 const META_JSON_FILE_PATH = path.join(DATA_DIR, 'dashboardMetaData.json');
 const USERS_JSON_FILE_PATH = path.join(DATA_DIR, 'usersData.json');
+const PILLARS_JSON_FILE_PATH = path.join(DATA_DIR, 'pillarsData.json');
+
+export const DEFAULT_PILLARS: CmsPillarItem[] = [
+  { id: 'pendidikan', name: 'Pendidikan', description: 'Pilar Pembangunan Manusia bidang Pendidikan dan Kebudayaan', order: 1 },
+  { id: 'kesehatan', name: 'Kesehatan', description: 'Pilar Peningkatan Kualitas Kesehatan Masyarakat', order: 2 },
+  { id: 'bencana', name: 'Kebencanaan', description: 'Pilar Penanggulangan dan Mitigasi Bencana', order: 3 },
+  { id: 'kemiskinan', name: 'Penurunan Kemiskinan', description: 'Pilar Percepatan Penghapusan Kemiskinan Ekstrem dan Penurunan Kemiskinan', order: 4 },
+];
 
 // Memory cache for fallback mode
 let memoryCards: CmsCardItem[] | null = null;
 let lastJsonMtime: number = 0;
 let memoryMeta: DashboardMetaItem | null = null;
 let memoryUsers: FallbackUserItem[] | null = null;
+let memoryPillars: CmsPillarItem[] | null = null;
 let isPrismaAvailable: boolean | null = null;
 
 export interface DashboardMetaItem {
@@ -187,6 +196,155 @@ export function saveUsersJsonFile(users: FallbackUserItem[]): void {
 }
 
 /**
+ * Initialize fallback Pillars JSON file if it doesn't exist
+ */
+export function ensurePillarsJsonFile(): CmsPillarItem[] {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(PILLARS_JSON_FILE_PATH)) {
+      fs.writeFileSync(PILLARS_JSON_FILE_PATH, JSON.stringify(DEFAULT_PILLARS, null, 2), 'utf-8');
+      memoryPillars = [...DEFAULT_PILLARS];
+      return memoryPillars;
+    }
+    if (!memoryPillars || memoryPillars.length === 0) {
+      try {
+        const raw = fs.readFileSync(PILLARS_JSON_FILE_PATH, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          memoryPillars = parsed;
+        }
+      } catch {
+        memoryPillars = null;
+      }
+    }
+    if (!memoryPillars || memoryPillars.length === 0) {
+      memoryPillars = [...DEFAULT_PILLARS];
+      fs.writeFileSync(PILLARS_JSON_FILE_PATH, JSON.stringify(memoryPillars, null, 2), 'utf-8');
+    }
+    return memoryPillars;
+  } catch (error) {
+    console.error('Error reading fallback pillars JSON, using memory:', error);
+    if (!memoryPillars) {
+      memoryPillars = [...DEFAULT_PILLARS];
+    }
+    return memoryPillars;
+  }
+}
+
+/**
+ * Persist pillars to fallback JSON file
+ */
+export function savePillarsJsonFile(pillars: CmsPillarItem[]): void {
+  memoryPillars = [...pillars];
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(PILLARS_JSON_FILE_PATH, JSON.stringify(pillars, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Failed to write pillarsData.json:', err);
+  }
+}
+
+/**
+ * Get all pillars along with program count
+ */
+export async function getPillars(): Promise<(CmsPillarItem & { programCount: number })[]> {
+  const pillars = ensurePillarsJsonFile();
+  const cards = await getCards();
+
+  return pillars
+    .map((p) => {
+      const programCount = cards.filter((c) => c.pillarId === p.id).length;
+      return {
+        ...p,
+        programCount,
+      };
+    })
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+}
+
+/**
+ * Create a new pillar
+ */
+export async function createPillar(data: {
+  id?: string;
+  name: string;
+  description?: string;
+  order?: number;
+}): Promise<CmsPillarItem> {
+  const pillars = ensurePillarsJsonFile();
+  const rawId = (data.id || data.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const id = rawId || `pillar-${Date.now()}`;
+
+  if (pillars.some((p) => p.id === id)) {
+    throw new Error(`Pilar dengan ID "${id}" sudah ada.`);
+  }
+
+  const newPillar: CmsPillarItem = {
+    id,
+    name: data.name.trim(),
+    description: data.description?.trim() || '',
+    order: data.order ?? pillars.length + 1,
+  };
+
+  const updated = [...pillars, newPillar];
+  savePillarsJsonFile(updated);
+  return newPillar;
+}
+
+/**
+ * Update existing pillar
+ */
+export async function updatePillar(
+  id: string,
+  data: Partial<CmsPillarItem>
+): Promise<CmsPillarItem | null> {
+  const pillars = ensurePillarsJsonFile();
+  const index = pillars.findIndex((p) => p.id === id);
+  if (index === -1) return null;
+
+  const current = pillars[index];
+  const updatedPillar: CmsPillarItem = {
+    ...current,
+    name: data.name !== undefined ? data.name.trim() : current.name,
+    description: data.description !== undefined ? data.description.trim() : current.description,
+    order: data.order !== undefined ? data.order : current.order,
+    badge: data.badge !== undefined ? data.badge : current.badge,
+  };
+
+  pillars[index] = updatedPillar;
+  savePillarsJsonFile(pillars);
+  return updatedPillar;
+}
+
+/**
+ * Delete a pillar
+ */
+export async function deletePillar(id: string): Promise<{ success: boolean; message?: string }> {
+  const pillars = ensurePillarsJsonFile();
+  const index = pillars.findIndex((p) => p.id === id);
+  if (index === -1) {
+    return { success: false, message: 'Pilar tidak ditemukan.' };
+  }
+
+  const cards = await getCards();
+  const linkedCount = cards.filter((c) => c.pillarId === id).length;
+  if (linkedCount > 0) {
+    return {
+      success: false,
+      message: `Pilar ini tidak dapat dihapus karena masih memiliki ${linkedCount} program terdaftar. Silakan pindahkan atau hapus program terkait terlebih dahulu.`,
+    };
+  }
+
+  const updated = pillars.filter((p) => p.id !== id);
+  savePillarsJsonFile(updated);
+  return { success: true };
+}
+
+/**
  * Check if Prisma PostgreSQL is reachable
  */
 export async function testPrismaConnection(): Promise<boolean> {
@@ -219,7 +377,6 @@ export function ensureJsonFile(): CmsCardItem[] {
           kendalaList: card.kendalaList || detail.kendalaList,
           monthlyData: card.monthlyData || detail.monthlyData,
           updateLogs: card.updateLogs || detail.updateLogs,
-          detailBlocks: card.detailBlocks || detail.detailBlocks,
         };
       });
 
@@ -238,27 +395,7 @@ export function ensureJsonFile(): CmsCardItem[] {
         const raw = fs.readFileSync(JSON_FILE_PATH, 'utf-8');
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          let hasMissingBlocks = false;
-          memoryCards = parsed.map((c) => {
-            if (!c.detailBlocks || c.detailBlocks.length === 0) {
-              hasMissingBlocks = true;
-              const detail = getProgramDetailData(c.slug || c.id, c.title, c.pillarId);
-              const blocks =
-                detail?.detailBlocks && detail.detailBlocks.length > 0
-                  ? detail.detailBlocks
-                  : getDefaultDetailBlocks(c.slug || c.id, c);
-              return { ...c, detailBlocks: blocks };
-            }
-            return c;
-          });
-          if (hasMissingBlocks) {
-            try {
-              fs.writeFileSync(JSON_FILE_PATH, JSON.stringify(memoryCards, null, 2), 'utf-8');
-              lastJsonMtime = fs.statSync(JSON_FILE_PATH).mtimeMs;
-            } catch (err) {
-              console.error('Failed to sync detailBlocks to cmsCardsData.json:', err);
-            }
-          }
+          memoryCards = parsed;
         }
       } catch {
         memoryCards = null;
@@ -353,10 +490,12 @@ function toCmsCardItem(r: any): CmsCardItem {
     monthlyData: r.monthlyData || undefined,
     kendalaList: r.kendalaList || undefined,
     updateLogs: r.updateLogs || undefined,
-    detailBlocks:
-      r.detailBlocks && Array.isArray(r.detailBlocks) && r.detailBlocks.length > 0
-        ? r.detailBlocks
-        : getDefaultDetailBlocks(r.slug || r.id, r),
+    supersetEmbed: r.supersetEmbed || undefined,
+    spatialMapEmbed: r.spatialMapEmbed || undefined,
+    customExcelTable: r.customExcelTable || undefined,
+    customExcelTables: r.customExcelTables || undefined,
+    mapMarkersExcel: r.mapMarkersExcel || undefined,
+    detailSectionOrder: r.detailSectionOrder || undefined,
   };
 }
 
@@ -462,6 +601,7 @@ export async function updateCard(
   if (useDb) {
     try {
       const updatePayload: Record<string, unknown> = {
+        pillarId: updated.pillarId,
         title: updated.title,
         value: updated.value,
         unit: updated.unit || '',
@@ -480,7 +620,12 @@ export async function updateCard(
         monthlyData: toJsonInput(updated.monthlyData),
         kendalaList: toJsonInput(updated.kendalaList),
         updateLogs: toJsonInput(updated.updateLogs),
-        detailBlocks: toJsonInput(updated.detailBlocks),
+        supersetEmbed: toJsonInput(updated.supersetEmbed),
+        spatialMapEmbed: toJsonInput(updated.spatialMapEmbed),
+        customExcelTable: toJsonInput(updated.customExcelTable),
+        customExcelTables: toJsonInput(updated.customExcelTables),
+        mapMarkersExcel: toJsonInput(updated.mapMarkersExcel),
+        detailSectionOrder: toJsonInput(updated.detailSectionOrder),
       };
 
       const r = await prisma.pillarCard.update({
@@ -573,17 +718,11 @@ export async function createCard(
       ? card.percent
       : calculatePercentage(card.value, card.target);
 
-  const detailBlocks =
-    card.detailBlocks && card.detailBlocks.length > 0
-      ? card.detailBlocks
-      : getDefaultDetailBlocks(slug, card);
-
   const newCard: CmsCardItem = {
     ...card,
     id,
     slug,
     percent,
-    detailBlocks,
   };
 
   const useDb = await testPrismaConnection();
@@ -612,7 +751,11 @@ export async function createCard(
         monthlyData: toJsonInput(newCard.monthlyData),
         kendalaList: toJsonInput(newCard.kendalaList),
         updateLogs: toJsonInput(newCard.updateLogs),
-        detailBlocks: toJsonInput(newCard.detailBlocks),
+        supersetEmbed: toJsonInput(newCard.supersetEmbed),
+        spatialMapEmbed: toJsonInput(newCard.spatialMapEmbed),
+        customExcelTable: toJsonInput(newCard.customExcelTable),
+        mapMarkersExcel: toJsonInput(newCard.mapMarkersExcel),
+        detailSectionOrder: toJsonInput(newCard.detailSectionOrder),
       };
 
       const r = await prisma.pillarCard.create({
@@ -1136,7 +1279,6 @@ export async function seedPrismaDatabase(): Promise<void> {
         kendalaList: toJsonInput(detail.kendalaList),
         monthlyData: toJsonInput(detail.monthlyData),
         updateLogs: toJsonInput(detail.updateLogs),
-        detailBlocks: toJsonInput(card.detailBlocks || detail.detailBlocks),
       };
 
       const seedCreatePayload: PillarCardCreatePayload = {
@@ -1161,7 +1303,6 @@ export async function seedPrismaDatabase(): Promise<void> {
         kendalaList: toJsonInput(detail.kendalaList),
         monthlyData: toJsonInput(detail.monthlyData),
         updateLogs: toJsonInput(detail.updateLogs),
-        detailBlocks: toJsonInput(card.detailBlocks || detail.detailBlocks),
       };
 
       await prisma.pillarCard.upsert({

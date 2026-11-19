@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronRight, X } from 'lucide-react';
 import { ProgramDetailPageView } from './ProgramDetailPageView';
 import { ProgramDetailData, KendalaDetailItem, MonthlyDataPoint, DataUpdateLogItem, getProgramDetailData } from '@/data/programDetailData';
-import { getDefaultDetailBlocks } from '@/data/defaultIndicatorBlocks';
 import { useCmsCards } from '@/lib/useCmsCards';
 
 interface KemiskinanDetailViewProps {
@@ -53,32 +52,99 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
   // Fetch cards dynamically from CMS / Database
   const { cards: cmsCards, loading } = useCmsCards('kemiskinan', category);
 
+  const displayedCards = useMemo(() => {
+    return cmsCards.map((c) => {
+      const rawKendala =
+        c.kendalaList && Array.isArray(c.kendalaList) && c.kendalaList.length > 0
+          ? (c.kendalaList as Array<{ title?: string; kendala?: string; tindakLanjut?: string }>)
+          : undefined;
+
+      const kendalaList =
+        rawKendala ||
+        (() => {
+          const detail = getProgramDetailData(c.slug || c.id, c.title, 'kemiskinan');
+          return detail.kendalaList && detail.kendalaList.length > 0
+            ? detail.kendalaList
+            : detail.kendala
+            ? [
+                {
+                  title: detail.title ? `Isu Pelaksanaan: ${detail.title}` : 'Kendala Pelaksanaan',
+                  kendala: detail.kendala,
+                  tindakLanjut:
+                    detail.tindakLanjut ||
+                    'Koordinasi lintas instansi pengampu untuk percepatan realisasi target.',
+                },
+              ]
+            : [];
+        })();
+
+      const issueData =
+        kendalaList.length > 0
+          ? {
+              hasIssue: true,
+              title: kendalaList[0].title || 'Kendala Pelaksanaan',
+              description:
+                kendalaList[0].kendala ||
+                kendalaList[0].title ||
+                'Kendala sedang dalam tindak lanjut orkestrasi.',
+              totalCount: kendalaList.length,
+            }
+          : {
+              hasIssue: false,
+              title: 'Status Pelaksanaan Terkendali',
+              description: 'Tidak terdata kendala operasional kritis.',
+              totalCount: 0,
+            };
+
+      return {
+        id: c.slug || c.id,
+        chipLabel: c.category,
+        title: c.title,
+        value: c.value,
+        unit: c.unit,
+        status: c.status,
+        target: c.target,
+        percent: c.percent !== null && c.percent !== undefined ? c.percent : undefined,
+        subtext: c.subtext,
+        isMilestone: c.isMilestone,
+        milestoneContent: c.milestoneContent,
+        kendalaList,
+        issueData,
+      };
+    });
+  }, [cmsCards]);
+
   // If a program detail is selected, render it as its own full page
   if (selectedProgramId) {
     const selectedCard = cmsCards.find((c) => (c.slug || c.id) === selectedProgramId);
+    const baseline = getProgramDetailData(selectedProgramId, selectedCard?.title, 'kemiskinan');
     const programDetail: ProgramDetailData = selectedCard
       ? {
+          ...baseline,
           id: selectedCard.slug || selectedCard.id,
           title: selectedCard.title,
           pillarId: 'kemiskinan',
           pillarTitle: 'Pilar Penurunan Kemiskinan',
           category: selectedCard.category,
-          description: selectedCard.description || 'Pengawalan perlindungan sosial, penanggulangan kemiskinan ekstrem, dan graduasi mandiri.',
-          picKementerian: selectedCard.picKementerian || 'Kemensos',
-          unit: selectedCard.unit || '',
+          description: selectedCard.description || baseline.description,
+          picKementerian: selectedCard.picKementerian || baseline.picKementerian,
+          unit: selectedCard.unit || baseline.unit,
           currentValue: selectedCard.value,
           target2026: selectedCard.target,
           status: selectedCard.status,
-          subtext: selectedCard.subtext,
-          kendalaList: (selectedCard.kendalaList as KendalaDetailItem[]) || [],
-          monthlyData: (selectedCard.monthlyData as Record<number, MonthlyDataPoint[]>) || {},
-          updateLogs: (selectedCard.updateLogs as DataUpdateLogItem[]) || [],
-          detailBlocks:
-            selectedCard.detailBlocks && selectedCard.detailBlocks.length > 0
-              ? selectedCard.detailBlocks
-              : getDefaultDetailBlocks(selectedCard.slug || selectedCard.id, selectedCard),
+          subtext: selectedCard.subtext || baseline.subtext,
+          kendalaList: (selectedCard.kendalaList as KendalaDetailItem[]) || baseline.kendalaList,
+          monthlyData: (selectedCard.monthlyData as Record<number, MonthlyDataPoint[]>) || baseline.monthlyData,
+          updateLogs: (selectedCard.updateLogs as DataUpdateLogItem[]) || baseline.updateLogs,
+          supersetEmbed: selectedCard.supersetEmbed || baseline.supersetEmbed,
+          spatialMapEmbed: selectedCard.spatialMapEmbed || baseline.spatialMapEmbed,
+          customExcelTable: selectedCard.customExcelTable || baseline.customExcelTable,
+          detailSectionOrder:
+            selectedCard.detailSectionOrder ||
+            selectedCard.supersetEmbed?.sectionOrder ||
+            baseline.detailSectionOrder,
         }
-      : getProgramDetailData(selectedProgramId, undefined, 'kemiskinan');
+      : baseline;
 
     return (
       <ProgramDetailPageView
@@ -94,21 +160,6 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
       />
     );
   }
-
-  const displayedCards = cmsCards.map((c) => ({
-    id: c.slug || c.id,
-    chipLabel: c.category,
-    title: c.title,
-    value: c.value,
-    unit: c.unit,
-    status: c.status,
-    target: c.target,
-    percent: c.percent !== null && c.percent !== undefined ? c.percent : undefined,
-    subtext: c.subtext,
-    isMilestone: c.isMilestone,
-    milestoneContent: c.milestoneContent,
-    kendalaList: c.kendalaList,
-  }));
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-150">
@@ -267,35 +318,7 @@ export const KemiskinanDetailView: React.FC<KemiskinanDetailViewProps> = ({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
           {displayedCards.map((card) => {
-            const kendalaList = (card.kendalaList && Array.isArray(card.kendalaList) && card.kendalaList.length > 0)
-              ? (card.kendalaList as Array<{ title?: string; kendala?: string; tindakLanjut?: string }>)
-              : (() => {
-                  const detail = getProgramDetailData(card.id, card.title, 'kemiskinan');
-                  return (detail.kendalaList && detail.kendalaList.length > 0)
-                    ? detail.kendalaList
-                    : detail.kendala
-                      ? [{
-                          title: detail.title ? `Isu Pelaksanaan: ${detail.title}` : 'Kendala Pelaksanaan',
-                          kendala: detail.kendala,
-                          tindakLanjut: detail.tindakLanjut || 'Koordinasi lintas instansi pengampu untuk percepatan realisasi target.',
-                        }]
-                      : [];
-                })();
-
-            const issueData = kendalaList.length > 0
-              ? {
-                  hasIssue: true,
-                  title: kendalaList[0].title || 'Kendala Pelaksanaan',
-                  description: kendalaList[0].kendala || kendalaList[0].title || 'Kendala sedang dalam tindak lanjut orkestrasi.',
-                  totalCount: kendalaList.length,
-                }
-              : {
-                  hasIssue: false,
-                  title: 'Status Pelaksanaan Terkendali',
-                  description: 'Tidak terdata kendala operasional kritis.',
-                  totalCount: 0,
-                };
-
+            const { issueData, kendalaList } = card;
             const isPinned = pinnedCardId === card.id;
 
             return (

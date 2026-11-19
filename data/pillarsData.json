@@ -1,0 +1,26 @@
+[
+  {
+    "id": "pendidikan",
+    "name": "Pendidikan",
+    "description": "Pilar Pembangunan Manusia bidang Pendidikan dan Kebudayaan",
+    "order": 1
+  },
+  {
+    "id": "kesehatan",
+    "name": "Kesehatan",
+    "description": "Pilar Peningkatan Kualitas Kesehatan Masyarakat",
+    "order": 2
+  },
+  {
+    "id": "bencana",
+    "name": "Kebencanaan",
+    "description": "Pilar Penanggulangan dan Mitigasi Bencana",
+    "order": 3
+  },
+  {
+    "id": "kemiskinan",
+    "name": "Penurunan Kemiskinan",
+    "description": "Pilar Percepatan Penghapusan Kemiskinan Ekstrem dan Penurunan Kemiskinan",
+    "order": 4
+  }
+]
