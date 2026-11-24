@@ -230,7 +230,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       return {
         ...subBaseline,
         supersetEmbed: currentProgram.supersetEmbed || subBaseline.supersetEmbed,
-        spatialMapEmbed: currentProgram.spatialMapEmbed || subBaseline.spatialMapEmbed,
         customExcelTable: currentProgram.customExcelTable || subBaseline.customExcelTable,
         detailSectionOrder: currentProgram.detailSectionOrder || subBaseline.detailSectionOrder,
       };
@@ -252,21 +251,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
         effectiveProgram.supersetEmbed.uuid)
   );
 
-  const hasSpatialMapEmbed = Boolean(
-    effectiveProgram.spatialMapEmbed &&
-      (effectiveProgram.spatialMapEmbed.srcUrl ||
-        effectiveProgram.spatialMapEmbed.url ||
-        effectiveProgram.spatialMapEmbed.uuid)
-  );
-
-  const hasCustomExcelTable = Boolean(
-    (effectiveProgram.customExcelTables &&
-      effectiveProgram.customExcelTables.some((t) => t.rows && t.rows.length > 0)) ||
-      (effectiveProgram.customExcelTable &&
-        effectiveProgram.customExcelTable.rows &&
-        effectiveProgram.customExcelTable.rows.length > 0)
-  );
-
   const orderedSections: DetailSectionId[] = useMemo(() => {
     const rawOrder =
       (effectiveProgram.detailSectionOrder as DetailSectionId[]) ||
@@ -277,7 +261,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
       ([
         'superset',
         'custom_excel',
-        'spatial_map',
         'kinerja_chart',
         'kendala',
       ] as DetailSectionId[]);
@@ -291,7 +274,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
     const defaultSections: DetailSectionId[] = [
       'superset',
       'custom_excel',
-      'spatial_map',
       'kinerja_chart',
       'kendala',
     ];
@@ -701,18 +683,6 @@ export const ProgramDetailPageView: React.FC<ProgramDetailPageViewProps> = ({
               <CustomExcelTableView key={tbl.id || `custom_excel_${idx}`} data={tbl} />
             ))}
           </div>
-        );
-      }
-
-      case 'spatial_map': {
-        if (!hasSpatialMapEmbed) return null;
-        return (
-          <SupersetEmbedView
-            key="spatial_map"
-            config={effectiveProgram.spatialMapEmbed}
-            defaultTitle={`Peta Spasial Sebaran: ${effectiveProgram.title}`}
-            defaultSubtitle="Visualisasi pemetaan spasial dan sebaran geografis dari Apache Superset Kemenko PMK"
-          />
         );
       }
 

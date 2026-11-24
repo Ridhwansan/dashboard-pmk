@@ -26,7 +26,6 @@ export interface ProvinceAggregateItem {
 export type DetailSectionId =
   | 'superset'
   | 'custom_excel'
-  | 'spatial_map'
   | 'kinerja_chart'
   | 'kendala';
 
@@ -124,7 +123,6 @@ export interface CmsCardItem {
   kendalaList?: unknown;
   updateLogs?: unknown;
   supersetEmbed?: SupersetEmbedConfig;
-  spatialMapEmbed?: SupersetEmbedConfig;
   customExcelTable?: CustomExcelTableData;
   customExcelTables?: CustomExcelTableData[];
   mapMarkersExcel?: MapMarkersExcelData;

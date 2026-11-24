@@ -51,7 +51,6 @@ export async function GET(request: Request, context: RouteContext) {
       annualTargets: card.annualTargets || (baselineDetail as unknown as { annualTargets?: unknown }).annualTargets,
       updateLogs: card.updateLogs || baselineDetail.updateLogs,
       supersetEmbed: card.supersetEmbed || (baselineDetail as ProgramDetailData).supersetEmbed,
-      spatialMapEmbed: card.spatialMapEmbed || (baselineDetail as ProgramDetailData).spatialMapEmbed,
       customExcelTable: card.customExcelTable || (baselineDetail as ProgramDetailData).customExcelTable,
       mapMarkersExcel: card.mapMarkersExcel || (baselineDetail as ProgramDetailData).mapMarkersExcel,
       detailSectionOrder:
@@ -97,7 +96,6 @@ export async function PUT(request: Request, context: RouteContext) {
       annualTargets: body.annualTargets,
       updateLogs: body.updateLogs,
       supersetEmbed: body.supersetEmbed,
-      spatialMapEmbed: body.spatialMapEmbed,
       customExcelTable: body.customExcelTable,
       mapMarkersExcel: body.mapMarkersExcel,
       detailSectionOrder: body.detailSectionOrder,

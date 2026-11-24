@@ -137,7 +137,6 @@ export const PendidikanDetailView: React.FC<PendidikanDetailViewProps> = ({
           monthlyData: (selectedCard.monthlyData as Record<number, MonthlyDataPoint[]>) || baseline.monthlyData,
           updateLogs: (selectedCard.updateLogs as DataUpdateLogItem[]) || baseline.updateLogs,
           supersetEmbed: selectedCard.supersetEmbed || baseline.supersetEmbed,
-          spatialMapEmbed: selectedCard.spatialMapEmbed || baseline.spatialMapEmbed,
           customExcelTable: selectedCard.customExcelTable || baseline.customExcelTable,
           detailSectionOrder:
             selectedCard.detailSectionOrder ||

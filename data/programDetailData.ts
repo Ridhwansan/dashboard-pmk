@@ -71,7 +71,6 @@ export interface ProgramDetailData {
   monthlyData: Record<number, MonthlyDataPoint[]>;
   updateLogs?: DataUpdateLogItem[];
   supersetEmbed?: SupersetEmbedConfig;
-  spatialMapEmbed?: SupersetEmbedConfig;
   customExcelTable?: CustomExcelTableData;
   customExcelTables?: CustomExcelTableData[];
   mapMarkersExcel?: MapMarkersExcelData;

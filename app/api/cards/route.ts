@@ -63,7 +63,6 @@ export async function POST(request: Request) {
       monthlyData: body.monthlyData || null,
       updateLogs: body.updateLogs || [],
       supersetEmbed: body.supersetEmbed || null,
-      spatialMapEmbed: body.spatialMapEmbed || null,
       customExcelTable: body.customExcelTable || null,
       mapMarkersExcel: body.mapMarkersExcel || null,
     });

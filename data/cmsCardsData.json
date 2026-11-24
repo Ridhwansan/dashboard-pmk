@@ -538,58 +538,14 @@
       }
     },
     "supersetEmbed": {
-      "embedCode": "<iframe width=\"600\" height=\"400\" seamless frameBorder=\"0\" scrolling=\"no\" src=\"https://superset.kemenkopmk.go.id/superset/explore/p/BQpgLPvgJMo/?standalone=1&height=400\"></iframe>",
-      "url": "https://ourworldindata.org/grapher/life-expectancy?tab=chart",
-      "srcUrl": "https://ourworldindata.org/grapher/life-expectancy?tab=chart",
-      "uuid": "XrPwNyVxNpW",
-      "title": "Eksplorasi Data Apache Superset Revitalisasi Satuan Pendidikan",
-      "widthPercent": 100,
-      "width": "100%",
-      "heightPx": 800,
-      "height": 500,
-      "updatedAt": "2026-11-19T07:19:59.307Z",
-      "lastUpdated": "2026-11-19T09:30:00.000Z",
       "enabled": true,
-      "iframeCode": "<iframe\n  src=\"https://ourworldindata.org/grapher/life-expectancy?tab=chart\"\n  width=\"100%\"\n  height=\"800\"\n  style=\"border: none; border-radius: 8px;\"\n  loading=\"lazy\"\n  title=\"Uji Embed Visualisasi Data\"\n></iframe>",
-      "sectionOrder": [
-        "superset",
-        "spatial_map",
-        "custom_excel",
-        "kinerja_chart",
-        "kendala"
-      ],
-      "sectionSettings": [
-        {
-          "id": "superset",
-          "name": "Visualisasi Embed Apache Superset",
-          "order": 1,
-          "enabled": true
-        },
-        {
-          "id": "spatial_map",
-          "name": "Peta Spasial Sebaran Titik Lokasi",
-          "order": 2,
-          "enabled": true
-        },
-        {
-          "id": "custom_excel",
-          "name": "Matriks Data Spreadsheet Excel (Tabel Khusus)",
-          "order": 3,
-          "enabled": true
-        },
-        {
-          "id": "kinerja_chart",
-          "name": "Grafik Tren & Tabel Rincian Kinerja",
-          "order": 4,
-          "enabled": true
-        },
-        {
-          "id": "kendala",
-          "name": "Isu, Kendala & Tindak Lanjut Lapangan",
-          "order": 5,
-          "enabled": true
-        }
-      ]
+      "iframeCode": "<iframe\n  src=\"https://ourworldindata.org/grapher/cross-country-literacy-rates?tab=map\"\n  loading=\"lazy\"\n  style=\"width: 100%; height: 600px; border: 0px none;\"\n  allow=\"web-share; clipboard-write\"\n></iframe>",
+      "srcUrl": "https://ourworldindata.org/grapher/cross-country-literacy-rates?tab=map",
+      "url": "https://ourworldindata.org/grapher/cross-country-literacy-rates?tab=map",
+      "uuid": "",
+      "widthPercent": 100,
+      "heightPx": 450,
+      "updatedAt": "2026-11-24T07:54:08.233Z"
     },
     "customExcelTable": {
       "tableName": "Matriks Indikasi Data Revitalisasi Satuan Pendidikan",
@@ -622,28 +578,47 @@
     },
     "detailSectionOrder": [
       "superset",
-      "spatial_map",
       "custom_excel",
       "kinerja_chart",
       "kendala"
     ],
-    "spatialMapEmbed": {
-      "enabled": true,
-      "srcUrl": "https://embed.windy.com/embed2.html?lat=-2.5&lon=118.0&zoom=5&level=surface&overlay=temp&product=ecmwf&menu=&message=true&marker=&calendar=now&type=map&location=coordinates&metricTemp=%C2%B0C",
-      "url": "https://embed.windy.com/embed2.html?lat=-2.5&lon=118.0&zoom=5&level=surface&overlay=temp&product=ecmwf&menu=&message=true&marker=&calendar=now&type=map&location=coordinates&metricTemp=%C2%B0C",
-      "uuid": "",
-      "widthPercent": 100,
-      "heightPx": 600,
-      "iframeCode": "<iframe\n  src=\"https://embed.windy.com/embed2.html?lat=-2.5&lon=118.0&zoom=5&level=surface&overlay=temp&product=ecmwf&menu=&message=true&marker=&calendar=now&type=map&location=coordinates&metricTemp=%C2%B0C\"\n  width=\"100%\"\n  height=\"600\"\n  style=\"border: none; border-radius: 8px;\"\n  loading=\"lazy\"\n  title=\"Contoh Peta Gradasi Wilayah Indonesia\"\n></iframe>",
-      "title": "",
-      "updatedAt": "2026-11-19T07:20:35.174Z"
-    },
     "mapMarkersExcel": {
       "markers": [],
       "markerCount": 0,
       "fileName": "",
       "uploadedAt": ""
-    }
+    },
+    "customExcelTables": [
+      {
+        "tableName": "Matriks Indikasi Data Revitalisasi Satuan Pendidikan",
+        "title": "Matriks Indikasi Data Revitalisasi Satuan Pendidikan",
+        "uploadedAt": "2026-11-19T04:01:31.994Z",
+        "lastUploadedAt": "2026-11-19T04:01:31.994Z",
+        "rowCount": 0,
+        "columns": [
+          {
+            "id": "col_1",
+            "key": "no",
+            "name": "No",
+            "label": "No",
+            "width": "70px"
+          },
+          {
+            "id": "col_2",
+            "key": "program_atau_komponen",
+            "name": "Program atau Komponen",
+            "label": "Program atau Komponen"
+          },
+          {
+            "id": "col_3",
+            "key": "indikasi_data_khusus",
+            "name": "Indikasi data khusus yang diperlukan",
+            "label": "Indikasi data khusus yang diperlukan"
+          }
+        ],
+        "rows": []
+      }
+    ]
   },
   {
     "id": "snt_operasional",
